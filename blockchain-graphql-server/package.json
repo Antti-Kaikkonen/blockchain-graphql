@@ -1,0 +1,31 @@
+{
+  "name": "blockchaingraphqlserver",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "apollo-server": "^2.16.1",
+    "cassandra-driver": "^4.6.0",
+    "class-validator": "^0.12.2",
+    "dotenv": "^8.2.0",
+    "graphql": "^15.3.0",
+    "graphql-query-complexity": "^0.7.0",
+    "reflect-metadata": "^0.1.13",
+    "type-graphql": "^1.0.0-rc.3",
+    "typedi": "^0.8.0"
+  },
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Antti Kaikkonen",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/express": "^4.17.7",
+    "@types/node": "^14.0.27",
+    "npm": "^7.0.5",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7"
+  }
+}
