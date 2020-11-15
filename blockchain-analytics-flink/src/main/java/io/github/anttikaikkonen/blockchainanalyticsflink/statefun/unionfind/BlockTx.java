@@ -1,15 +1,15 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind;
 
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
+@EqualsAndHashCode
 @AllArgsConstructor
-public class MergeOperation {
-    String to;
-    
-    List<String> visited;
-    
+@NoArgsConstructor
+public class BlockTx {
+    int txN;
+    long delta;
 }

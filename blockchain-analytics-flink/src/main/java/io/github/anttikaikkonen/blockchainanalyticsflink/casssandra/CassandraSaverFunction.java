@@ -30,6 +30,13 @@ public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Voi
 
             @Override
             public void onFailure(Throwable ex) {
+                if (ex instanceof com.datastax.driver.core.exceptions.BusyPoolException) {
+                    //timeout(input, resultFuture);
+                } else if (ex instanceof com.datastax.driver.core.exceptions.ConnectionException) {
+                } else {
+                    
+                }
+                System.out.println("OnFailure "+ex.getMessage());
                 resultFuture.completeExceptionally(ex);
             }
         });
@@ -40,12 +47,22 @@ public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Voi
 
     @Override
     public void close() throws Exception {
-        if (this.manager != null) {
+        if (this.manager == null) return;
+        try {
             if (this.manager.getSession() != null) {
-                this.manager.getSession().getCluster().close();
-                this.manager = null;
+                this.manager.getSession().close();
             }
+        } catch (Exception e) {
+            //LOG.error("Error while closing session.", e);
         }
+        try {
+            if (this.manager.getSession() != null && this.manager.getSession().getCluster() != null) {
+                this.manager.getSession().getCluster().close();
+            }
+        } catch (Exception e) {
+            //LOG.error("Error while closing cluster.", e);
+        }
+        this.manager = null;
     }
     
     

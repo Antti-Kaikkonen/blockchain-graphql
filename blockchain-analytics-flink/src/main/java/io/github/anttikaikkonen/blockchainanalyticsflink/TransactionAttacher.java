@@ -19,6 +19,7 @@ import org.apache.flink.util.Collector;
 
 public class TransactionAttacher extends KeyedCoProcessFunction<String, Tuple2<TransactionInputWithOutput, String>, ConfirmedTransaction, ConfirmedTransactionWithInputs> {
 
+    //We store transaction by time because multiple blocks can have a coinbase transaction with the same txid. Exaxmple: BTC block 91722 and 91880
     private MapState<Long, ConfirmedTransaction> transactionState;
     private ListState<TransactionInputWithOutput> inputState;
 
@@ -40,14 +41,6 @@ public class TransactionAttacher extends KeyedCoProcessFunction<String, Tuple2<T
                 inputMap.put(input.getTxid()+input.getVout(), input);
             }
         }
-        if (transaction == null) {
-            System.out.println("TRANSACTION NULL");
-            for (String vin : inputMap.keySet()) {
-                System.out.println(vin+ " = "+inputMap.get(vin));
-            }
-        //    return;
-            //TODO bitcoin blocks 91722 and 91880 have the same coinbase transaction (same txid)
-        }
         TransactionInputWithOutput[] res = new TransactionInputWithOutput[transaction.getVin().length];
         for (int i = 0; i < transaction.getVin().length; i++) {
             TransactionInput vin = transaction.getVin()[i];
@@ -57,18 +50,10 @@ public class TransactionAttacher extends KeyedCoProcessFunction<String, Tuple2<T
                 res[i] = inputMap.get(vin.getTxid()+vin.getVout());
             }
         }
-        //if (transaction.getTxN() == 0) {
-            //Multiple coinbase transactions can have the same txid. For example the transactions below in BTC blockchain
-            //d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599 in blocks (91812 AND 91842)
-            //e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468 in blocks (91722 AND 91880)
-        //} else {
-            transactionState.remove(timestamp);
-            inputState.clear();
-        //}
-        out.collect(new ConfirmedTransactionWithInputs(transaction, res));
+        transactionState.remove(timestamp);
+        inputState.clear();
+        out.collect(new ConfirmedTransactionWithInputs(transaction, res, timestamp));
     }
-    
-    
     
     @Override
     public void processElement1(Tuple2<TransactionInputWithOutput, String> value, Context ctx, Collector<ConfirmedTransactionWithInputs> out) throws Exception {
@@ -77,15 +62,8 @@ public class TransactionAttacher extends KeyedCoProcessFunction<String, Tuple2<T
 
     @Override
     public void processElement2(ConfirmedTransaction value, Context ctx, Collector<ConfirmedTransactionWithInputs> out) throws Exception {
-        //ConfirmedTransaction oldTx = transactionState.value();
-        //if (oldTx != null) System.out.println(oldTx.getTxid()+ " already exists! Height = "+ oldTx.getHeight());
-        //transactionState.update(value);
         transactionState.put(ctx.timestamp(), value);
         ctx.timerService().registerEventTimeTimer(ctx.timestamp());
     }
-
-
-    
-    
     
 }

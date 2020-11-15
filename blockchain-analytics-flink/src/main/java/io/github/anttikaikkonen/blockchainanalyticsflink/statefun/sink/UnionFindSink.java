@@ -7,6 +7,7 @@ import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import io.github.anttikaikkonen.blockchainanalyticsflink.AddressBalanceCandlesticks;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteAddresses;
@@ -41,6 +42,8 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
     
     private transient PreparedStatement deleteTransactionsStatement;
     
+    private Semaphore semaphore;
+    
     public UnionFindSink(TypeSerializer<AddressOperation> serializer, CassandraSessionBuilder sessionBuilder) throws Exception {
         super(new ScyllaCommitter(sessionBuilder), serializer, UUID.randomUUID().toString().replace("-", "_"));
         this.sessionBuilder = sessionBuilder;
@@ -49,12 +52,13 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
     @Override
     public void open() throws Exception {
         super.open();
+        this.semaphore = new Semaphore(AddressBalanceCandlesticks.CASSANDRA_CONCURRENT_REQUESTS, true);
         this.session = this.sessionBuilder.build();
         this.addTransactionStatement = this.session.prepare("INSERT INTO cluster_transaction (cluster_id, timestamp, height, tx_n, balance_change) VALUES (?, ?, ?, ?, ?)");
         this.setParentStatement = this.session.prepare("INSERT INTO union_find (address, parent) VALUES (?, ?)");
         this.makesetStatement = this.session.prepare("INSERT INTO union_find (address) VALUES (?)");
         this.addAddressStatement = this.session.prepare("INSERT INTO cluster_address (cluster_id, address) VALUES (?, ?)");
-        
+
         this.deleteAddressesStatement = this.session.prepare("DELETE FROM cluster_address WHERE cluster_id = ?");
         this.deleteTransactionsStatement = this.session.prepare("DELETE FROM cluster_transaction WHERE cluster_id = ?");
     }
@@ -79,13 +83,20 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
     }
     
     
+    private void execute(BoundStatement bind, long timestamp, FutureCallback<ResultSet> callback) throws InterruptedException {
+        bind.setDefaultTimestamp(timestamp);
+        semaphore.acquire();
+        ResultSetFuture resultFuture = this.session.executeAsync(bind);
+        if (resultFuture != null) {
+            Futures.addCallback(resultFuture, callback);
+        }
+    }
     
     @Override
     protected boolean sendValues(Iterable<AddressOperation> iterable, long checkpointId, long timestamp) throws Exception {
         final AtomicInteger updatesCount = new AtomicInteger(0);
         final AtomicInteger updatesConfirmed = new AtomicInteger(0);
         final AtomicReference<Throwable> exception = new AtomicReference<>();
-        Semaphore semaphore = new Semaphore(16, false);
         FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
             @Override
             public void onSuccess(ResultSet resultSet) {
@@ -104,6 +115,7 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
             public void onFailure(Throwable throwable) {
                 semaphore.release();
                 if (exception.compareAndSet(null, throwable)) {
+                    System.out.println("ERROR SENDING VALUE1: "+exception.get());
                     LOG.error("Error while sending value.", throwable);
                     synchronized (updatesConfirmed) {
                         updatesConfirmed.notifyAll();
@@ -111,13 +123,14 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
                 }
             }
         };
+
         
         int updatesSent = 0;
+        
         for (AddressOperation op : iterable) {
             BoundStatement bind;
             Object input = op.getOp();
             String address = op.getAddress();
-            semaphore.acquire();
             if (input instanceof SetParent) {
                 SetParent setParent = (SetParent) input;
                 if (setParent.getParent() == null) {
@@ -135,10 +148,37 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
             } else if (input instanceof AddTransactionOperation) {
                 AddTransactionOperation addTransaction = (AddTransactionOperation) input;
                 bind = this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), addTransaction.getDelta());
+            } else if (input instanceof AddAddressOperation[]) {
+                AddAddressOperation[] addAddresses = (AddAddressOperation[]) input;
+                for (AddAddressOperation addAddress : addAddresses) {
+                    bind = this.addAddressStatement.bind(address, addAddress.getAddress());
+                    bind.setDefaultTimestamp(timestamp);
+                    semaphore.acquire();
+                    ResultSetFuture resultFuture = this.session.executeAsync(bind);
+                    updatesSent++;
+                    if (resultFuture != null) {
+                        Futures.addCallback(resultFuture, callback);
+                    }
+                } 
+                continue;
+            } else if (input instanceof AddTransactionOperation[]) {
+                AddTransactionOperation[] addTransactions = (AddTransactionOperation[]) input;
+                for (AddTransactionOperation addTransaction : addTransactions) {
+                    bind = this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), addTransaction.getDelta());
+                    bind.setDefaultTimestamp(timestamp);
+                    semaphore.acquire();
+                    ResultSetFuture resultFuture = this.session.executeAsync(bind);
+                    updatesSent++;
+                    if (resultFuture != null) {
+                        Futures.addCallback(resultFuture, callback);
+                    }
+                }
+                continue;
             } else {
                 throw new RuntimeException("Unsupported type "+input.getClass().toString());
             }
             bind.setDefaultTimestamp(timestamp);
+            semaphore.acquire();
             ResultSetFuture resultFuture = this.session.executeAsync(bind);
             updatesSent++;
             if (resultFuture != null) {
@@ -154,6 +194,7 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
             }
         }
         if (exception.get() != null) {
+            System.out.println("ERROR SENDING VALUE2: "+exception.get());
             LOG.warn("Sending a value failed.", exception.get());
             return false;
         } else {

@@ -13,5 +13,5 @@ public class MergeRootOperation {
     
     List<String> visited;
     
-    AddTransactionOperation transaction;
+    //AddTransactionOperation transaction;
 }
