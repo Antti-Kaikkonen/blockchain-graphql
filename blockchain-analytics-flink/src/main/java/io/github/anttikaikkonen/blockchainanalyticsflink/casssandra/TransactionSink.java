@@ -40,7 +40,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
-        this.semaphore = new Semaphore(Main.CASSANDRA_CONCURRENT_REQUESTS, false);
+        this.semaphore = new Semaphore(Main.CASSANDRA_CONCURRENT_REQUESTS, true);
     }
     
     @Override

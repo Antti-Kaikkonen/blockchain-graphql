@@ -54,6 +54,7 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
         super.open();
         this.semaphore = new Semaphore(Main.CASSANDRA_CONCURRENT_REQUESTS, true);
         this.session = this.sessionBuilder.build();
+        
         this.addTransactionStatement = this.session.prepare("INSERT INTO cluster_transaction (cluster_id, timestamp, height, tx_n, balance_change) VALUES (?, ?, ?, ?, ?)");
         this.setParentStatement = this.session.prepare("INSERT INTO union_find (address, parent) VALUES (?, ?)");
         this.makesetStatement = this.session.prepare("INSERT INTO union_find (address) VALUES (?)");

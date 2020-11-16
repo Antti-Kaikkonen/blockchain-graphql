@@ -15,7 +15,7 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.policies.RetryPolicy;
-import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.BlockSaver;
+import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.BlockSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransaction;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
@@ -29,9 +29,9 @@ import io.github.anttikaikkonen.bitcoinrpcclientjava.RpcClient;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Block;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.BlockHeader;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Transaction;
-import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionInput;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.AddressSink;
+import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CreateStatements;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.TransactionSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.InputPointer;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.SpentOutput;
@@ -53,11 +53,9 @@ import org.apache.flink.api.common.eventtime.WatermarkGeneratorSupplier;
 import org.apache.flink.api.common.eventtime.WatermarkOutput;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.statefun.flink.core.StatefulFunctionsConfig;
 import org.apache.flink.statefun.flink.core.message.MessageFactoryType;
@@ -200,6 +198,35 @@ public class Main {
                 return session;
             }
         };
+        
+        //Create schema if it doesn't already exist
+        Cluster cluster = Cluster.builder().addContactPoints(cassandraHosts).build();
+        Session session = cluster.connect();
+        session.execute("CREATE KEYSPACE IF NOT EXISTS "+cassandraKeyspace+" WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}");
+        session.execute("USE "+cassandraKeyspace);
+        session.execute(CreateStatements.TABLE_BLOCK);
+        session.execute(CreateStatements.TABLE_LONGEST_CHAIN);
+        
+        session.execute(CreateStatements.TYPE_SCRIPTPUBKEY);
+        session.execute(CreateStatements.TYPE_SCRIPTSIG);
+        session.execute(CreateStatements.TABLE_CONFIRMED_TRANSACTION);
+        session.execute(CreateStatements.TABLE_TRANSACTION);
+        session.execute(CreateStatements.TABLE_TRANSACTION_OUTPUT);
+        session.execute(CreateStatements.TABLE_TRANSACTION_INPUT);
+        session.execute(CreateStatements.TABLE_ADDRESS_TRANSACTION);
+        
+        session.execute(CreateStatements.TABLE_OHLC);
+        session.execute(CreateStatements.TABLE_DAILY_TOP_GAINERS);
+        session.execute(CreateStatements.TABLE_DAILY_TOP_LOSERS);
+        session.execute(CreateStatements.TABLE_DAILY_RICHLIST);
+        session.execute(CreateStatements.TABLE_ADDRESS_BALANCE);
+        
+        session.execute(CreateStatements.TABLE_UNION_FIND);
+        session.execute(CreateStatements.TABLE_CLUSTER_ADDRESS);
+        session.execute(CreateStatements.TABLE_CLUSTER_TRANSACTION);
+        session.close();
+        session.getCluster().close();
+        //End of schema creation
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
@@ -327,10 +354,9 @@ public class Main {
         ).startNewChain().uid("async_block_fetcher").name("Block fetcher");//.setParallelism(1);
         
 
-        AsyncDataStream.unorderedWait(
-                blocks,
-                new BlockSaver(sessionBuilder), 
-                10, 
+        AsyncDataStream.unorderedWait(blocks,
+                new BlockSink(sessionBuilder),
+                30, 
                 TimeUnit.SECONDS, 
                 CASSANDRA_CONCURRENT_REQUESTS
         ).uid("async_block_saver").name("Block saver");//.setParallelism(sinkParallelism);
@@ -369,37 +395,11 @@ public class Main {
             }
         }).uid("transactions_to_input_pointers").name("Input Pointers");
         
-        
-        /*SingleOutputStreamOperator<Tuple3<TransactionInput, String, Integer>> inputs = transactions.flatMap(new FlatMapFunction<ConfirmedTransaction, Tuple3<TransactionInput, String, Integer>>() {
-            @Override
-            public void flatMap(ConfirmedTransaction value, Collector<Tuple3<TransactionInput, String, Integer>> out) throws Exception {
-                int index = 0;
-                for (TransactionInput vin : value.getVin()) {
-                    out.collect(new Tuple3(vin, value.getTxid(), index));
-                    index++;
-                }
-            }
-        }).uid("transactions_to_inputs").name("Inputs");*/
-        
-        /*SingleOutputStreamOperator<Tuple2<TransactionInput, String>> nonCoinbaseInputs = inputs
-                .filter(input -> input.f0.getTxid() != null).uid("non_coinbase_filter").name("Non coinbase inputs")
-                .map(new MapFunction<Tuple3<TransactionInput, String, Integer>, Tuple2<TransactionInput, String>>() {
-                    @Override
-                    public Tuple2<TransactionInput, String> map(Tuple3<TransactionInput, String, Integer> e) throws Exception {
-                        return new Tuple2<TransactionInput, String>(e.f0, e.f1);
-                    }
-                })
-                .uid("non_coinbase_inputs").name("Non coinbase input tuples"); //.setParallelism(1);*/
-
-        //KeyedStream<Tuple2<TransactionInput, String>, String> inputsByOutpoint = nonCoinbaseInputs.keyBy(e -> e.f0.getTxid() + e.f0.getVout());
 
         SingleOutputStreamOperator<SpentOutput> spentOutputs = inputPointers.keyBy(e -> e.getTxid()+e.getVout())
                 .connect(outputsByOutpoint)
                 .process(new InputAttacher())
                 .uid("input_attacher").name("Input attacher");
-
-
-        //KeyedStream<SpentOutput, String> spentOutputsByOutpoint = DataStreamUtils.reinterpretAsKeyedStream(spentOutputs, e -> e.getVout().getTxid()+e.f0.getVout());
 
         KeyedStream<SpentOutput, String> spentOutputsByTxid = spentOutputs.keyBy(e -> e.getSpending_txid());
 
@@ -409,7 +409,7 @@ public class Main {
         AsyncDataStream.unorderedWait(
                 fullTxs, 
                 new TransactionSink(sessionBuilder), 
-                10, 
+                30, 
                 TimeUnit.SECONDS, 
                 CASSANDRA_CONCURRENT_REQUESTS
         ).uid("async_transaction_sink").name("TransactionSink");//.setParallelism(sinkParallelism);
@@ -438,15 +438,12 @@ public class Main {
                 for (Map.Entry<String, Long> e : addressDeltas.entrySet()) {
                     out.collect(new Tuple2<String, Long>(e.getKey(), e.getValue()));
                 }
-                
-                
             }
-            
         }).uid("address_transaction_deltas").name("Address Transaction Deltas").keyBy(e -> e.f0);
         
         AsyncDataStream.unorderedWait(addressTransactionDeltas.process(new AddressBalanceProcessor()).uid("address_balance_processor").name("Address Balance Processor"), 
                 new AddressSink(sessionBuilder), 
-                10, 
+                30, 
                 TimeUnit.SECONDS, 
                 CASSANDRA_CONCURRENT_REQUESTS
         ).uid("address_sink").name("Address Sink");

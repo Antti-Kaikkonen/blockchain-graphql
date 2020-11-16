@@ -1,6 +1,5 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.casssandra;
 
-
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
 import com.google.common.util.concurrent.Futures;
@@ -9,13 +8,13 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Longe
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Block;
 import java.util.List;
 
-public class BlockSaver extends CassandraSaverFunction<Block> {
+public class BlockSink extends CassandraSaverFunction<Block> {
 
     
     private Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block> blockMapper;
     private Mapper<LongestChain> heightMapper;
     
-    public BlockSaver(CassandraSessionBuilder sessionBuilder) {
+    public BlockSink(CassandraSessionBuilder sessionBuilder) {
         super(sessionBuilder);
     }
     
@@ -33,6 +32,7 @@ public class BlockSaver extends CassandraSaverFunction<Block> {
     public void initMappers(MappingManager manager) {
         this.heightMapper = manager.mapper(LongestChain.class);
         this.blockMapper = manager.mapper(io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block.class);
+        
     }
     
 }
