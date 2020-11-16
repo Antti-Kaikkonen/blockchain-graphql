@@ -45,7 +45,7 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
     private Semaphore semaphore;
     
     public UnionFindSink(TypeSerializer<AddressOperation> serializer, CassandraSessionBuilder sessionBuilder) throws Exception {
-        super(new ScyllaCommitter(sessionBuilder), serializer, UUID.randomUUID().toString().replace("-", "_"));
+        super(new CassandraCommitter(sessionBuilder), serializer, UUID.randomUUID().toString().replace("-", "_"));
         this.sessionBuilder = sessionBuilder;
     }
 

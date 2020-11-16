@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.Map;
 import org.apache.flink.streaming.runtime.operators.CheckpointCommitter;
 
-public class ScyllaCommitter extends CheckpointCommitter {
+public class CassandraCommitter extends CheckpointCommitter {
 
     private static final long serialVersionUID = 1L;
 
@@ -23,7 +23,7 @@ public class ScyllaCommitter extends CheckpointCommitter {
 	 */
 	private final Map<Integer, Long> lastCommittedCheckpoints = new HashMap<>();
 
-	public ScyllaCommitter(CassandraSessionBuilder sessionBuilder) {
+	public CassandraCommitter(CassandraSessionBuilder sessionBuilder) {
 		this.sessionBuilder = sessionBuilder;
 	}
 
