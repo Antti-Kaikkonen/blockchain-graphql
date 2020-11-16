@@ -2,9 +2,11 @@ package io.github.anttikaikkonen.blockchainanalyticsflink.casssandra;
 
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
+import io.github.anttikaikkonen.blockchainanalyticsflink.Main;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.AddressTransaction;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.ConfirmedTransaction;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.ScriptPubKey;
@@ -19,6 +21,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
+import org.apache.flink.configuration.Configuration;
 
 public class TransactionSink extends CassandraSaverFunction<ConfirmedTransactionWithInputs> {
 
@@ -27,13 +31,32 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
     private Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput> voutMapper;
     private Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput> vinMapper;
     private Mapper<AddressTransaction> addressTransactionMapper;
+    private Semaphore semaphore;
     
     public TransactionSink(CassandraSessionBuilder sessionBuilder) {
         super(sessionBuilder);
     }
+
+    @Override
+    public void open(Configuration parameters) throws Exception {
+        super.open(parameters);
+        this.semaphore = new Semaphore(Main.CASSANDRA_CONCURRENT_REQUESTS, false);
+    }
     
     @Override
     public ListenableFuture saveAsync(ConfirmedTransactionWithInputs transaction) {
+        FutureCallback<Void> releaseSemaphore = new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(Void resultSet) {
+                semaphore.release();
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                semaphore.release();
+            }
+        };
+        
         ArrayList<ListenableFuture<Void>> futures = new ArrayList<>();
         
         List<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput> inputs = new ArrayList<>();
@@ -56,8 +79,9 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
                 vout.setN(vin.getVout());
                 vout.setSpending_txid(transaction.getTxid());
                 vout.setSpending_index(transaction.getTxN());
-                futures.add(voutMapper.saveAsync(vout, Mapper.Option.saveNullFields(false)));//Update query
-                
+                this.semaphore.acquireUninterruptibly();
+                ListenableFuture<Void> future = voutMapper.saveAsync(vout, Mapper.Option.saveNullFields(false));//Update query
+                Futures.addCallback(future, releaseSemaphore);
                 fee += Math.round(vin.getSpentOutput().getValue()*1e8);
             }
 
@@ -73,7 +97,10 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
             vin2.setSequence(vin.getSequence());
             vin2.setTxid(vin.getTxid());
             vin2.setVout(vin.getVout());
-            futures.add(vinMapper.saveAsync(vin2));
+            this.semaphore.acquireUninterruptibly();
+            ListenableFuture<Void> future = vinMapper.saveAsync(vin2);
+            Futures.addCallback(future, releaseSemaphore);
+            futures.add(future);
         }
         for (TransactionOutput vout : transaction.getVout()) {
             io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput vout2 = new io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput();
@@ -82,7 +109,10 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
             ScriptPubKey scriptpubKey = new ScriptPubKey(vout.getScriptPubKey());
             vout2.setScriptPubKey(scriptpubKey);
             vout2.setValue(vout.getValue());
-            futures.add(voutMapper.saveAsync(vout2));
+            this.semaphore.acquireUninterruptibly();
+            ListenableFuture<Void> future = voutMapper.saveAsync(vout2);
+            Futures.addCallback(future, releaseSemaphore);
+            futures.add(future);
 
             fee -= Math.round(vout.getValue()*1e8);
         }
@@ -91,11 +121,15 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
         } else {
             tx.setTx_fee(fee);
         }
-        
-        
-        futures.add(txMapper.saveAsync(tx));
+        this.semaphore.acquireUninterruptibly();
+        ListenableFuture<Void> future = txMapper.saveAsync(tx);
+        Futures.addCallback(future, releaseSemaphore);
+        futures.add(future);
         ConfirmedTransaction ct = new ConfirmedTransaction(tx.getHeight(), tx.getTxN(), tx.getTxid());
-        futures.add(ctMapper.saveAsync(ct));
+        this.semaphore.acquireUninterruptibly();
+        future = ctMapper.saveAsync(ct);
+        Futures.addCallback(future, releaseSemaphore);
+        futures.add(future);
         
         
         Map<String, Long> addressDeltas = new HashMap<>();
@@ -118,7 +152,10 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
             long delta = addressDeltas.get(address);
             AddressTransaction addressTransaction = new AddressTransaction(address, null, transaction.getHeight(), transaction.getTxN(), delta);
             addressTransaction.setTimestamp(Date.from(Instant.ofEpochMilli(transaction.getTimestamp())));
-            futures.add(addressTransactionMapper.saveAsync(addressTransaction));
+            this.semaphore.acquireUninterruptibly();
+            future = addressTransactionMapper.saveAsync(addressTransaction);
+            Futures.addCallback(future, releaseSemaphore);
+            futures.add(future);
         }
         
         

@@ -164,7 +164,7 @@
                             </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>io.github.anttikaikkonen.blockchainanalyticsflink.AddressBalanceCandlesticks</mainClass>
+                                    <mainClass>io.github.anttikaikkonen.blockchainanalyticsflink.Main</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

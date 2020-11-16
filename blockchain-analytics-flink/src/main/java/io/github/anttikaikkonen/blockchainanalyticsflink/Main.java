@@ -33,6 +33,8 @@ import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionInput;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.AddressSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.TransactionSink;
+import io.github.anttikaikkonen.blockchainanalyticsflink.models.InputPointer;
+import io.github.anttikaikkonen.blockchainanalyticsflink.models.SpentOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockClusterProcessor;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockClustering;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.ConfirmedTransactionToDisjointSets;
@@ -52,7 +54,6 @@ import org.apache.flink.api.common.eventtime.WatermarkOutput;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -73,7 +74,6 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.util.Collector;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -83,11 +83,11 @@ import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
 
-public class AddressBalanceCandlesticks {
+public class Main {
     
     
     private static final int BLOCK_FETCHER_CONCURRENCY = 1;
-    public static final int CASSANDRA_CONCURRENT_REQUESTS = 3;
+    public static final int CASSANDRA_CONCURRENT_REQUESTS = 100;
     
     public static final String PROPERTIES_CASSANDRA_HOST = "cassandra.host";
     public static final String PROPERTIES_CASSANDRA_KEYSPACE = "cassandra.namespace";
@@ -123,8 +123,8 @@ public class AddressBalanceCandlesticks {
                                 new PoolingOptions()
                                         .setConnectionsPerHost(HostDistance.LOCAL, 1, 1)
                                         .setConnectionsPerHost(HostDistance.REMOTE, 1, 1)
-                                        .setMaxRequestsPerConnection(HostDistance.LOCAL, 20000)
-                                        .setMaxRequestsPerConnection(HostDistance.REMOTE, 20000)
+                                        .setMaxRequestsPerConnection(HostDistance.LOCAL, 30000)
+                                        .setMaxRequestsPerConnection(HostDistance.REMOTE, 30000)
                                         .setMaxQueueSize(0)
                         ).withRetryPolicy(new RetryPolicy() {
                             @Override
@@ -134,7 +134,7 @@ public class AddressBalanceCandlesticks {
                                     try {
                                         Thread.sleep(nbRetry*100);
                                     } catch (InterruptedException ex) {
-                                        Logger.getLogger(AddressBalanceCandlesticks.class.getName()).log(Level.SEVERE, null, ex);
+                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
                                     return RetryPolicy.RetryDecision.retry(cl);
                                 } else {
@@ -149,7 +149,7 @@ public class AddressBalanceCandlesticks {
                                     try {
                                         Thread.sleep(nbRetry*100);
                                     } catch (InterruptedException ex) {
-                                        Logger.getLogger(AddressBalanceCandlesticks.class.getName()).log(Level.SEVERE, null, ex);
+                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
                                     return RetryPolicy.RetryDecision.retry(cl);
                                 } else {
@@ -164,7 +164,7 @@ public class AddressBalanceCandlesticks {
                                     try {
                                         Thread.sleep(nbRetry*100);
                                     } catch (InterruptedException ex) {
-                                        Logger.getLogger(AddressBalanceCandlesticks.class.getName()).log(Level.SEVERE, null, ex);
+                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
                                     return RetryPolicy.RetryDecision.retry(cl);
                                 } else {
@@ -179,7 +179,7 @@ public class AddressBalanceCandlesticks {
                                     try {
                                         Thread.sleep(nbRetry*100);
                                     } catch (InterruptedException ex) {
-                                        Logger.getLogger(AddressBalanceCandlesticks.class.getName()).log(Level.SEVERE, null, ex);
+                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
                                     return RetryPolicy.RetryDecision.retry(cl);
                                 } else {
@@ -324,10 +324,10 @@ public class AddressBalanceCandlesticks {
                 10, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY
-        ).uid("async_block_fetcher").name("Block fetcher");//.setParallelism(1);
+        ).startNewChain().uid("async_block_fetcher").name("Block fetcher");//.setParallelism(1);
         
 
-        AsyncDataStream.orderedWait(
+        AsyncDataStream.unorderedWait(
                 blocks,
                 new BlockSaver(sessionBuilder), 
                 10, 
@@ -358,7 +358,19 @@ public class AddressBalanceCandlesticks {
 
         KeyedStream<Tuple2<TransactionOutput, String>, String> outputsByOutpoint = outputs.keyBy(e -> e.f1 + e.f0.getN());
 
-        SingleOutputStreamOperator<Tuple3<TransactionInput, String, Integer>> inputs = transactions.flatMap(new FlatMapFunction<ConfirmedTransaction, Tuple3<TransactionInput, String, Integer>>() {
+        SingleOutputStreamOperator<InputPointer> inputPointers = transactions.flatMap(new FlatMapFunction<ConfirmedTransaction, InputPointer>() {
+            @Override
+            public void flatMap(ConfirmedTransaction value, Collector<InputPointer> out) throws Exception {
+                if (value.getTxN() == 0) return;
+                
+                for (int i = 0; i < value.getVin().length; i++) {
+                    out.collect(new InputPointer(value.getTxid(), value.getVin()[i].getTxid(), value.getVin()[i].getVout(), i));
+                }
+            }
+        }).uid("transactions_to_input_pointers").name("Input Pointers");
+        
+        
+        /*SingleOutputStreamOperator<Tuple3<TransactionInput, String, Integer>> inputs = transactions.flatMap(new FlatMapFunction<ConfirmedTransaction, Tuple3<TransactionInput, String, Integer>>() {
             @Override
             public void flatMap(ConfirmedTransaction value, Collector<Tuple3<TransactionInput, String, Integer>> out) throws Exception {
                 int index = 0;
@@ -367,9 +379,9 @@ public class AddressBalanceCandlesticks {
                     index++;
                 }
             }
-        }).uid("transactions_to_inputs").name("Inputs");
+        }).uid("transactions_to_inputs").name("Inputs");*/
         
-        SingleOutputStreamOperator<Tuple2<TransactionInput, String>> nonCoinbaseInputs = inputs
+        /*SingleOutputStreamOperator<Tuple2<TransactionInput, String>> nonCoinbaseInputs = inputs
                 .filter(input -> input.f0.getTxid() != null).uid("non_coinbase_filter").name("Non coinbase inputs")
                 .map(new MapFunction<Tuple3<TransactionInput, String, Integer>, Tuple2<TransactionInput, String>>() {
                     @Override
@@ -377,24 +389,24 @@ public class AddressBalanceCandlesticks {
                         return new Tuple2<TransactionInput, String>(e.f0, e.f1);
                     }
                 })
-                .uid("non_coinbase_inputs").name("Non coinbase input tuples"); //.setParallelism(1);
+                .uid("non_coinbase_inputs").name("Non coinbase input tuples"); //.setParallelism(1);*/
 
-        KeyedStream<Tuple2<TransactionInput, String>, String> inputsByOutpoint = nonCoinbaseInputs.keyBy(e -> e.f0.getTxid() + e.f0.getVout());
+        //KeyedStream<Tuple2<TransactionInput, String>, String> inputsByOutpoint = nonCoinbaseInputs.keyBy(e -> e.f0.getTxid() + e.f0.getVout());
 
-        SingleOutputStreamOperator<Tuple2<TransactionInputWithOutput, String>> spentOutputs = inputsByOutpoint
+        SingleOutputStreamOperator<SpentOutput> spentOutputs = inputPointers.keyBy(e -> e.getTxid()+e.getVout())
                 .connect(outputsByOutpoint)
                 .process(new InputAttacher())
                 .uid("input_attacher").name("Input attacher");
 
 
-        KeyedStream<Tuple2<TransactionInputWithOutput, String>, String> spentOutputsByOutpoint = DataStreamUtils.reinterpretAsKeyedStream(spentOutputs, e -> e.f0.getTxid()+e.f0.getVout());
+        //KeyedStream<SpentOutput, String> spentOutputsByOutpoint = DataStreamUtils.reinterpretAsKeyedStream(spentOutputs, e -> e.getVout().getTxid()+e.f0.getVout());
 
-        KeyedStream<Tuple2<TransactionInputWithOutput, String>, String> spentOutputsByTxid = spentOutputsByOutpoint.keyBy(e -> e.f1);
+        KeyedStream<SpentOutput, String> spentOutputsByTxid = spentOutputs.keyBy(e -> e.getSpending_txid());
 
         SingleOutputStreamOperator<ConfirmedTransactionWithInputs> fullTxs = spentOutputsByTxid.connect(transactions.keyBy(e -> e.getTxid())).process(new TransactionAttacher())
                 .uid("transaction_attacher").name("Transaction attacher");
         
-        AsyncDataStream.orderedWait(
+        AsyncDataStream.unorderedWait(
                 fullTxs, 
                 new TransactionSink(sessionBuilder), 
                 10, 
@@ -432,14 +444,14 @@ public class AddressBalanceCandlesticks {
             
         }).uid("address_transaction_deltas").name("Address Transaction Deltas").keyBy(e -> e.f0);
         
-        AsyncDataStream.orderedWait(addressTransactionDeltas.process(new AddressBalanceProcessor()).uid("address_balance_processor").name("Address Balance Processor"), 
+        AsyncDataStream.unorderedWait(addressTransactionDeltas.process(new AddressBalanceProcessor()).uid("address_balance_processor").name("Address Balance Processor"), 
                 new AddressSink(sessionBuilder), 
                 10, 
                 TimeUnit.SECONDS, 
                 CASSANDRA_CONCURRENT_REQUESTS
-        ).uid("address_sink").name("AddressSink");
+        ).uid("address_sink").name("Address Sink");
        
-        String flinkJobName = StringUtils.capitalize(cassandraKeyspace) + " Address Analysis";
+        String flinkJobName = StringUtils.capitalize(cassandraKeyspace) + " Blockchain Analysis";
 
         DataStream<Tuple2<Integer, DisjointSetForest>> txClusters = fullTxs.process(new ConfirmedTransactionToDisjointSets()).uid("tx_clusters").name("Tx clusters");
         
@@ -461,8 +473,6 @@ public class AddressBalanceCandlesticks {
                 .build(env);
         
         DataStream<AddressOperation> cassandraAddressOperations = out.getDataStreamForEgressId(UnionFindFunction.EGRESS);
-        
-        
         UnionFindSink sink = new UnionFindSink(cassandraAddressOperations.getType().createSerializer(cassandraAddressOperations.getExecutionEnvironment().getConfig()), sessionBuilder);
         SingleOutputStreamOperator<AddressOperation> nothing = cassandraAddressOperations.transform("Address Clustering Sink", null, sink).uid("address_clustering_sink");//.setParallelism(SINK_PARALLELISM);
         

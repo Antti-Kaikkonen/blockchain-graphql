@@ -44,7 +44,7 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
     
     @Override
     public void run(SourceContext<Integer> ctx) throws Exception {
-        System.out.println("Headers source run() height = "+this.height);
+        System.out.println("Starting block height source from height "+this.height);
         while (this.isRunning) {
             long blockCount = this.rpcClient.getBlockCount().toCompletableFuture().get();
             long targetHeight = blockCount-this.minConfirmations;
@@ -66,25 +66,21 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
                 Thread.sleep(this.pollingInterval);
             }
         }
-        System.out.println("Height source exit run");
     }
 
     @Override
     public void cancel() {
-        System.out.println("HeightSource cancel");
         this.isRunning = false;
     }
 
     @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
-        System.out.println("Block height source: snapshotting state "+context.getCheckpointId());
         this.checkpointedHeight.clear();
         this.checkpointedHeight.add(height);
     }
 
     @Override
     public void initializeState(FunctionInitializationContext context) throws Exception {
-        System.out.println("Block height source: initialize state");
         this.checkpointedHeight = context.getOperatorStateStore().getListState(new ListStateDescriptor<>("height", Integer.class));
         if (context.isRestored()) {
             for (Integer height : this.checkpointedHeight.get()) {
@@ -110,7 +106,7 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
         System.out.println("HeightSource open");
         this.rpcClient = rpcClientBuilder.build();
         this.session = sessionBuilder.build();
-        this.heightStatement = this.session.prepare("SELECT hash FROM longest_chain WHERE height = :height");
+        this.heightStatement = this.session.prepare("SELECT tx_n FROM confirmed_transaction WHERE height = :height AND tx_n = 0");
         getRuntimeContext().getMetricGroup().gauge("Current height", new Gauge<Integer>() {
             @Override
             public Integer getValue() {

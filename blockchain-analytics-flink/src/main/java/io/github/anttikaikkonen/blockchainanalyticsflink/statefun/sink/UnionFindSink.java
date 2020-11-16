@@ -7,7 +7,7 @@ import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import io.github.anttikaikkonen.blockchainanalyticsflink.AddressBalanceCandlesticks;
+import io.github.anttikaikkonen.blockchainanalyticsflink.Main;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteAddresses;
@@ -52,7 +52,7 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
     @Override
     public void open() throws Exception {
         super.open();
-        this.semaphore = new Semaphore(AddressBalanceCandlesticks.CASSANDRA_CONCURRENT_REQUESTS, true);
+        this.semaphore = new Semaphore(Main.CASSANDRA_CONCURRENT_REQUESTS, true);
         this.session = this.sessionBuilder.build();
         this.addTransactionStatement = this.session.prepare("INSERT INTO cluster_transaction (cluster_id, timestamp, height, tx_n, balance_change) VALUES (?, ?, ?, ?, ?)");
         this.setParentStatement = this.session.prepare("INSERT INTO union_find (address, parent) VALUES (?, ?)");
@@ -82,15 +82,6 @@ public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
         }
     }
     
-    
-    private void execute(BoundStatement bind, long timestamp, FutureCallback<ResultSet> callback) throws InterruptedException {
-        bind.setDefaultTimestamp(timestamp);
-        semaphore.acquire();
-        ResultSetFuture resultFuture = this.session.executeAsync(bind);
-        if (resultFuture != null) {
-            Futures.addCallback(resultFuture, callback);
-        }
-    }
     
     @Override
     protected boolean sendValues(Iterable<AddressOperation> iterable, long checkpointId, long timestamp) throws Exception {

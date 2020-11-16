@@ -1,7 +1,7 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.precluster;
 
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
-import io.github.anttikaikkonen.blockchainanalyticsflink.AddressBalanceCandlesticks;
+import io.github.anttikaikkonen.blockchainanalyticsflink.Main;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.TransactionInputWithOutput;
 import java.util.Set;
@@ -31,7 +31,7 @@ public class ConfirmedTransactionToDisjointSets extends ProcessFunction<Confirme
             } catch(Exception ex) {
             }
         }
-        if (!AddressBalanceCandlesticks.possiblyCoinJoin(tx)) {
+        if (!Main.possiblyCoinJoin(tx)) {
             Set<String> inputAddresses = new TreeSet<>();
             for (TransactionInputWithOutput vin : tx.getVin()) {
                 try {
