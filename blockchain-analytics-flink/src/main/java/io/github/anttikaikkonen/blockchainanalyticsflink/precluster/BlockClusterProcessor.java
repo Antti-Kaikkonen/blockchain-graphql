@@ -5,6 +5,7 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.Bloc
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.MergeOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.UnionFindFunction;
 import java.time.Duration;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -90,28 +91,47 @@ public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<
             Collections.sort(connectedAddresses);
             Map<Integer, Long> txs = blockCluster.f1.transactions.get(root);
             BlockTx[] blockTxs = new BlockTx[txs.size()];
-            int i = 0;
+            int transactionIndex = 0;
             for (Map.Entry<Integer, Long> e : txs.entrySet()) {
                 BlockTx blockTx = new BlockTx(e.getKey(), e.getValue());
-                blockTxs[i] = blockTx;
-                i++;
+                blockTxs[transactionIndex] = blockTx;
+                transactionIndex++;
             }
             SimpleAddAddressesAndTransactionsOperation op = new SimpleAddAddressesAndTransactionsOperation(connectedAddresses.toArray(new String[connectedAddresses.size()]), blockTxs);
             this.persistedOps.add(op);
-            for (int ii = 1; ii < connectedAddresses.size(); ii++) {
-                MergeOperation mergeOp = new MergeOperation(connectedAddresses.get(0), new ArrayList<>());
-                RoutableMessage rm = RoutableMessageBuilder.builder().withTargetAddress(new Address(UnionFindFunction.TYPE, connectedAddresses.get(ii))).withMessageBody(mergeOp).build();
+            if (connectedAddresses.size() > 1) {
+                String toAddress = connectedAddresses.get(0);
+                ArrayList<String> fromAddresses = new ArrayList<>();
+                for (int i = 1; i < connectedAddresses.size(); i++) {
+                    fromAddresses.add(connectedAddresses.get(i));
+                }
+                MergeOperation mergeOp = new MergeOperation(fromAddresses);
+                RoutableMessage rm = RoutableMessageBuilder.builder().withTargetAddress(new Address(UnionFindFunction.TYPE, toAddress)).withMessageBody(mergeOp).build();
                 out.collect(rm);
             }
+            /*List<String> fromAddresses = connectedAddresses.subList(1, connectedAddresses.size());
+            String to = connectedAddresses.get(0);
+            for (int i = 1; i < connectedAddresses.size(); i++) {
+                //String to = connectedAddresses.get(connectedAddresses.size()-1);
+                //String from = connectedAddresses.get(ii);
+                //to < from
+                String to = connectedAddresses.get(0);
+                String from = connectedAddresses.get(i);
+                MergeOperation mergeOp = new MergeOperation(from, 0);
+                RoutableMessage rm = RoutableMessageBuilder.builder().withTargetAddress(new Address(UnionFindFunction.TYPE, to)).withMessageBody(mergeOp).build();
+                out.collect(rm);
+            }*/
         }
         
         
         persistedTime.update(ctx.timestamp());
-        long ago = System.currentTimeMillis()-ctx.timestamp();
-        if (ago > Duration.ofDays(1).toMillis()) {
-            ctx.timerService().registerEventTimeTimer(ctx.timestamp()+Math.round(ago*0.5));
+        long currentTime = System.currentTimeMillis();
+        long ago = currentTime-ctx.timestamp();
+        long processTime = ctx.timestamp()+Math.round(ago*0.5);
+        if (currentTime-processTime < Duration.ofDays(1).toMillis()) {//Process the last 24 hours in real-time
+            ctx.timerService().registerEventTimeTimer(Math.max(ctx.timestamp(), currentTime-Duration.ofDays(1).toMillis()));
         } else {
-            ctx.timerService().registerEventTimeTimer(ctx.timestamp());
+            ctx.timerService().registerEventTimeTimer(processTime);
         }
     }
 

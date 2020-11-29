@@ -105,12 +105,12 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
         for (TransactionOutput vout : transaction.getVout()) {
             io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput vout2 = new io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput();
             vout2.setTxid(transaction.getTxid());
-            vout2.setN(transaction.getTxN());
+            vout2.setN(vout.getN());
             ScriptPubKey scriptpubKey = new ScriptPubKey(vout.getScriptPubKey());
             vout2.setScriptPubKey(scriptpubKey);
             vout2.setValue(vout.getValue());
             this.semaphore.acquireUninterruptibly();
-            ListenableFuture<Void> future = voutMapper.saveAsync(vout2);
+            ListenableFuture<Void> future = voutMapper.saveAsync(vout2, Mapper.Option.saveNullFields(false));
             Futures.addCallback(future, releaseSemaphore);
             futures.add(future);
 

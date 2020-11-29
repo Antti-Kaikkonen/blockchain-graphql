@@ -3,28 +3,23 @@ package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind;
 
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetParent;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import org.apache.flink.statefun.sdk.Address;
 import org.apache.flink.statefun.sdk.Context;
 import org.apache.flink.statefun.sdk.FunctionType;
 import org.apache.flink.statefun.sdk.StatefulFunction;
 import org.apache.flink.statefun.sdk.annotations.Persisted;
 import org.apache.flink.statefun.sdk.io.EgressIdentifier;
-import org.apache.flink.statefun.sdk.state.PersistedStateRegistry;
 import org.apache.flink.statefun.sdk.state.PersistedTable;
 import org.apache.flink.statefun.sdk.state.PersistedValue;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteTransactions;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteAddresses;
+import java.util.Iterator;
 
 public class UnionFindFunction implements StatefulFunction {
     
     public static final EgressIdentifier<AddressOperation> EGRESS = new EgressIdentifier<>("address_clustering", "union_find_sink", AddressOperation.class);
 
-    
     public static final FunctionType TYPE = new FunctionType("address_clustering", "union_find");
     
     @Persisted
@@ -33,25 +28,17 @@ public class UnionFindFunction implements StatefulFunction {
     @Persisted
     private final PersistedValue<Long> persistentAddressCount = PersistedValue.of("addressCount", Long.class);
     
-    /*@Persisted
-    private final PersistedStateRegistry registry = new PersistedStateRegistry();*/
-    
     @Persisted
     private final PersistedTable<String, String> persistedAddresses = PersistedTable.of("addresses", String.class, String.class);
 
     @Persisted
     private final PersistedTable<TxPointer, Long> persistedTransactions = PersistedTable.of("transactions", TxPointer.class, Long.class);
     
-    /*@Persisted
-    private final PersistedValue<Integer> persistedTransactionCount = PersistedValue.of("transactionCount", Integer.class);*/
+    @Persisted
+    private final PersistedValue<Long> persistedClusterTransactionCount = PersistedValue.of("clusterTransactionCount", Long.class);
     
-    /*@Persisted
-    private final PersistedTable<TxPointer, Long> persistedTransactions = PersistedTable.of("transactions", TxPointer.class, Long.class);*/
-    
-    /*@Persisted
-    private final PersistedAppendingBuffer<String> persistedAddresses = PersistedAppendingBuffer.of("addresses", String.class);*/
-    
-    
+    @Persisted
+    private final PersistedValue<Long> persistedClusterAddressCount = PersistedValue.of("clusterAddressCount", Long.class);
     
     public UnionFindFunction() {
     }
@@ -71,34 +58,34 @@ public class UnionFindFunction implements StatefulFunction {
             makeSet = true;
         }
         if (!address.equals(parent)) {
+            if (context.caller() != null) {
+                context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
+            }
             context.send(new Address(TYPE, parent), op);
         } else {
-            /*if (this.persistedAddresses == null) {
-                this.persistedAddresses = PersistedTable.of("addresses", String.class, String.class);
-                this.registry.registerTable(persistedAddresses);
-
-                this.persistedTransactions = PersistedTable.of("transactions", TxPointer.class, Long.class);
-                this.registry.registerTable(persistedTransactions);
-                
-                for (BlockTx tx : op.getBlockTxs()) {
-                    TxPointer key = new TxPointer(op.getTimestamp(), op.getHeight(), tx.getTxN());
-                    persistedTransactions.set(key, tx.getDelta());
-                    sendToCassandra(context, new AddTransactionOperation(op.getTimestamp(), op.getHeight(), tx.getTxN(), tx.getDelta()));
-                }
-            } else {*/
-                for (BlockTx tx : op.getBlockTxs()) {
-                    TxPointer key = new TxPointer(op.getTimestamp(), op.getHeight(), tx.getTxN());
-                    Long oldDelta = makeSet ? null : persistedTransactions.get(key);
-                    //Long oldDelta = persistedTransactions.get(key);
-                    long newDelta = oldDelta == null ? tx.getDelta() : tx.getDelta()+oldDelta;
-                    persistedTransactions.set(key, newDelta);
-                    sendToCassandra(context, new AddTransactionOperation(op.getTimestamp(), op.getHeight(), tx.getTxN(), newDelta));
-                }
-            //}
-            for (String addr : op.getAddresses()) {
-                this.persistedAddresses.set(addr, "");
-                sendToCassandra(context, new AddAddressOperation(addr));
+            long oldTxCount = makeSet ? 0 : this.persistedClusterTransactionCount.getOrDefault(0l);
+            int newTransactions = 0;
+            for (BlockTx tx : op.getBlockTxs()) {
+                TxPointer key = new TxPointer(op.getTimestamp(), op.getHeight(), tx.getTxN());
+                Long oldDelta = (oldTxCount == 0) ? null : persistedTransactions.get(key);
+                if (oldDelta == null) newTransactions++;
+                long newDelta = oldDelta == null ? tx.getDelta() : tx.getDelta()+oldDelta;
+                persistedTransactions.set(key, newDelta);
+                sendToCassandra(context, new AddTransactionOperation(op.getTimestamp(), op.getHeight(), tx.getTxN(), newDelta));
             }
+            if (newTransactions > 0) this.persistedClusterTransactionCount.set(oldTxCount+newTransactions);
+            
+            long oldAddressCount = makeSet ? 0 : this.persistedClusterAddressCount.getOrDefault(0l);
+            int newAddresses = 0;
+            for (String addr : op.getAddresses()) {
+                String existingAddress = (oldAddressCount == 0) ? null : this.persistedAddresses.get(addr);
+                if (existingAddress == null) {
+                    newAddresses++;
+                    this.persistedAddresses.set(addr, "");
+                    sendToCassandra(context, new AddAddressOperation(addr));
+                }
+            }
+            if (newAddresses > 0) this.persistedClusterAddressCount.set(oldAddressCount+newAddresses);
         }
     }
     
@@ -112,19 +99,13 @@ public class UnionFindFunction implements StatefulFunction {
             mergeRoot(context, e);
         } else if (input instanceof Compress) {
             Compress e = (Compress) input;
-            compress2(context, e);
+            compress(context, e);
         } else if (input instanceof SetSize) {
             SetSize e = (SetSize) input;
             setSize(context, e);
-        } else if (input instanceof AddTransactionOperation[]) {
-            AddTransactionOperation[] e = (AddTransactionOperation[]) input;
-            addTransactions(context, e);
         } else if (input instanceof AddTransactionOperation) {
             AddTransactionOperation e = (AddTransactionOperation) input;
             addTransaction(context, e);
-        } else if (input instanceof AddAddressOperation[]) {
-            AddAddressOperation[] e = (AddAddressOperation[]) input;
-            addAddresses(context, e);
         } else if (input instanceof AddAddressOperation) {
             AddAddressOperation e = (AddAddressOperation) input;
             addAddress(context, e);
@@ -140,127 +121,124 @@ public class UnionFindFunction implements StatefulFunction {
         String address = context.self().id();
         setParent(context, address);
         persistentAddressCount.set(1l);
-        //sendToCassandra(context, new AddAddressOperation(address));TODO
-        
-        //executeCassandraQuery(context, "INSERT INTO dash.cluster_address (cluster_id, address) VALUES ('"+address+"', '"+address+"')");
     }
+    
+    
     
     private void merge(Context context, MergeOperation merge) {
-        if (merge.getVisited().size() > 10) {
-            System.out.println("Merge Visited.size = "+merge.getVisited().size());
+        final String callerAddress;
+        if (context.caller() != null && context.caller().type().equals(TYPE)) {
+            callerAddress = context.caller().id();
+        } else {
+            callerAddress = null;
         }
         String address = context.self().id();
-        
         String parent = persistedParent.get();
+        
+        //System.out.println(address+" MERGE "+merge.toString()+", parent="+parent+", caller="+callerAddress);
+        
+        
         if (parent == null) {
             makeset(context);
-            MergeRootOperation mergeRoot = new MergeRootOperation(address, 1, merge.getVisited(), new ArrayList<>()/*, merge.getTransaction()*/);
-            context.send(new Address(TYPE, merge.getTo()), mergeRoot);
-        } else if (parent.equals(merge.getTo())) {
-            compressTo(context, parent,  merge.getVisited());
-            //if (merge.getTransaction() != null) context.send(new Address(TYPE, parent), merge.getTransaction());
-            //TODO save tx, path compression
+            for (String from : merge.getFromAddresses()) {
+                MergeRootOperation mergeRoot = new MergeRootOperation(address, 1, false);//Crete new objects because sending the same object caused it to be reused in mergeRoot() method
+                context.send(new Address(TYPE, from), mergeRoot);
+            } 
         } else if (address.equals(parent)) {
-            MergeRootOperation mergeRoot = new MergeRootOperation(address, persistentAddressCount.get(), merge.getVisited(), new ArrayList<>()/*, merge.getTransaction()*/);
-            context.send(new Address(TYPE, merge.getTo()), mergeRoot);
+            long size = persistentAddressCount.get();
+            for (String from : merge.getFromAddresses()) {
+                MergeRootOperation mergeRoot = new MergeRootOperation(address, size, false);
+                context.send(new Address(TYPE, from), mergeRoot);
+            }
         } else {
-            merge.getVisited().add(address);
-            context.send(new Address(TYPE, parent), merge);
-        }
-    }
-    
-    private void compressTo(Context context, String to, Collection<String> addresses) {
-        
-        Compress compress = new Compress(to);
-        for (String a: addresses) {
-            context.send(new Address(TYPE, a), compress);
+            if (callerAddress != null) {
+                context.send(new Address(TYPE, callerAddress), new Compress(parent));
+            }
+            Iterator<String> fromAddresses = merge.getFromAddresses().iterator();
+            while (fromAddresses.hasNext()) {
+                String from = fromAddresses.next();
+                if (parent.equals(from)) {//Already in the same set
+                    fromAddresses.remove();
+                } 
+            }
+            if (merge.getFromAddresses().size() > 0) {
+                context.send(new Address(TYPE, parent), merge);
+            }
         }
     }
     
     private void mergeRoot(Context context, MergeRootOperation mergeRoot) {
-        if (mergeRoot.getVisited().size() > 10) {
-            System.out.println("Mergeroot Visited.size = "+mergeRoot.getVisited().size());
-        }
         String address = context.self().id();
         String parent = persistedParent.get();
         if (parent == null) {
-            if (mergeRoot.getRootSize() > 1 || (mergeRoot.getRootSize() == 1 && address.compareTo(mergeRoot.getRoot()) < 0)) {//we use a tiebreaker to avoid creating loops
+            if (mergeRoot.getRootSize() > 1 || (mergeRoot.getRootSize() == 1 && address.compareTo(mergeRoot.getRoot()) > 0)) {//we use a tiebreaker to avoid creating loops (merge from the lexicographically larger address to the smaller one)
                 setParent(context, mergeRoot.getRoot());
-                context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(1));
-                //if (mergeRoot.getTransaction() != null) context.send(new Address(TYPE, mergeRoot.getRoot())/*, mergeRoot.getTransaction()*/);
-                Set<String> compresAddresses = new HashSet<>(mergeRoot.getVisited());
-                for (int i = 0; i < mergeRoot.getRootVisited().size()-1; i++) {
-                    compresAddresses.add(mergeRoot.getRootVisited().get(i));
-                }
-                compressTo(context, mergeRoot.getRoot(), compresAddresses);
-                //context.send(new Address(TYPE, mergeRoot.getRoot()), new AddAddressOperation(address));
+                context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(1, false));
             } else {
                 makeset(context);
                 parent = address;
-                context.send(new Address(TYPE, mergeRoot.getRoot()), new MergeRootOperation(parent, 1, mergeRoot.getVisited(), mergeRoot.getRootVisited()/*, mergeRoot.getTransaction()*/));
-
+                context.send(new Address(TYPE, mergeRoot.getRoot()), new MergeRootOperation(parent, 1, false));
             }
         } else if (parent.equals(mergeRoot.getRoot())) {//already in the same set
-            //if (mergeRoot.getTransaction() != null) {
-            //    addTransaction(context, mergeRoot.getTransaction());
-            //}
-            Set<String> compresAddresses = new HashSet<>(mergeRoot.getVisited());
-            for (int i = 0; i < mergeRoot.getRootVisited().size()-1; i++) {
-                compresAddresses.add(mergeRoot.getRootVisited().get(i));
+            if (mergeRoot.isCalledFromChild()) {
+                context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
             }
-            compressTo(context, parent, compresAddresses);
         } else if (address.equals(parent)) {
             long size = persistentAddressCount.get();
-            if (mergeRoot.getRootSize() > size || (mergeRoot.getRootSize() == size && address.compareTo(mergeRoot.getRoot()) < 0)) {
+            if (mergeRoot.getRootSize() > size || (mergeRoot.getRootSize() == size && address.compareTo(mergeRoot.getRoot()) > 0)) {
                 setParent(context, mergeRoot.getRoot());
                 persistentAddressCount.clear();
-
-                Set<String> compresAddresses = new HashSet<>(mergeRoot.getVisited());
-                compresAddresses.addAll(mergeRoot.getRootVisited());
-                compressTo(context, mergeRoot.getRoot(), compresAddresses);
+                context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(size, false));
                 
-                context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(size));
-                
-                //if (persistedAddresses != null) {
-                    ArrayList<AddAddressOperation> addAddressOperations = new ArrayList<>(100);
-                    //addAddressOperations.add(new AddAddressOperation(address));//TODO remove?
+                long addressCount = persistedClusterAddressCount.getOrDefault(0l);
+                if (addressCount > 0) {
+                    long adderssesDeleted = 0;
                     Iterable<String> addresses = this.persistedAddresses.keys();
                     for (String a : addresses) {
-                        addAddressOperations.add(new AddAddressOperation(a));
-                        if (addAddressOperations.size() == 100) {
-                            context.send(new Address(TYPE, mergeRoot.getRoot()), addAddressOperations.toArray(new AddAddressOperation[0]));
-                            addAddressOperations.clear();
-                        }
+                        adderssesDeleted++;
+                        context.send(new Address(TYPE, mergeRoot.getRoot()), new AddAddressOperation(a));
                     }
-                    if (!addAddressOperations.isEmpty()) context.send(new Address(TYPE, mergeRoot.getRoot()), addAddressOperations.toArray(new AddAddressOperation[0]));
-                    deleteAddresses(context);
-                //}
-                //if (persistedTransactions != null) {
-                    ArrayList<AddTransactionOperation> addTransactionOperations = new ArrayList<>(100);
+                    if (adderssesDeleted > 0) deleteAddresses(context);
+                }
+                long txCount = persistedClusterTransactionCount.getOrDefault(0l);
+                if (txCount > 0) {
+                    long transactionsDeleted = 0;
                     Iterable<Map.Entry<TxPointer, Long>> entries = persistedTransactions.entries();
                     for (Map.Entry<TxPointer, Long> e : entries) {
+                        transactionsDeleted++;
                         AddTransactionOperation addTx = new AddTransactionOperation(e.getKey().getTime(), e.getKey().getHeight(), e.getKey().getTx_n(), e.getValue());
-                        addTransactionOperations.add(addTx);
-                        if (addTransactionOperations.size() == 100) {
-                            context.send(new Address(TYPE, ""+mergeRoot.getRoot()), addTransactionOperations.toArray(new AddTransactionOperation[0]));
-                            addTransactionOperations.clear();
-                        }
+                        context.send(new Address(TYPE, mergeRoot.getRoot()), addTx);
                     }
-                    if (!addTransactionOperations.isEmpty()) context.send(new Address(TYPE, ""+parent), addTransactionOperations.toArray(new AddTransactionOperation[0]));
-                    deleteTransactions(context);
-                //}
+                    if (transactionsDeleted > 0) deleteTransactions(context);
+                }
                 
             } else {
-                context.send(new Address(TYPE, mergeRoot.getRoot()), new MergeRootOperation(parent, size, mergeRoot.getVisited(), mergeRoot.getRootVisited()/*, mergeRoot.getTransaction()*/));
+                context.send(new Address(TYPE, mergeRoot.getRoot()), new MergeRootOperation(address, size, false));//Merge from mergeRoot.getRoot() to this address
             }
         } else {
-            mergeRoot.getVisited().add(address);
+            if (mergeRoot.isCalledFromChild()) {
+                context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
+            }
+            mergeRoot.setCalledFromChild(true);
             context.send(new Address(TYPE, parent), mergeRoot);
         }
     }
     
-    private void compress2(Context context, Compress compress2) {
-        setParent(context, compress2.getParent());
+    
+    private void compress(Context context, Compress compress) {
+        context.caller();
+        String address = context.self().id();
+        String parent = persistedParent.get();
+        if (parent == null) {
+            throw new RuntimeException("Compress reached root1. This should never happen!");
+        } else if (address.equals(parent)) {
+            System.out.println(address+"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+            throw new RuntimeException("Compress reached root2. This should never happen!");
+        } else if (parent.equals(compress.getTo())) {
+        } else if (parent.equals(context.caller().id())) {
+            setParent(context, compress.getTo());
+        } else {//already compressed to a node closer to root
+        }
     }
     
     private void setSize(Context context, SetSize setSize) {
@@ -269,59 +247,40 @@ public class UnionFindFunction implements StatefulFunction {
         if (address.equals(parent)) {
             persistentAddressCount.updateAndGet(oldSize -> oldSize + setSize.getAdd());
         } else {
+            if (setSize.isCalledFromChild()) {
+                context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
+            }
+            setSize.setCalledFromChild(true);
             context.send(new Address(TYPE, parent), setSize);
         }
     }
     
     private void executeCassandraQuery(Context context, String query) {
         throw new RuntimeException("Unsupported operation");
-        /*if (true) {
-            context.sendAfter(Duration.ofMinutes(4), new Address(CassandraExecutor.TYPE, ""+context.self().id()), query);
-            return;
-        }*/
     }
     
-    public void addTransactions(Context context, AddTransactionOperation[] addTransactionsOperations) {
+    public void addTransaction(Context context, AddTransactionOperation addTransactionOperation) {
         String address = context.self().id();
         String parent = persistedParent.get();
         
         boolean makeSet = false;
-        if (parent == null) {//Makeset
+        if (parent == null) {
             makeSet = true;
             makeset(context);
             parent = address;
         }
         if (!parent.equals(address)) {
-            context.send(new Address(TYPE, parent), addTransactionsOperations);
+            context.send(new Address(TYPE, parent), addTransactionOperation);
         } else {
-            /*if (this.persistedTransactions == null) {
-                System.out.println("CREATE 1 @@@");
-                this.persistedTransactions = PersistedTable.of("transactions", TxPointer.class, Long.class);
-                this.registry.registerTable(this.persistedTransactions);
-            }*/
-            
-            //int new_tx_count = 0;
-            for (AddTransactionOperation addTransactionOperation : addTransactionsOperations) {
-                TxPointer key = new TxPointer(addTransactionOperation.getTime(), addTransactionOperation.getHeight(), addTransactionOperation.getTx_n());
-                Long oldDelta = makeSet ? null : persistedTransactions.get(key);
-                //Long oldDelta = null;//TODO!!!
-                long newDelta = oldDelta == null ? addTransactionOperation.getDelta() : addTransactionOperation.getDelta()+oldDelta;
-                addTransactionOperation.setDelta(newDelta);
-                persistedTransactions.set(key, newDelta);
-                //executeCassandraQuery(context, "INSERT INTO dash.cluster_transaction (cluster_id, timestamp, height, tx_n, balance_change) VALUES ('"+address+"', "+key.getTime()+", "+key.getHeight()+", "+key.getTx_n()+", "+newDelta+")");
-                //sendToCassandra(context, addTransactionOperation);
-                //if (oldDelta == null) {
-                //    new_tx_count++;
-                //}
-            }
-            sendToCassandra(context, addTransactionsOperations);
-            //final int new_tx_count_final = new_tx_count;
-            //persistedTransactionCount.updateAndGet(oldCount -> oldCount == null ? new_tx_count_final: oldCount + new_tx_count_final);
+            long oldTxCount = makeSet ? 0 : persistedClusterTransactionCount.getOrDefault(0l);
+            TxPointer key = new TxPointer(addTransactionOperation.getTime(), addTransactionOperation.getHeight(), addTransactionOperation.getTx_n());
+            Long oldDelta = (oldTxCount == 0) ? null : persistedTransactions.get(key);
+            long newDelta = oldDelta == null ? addTransactionOperation.getDelta() : addTransactionOperation.getDelta()+oldDelta;
+            addTransactionOperation.setDelta(newDelta);
+            persistedTransactions.set(key, newDelta);
+            if (oldDelta == null) persistedClusterTransactionCount.set(oldTxCount+1);
+            sendToCassandra(context, addTransactionOperation);
         }
-    }
-    
-    public void addTransaction(Context context, AddTransactionOperation addTransactionOperation) {
-        addTransactions(context, new AddTransactionOperation[] {addTransactionOperation});
     }
     
     public void setParent(Context context, String parent) {
@@ -329,47 +288,43 @@ public class UnionFindFunction implements StatefulFunction {
         String address = context.self().id();
         if (address.equals(parent)) {
             sendToCassandra(context, new SetParent(null));
-            //executeCassandraQuery(context, "INSERT INTO dash.union_find (address) VALUES ('"+address+"')");
         } else {
             sendToCassandra(context, new SetParent(parent));
-            //executeCassandraQuery(context, "INSERT INTO dash.union_find (address, parent) VALUES ('"+address+"', '"+parent+"')");
-        }
-    }
-    
-    public void addAddresses(Context context, AddAddressOperation[] addAddressOps) {
-        String address = context.self().id();
-        String parent = persistedParent.get();
-        if (!parent.equals(address)) {
-            context.send(new Address(TYPE, ""+parent), addAddressOps);
-        } else {
-            /*if (persistedAddresses == null) {
-                System.out.println("CREATE 2 @@@");
-                this.persistedAddresses = PersistedTable.of("addresses", String.class, String.class);
-                this.registry.registerTable(persistedAddresses);
-            }*/
-            for (AddAddressOperation addAddressOp : addAddressOps) {
-                persistedAddresses.set(addAddressOp.getAddress(), "");
-                //sendToCassandra(context, addAddressOp);
-                //executeCassandraQuery(context, "INSERT INTO dash.cluster_address (cluster_id, address) VALUES ('"+address+"', '"+addAddressOp.getAddress()+"')");
-            }
-            sendToCassandra(context, addAddressOps);
         }
     }
     
     public void addAddress(Context context, AddAddressOperation addAddressOp) {
-        addAddresses(context, new AddAddressOperation[] {addAddressOp});
+        String address = context.self().id();
+        String parent = persistedParent.get();
+        boolean makeSet = false;
+        if (parent == null) {
+            makeSet = true;
+            makeset(context);
+            parent = address;
+        }
+        if (!parent.equals(address)) {
+            context.send(new Address(TYPE, ""+parent), addAddressOp);
+        } else {
+            long oldAddressCount = makeSet ? 0 : persistedClusterAddressCount.getOrDefault(0l);
+            String existingAddress = (oldAddressCount == 0) ? null : persistedAddresses.get(addAddressOp.getAddress());
+            if (existingAddress == null) {
+                persistedAddresses.set(addAddressOp.getAddress(), "");
+                persistedClusterAddressCount.set(oldAddressCount+1);
+                sendToCassandra(context, addAddressOp);
+            }
+        }
     }
     
     public void deleteAddresses(Context context) {
         persistedAddresses.clear();
+        persistedClusterAddressCount.clear();
         sendToCassandra(context, new DeleteAddresses());
-        //executeCassandraQuery(context, "DELETE FROM dash.cluster_address WHERE cluster_id = '"+context.self().id()+"'");
     }
     
     public void deleteTransactions(Context context) {
         persistedTransactions.clear();
+        persistedClusterTransactionCount.clear();
         sendToCassandra(context, new DeleteTransactions());
-        //executeCassandraQuery(context, "DELETE FROM dash.cluster_transaction WHERE cluster_id = '"+context.self().id()+"'");
     }
 
 

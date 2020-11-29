@@ -11,7 +11,7 @@ import org.apache.flink.util.Collector;
 
 public class HeaderTimeProcessor extends ProcessFunction<BlockHeader, BlockHeader> implements CheckpointedFunction {
 
-    private ListState<Long> checkpointedTime;
+    private transient ListState<Long> checkpointedTime;
     private long time = 0;
     
     @Override

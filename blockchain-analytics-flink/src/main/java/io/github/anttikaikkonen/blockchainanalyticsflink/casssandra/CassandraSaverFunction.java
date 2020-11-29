@@ -51,6 +51,7 @@ public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Voi
         try {
             if (this.manager.getSession() != null) {
                 this.manager.getSession().close();
+                System.out.println("Session closed");
             }
         } catch (Exception e) {
             //LOG.error("Error while closing session.", e);
@@ -58,6 +59,7 @@ public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Voi
         try {
             if (this.manager.getSession() != null && this.manager.getSession().getCluster() != null) {
                 this.manager.getSession().getCluster().close();
+                System.out.println("Cluster closed");
             }
         } catch (Exception e) {
             //LOG.error("Error while closing cluster.", e);

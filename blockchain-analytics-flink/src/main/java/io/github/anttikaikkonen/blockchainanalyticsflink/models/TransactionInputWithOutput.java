@@ -4,11 +4,14 @@ import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionInput;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class TransactionInputWithOutput extends TransactionInput {
     
     public TransactionInputWithOutput(TransactionInput input, TransactionOutput spentOutput) {

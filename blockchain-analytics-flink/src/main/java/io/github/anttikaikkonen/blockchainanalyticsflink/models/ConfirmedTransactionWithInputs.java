@@ -1,6 +1,7 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.models;
 
 import java.util.Date;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

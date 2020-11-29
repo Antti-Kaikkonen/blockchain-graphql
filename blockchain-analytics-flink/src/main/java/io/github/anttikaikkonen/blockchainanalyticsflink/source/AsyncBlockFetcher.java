@@ -28,6 +28,7 @@ public class AsyncBlockFetcher extends RichAsyncFunction<String, Block> {
     
     @Override
     public void close() throws Exception {
+        this.client.close();
         this.client = null;
     }
 

@@ -120,7 +120,7 @@ public class LeastConnectionsRpcClient implements RpcClient {
                             banClient(take);
                             System.out.println("client error "+error);
                             if (queue.isEmpty()) {
-                                throw new RuntimeException("No host available");
+                                throw new RuntimeException("No host available", error);
                             }
                             return null;//try next host
                         } else {

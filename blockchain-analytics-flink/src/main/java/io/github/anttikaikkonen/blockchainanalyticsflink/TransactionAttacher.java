@@ -42,18 +42,19 @@ public class TransactionAttacher extends KeyedCoProcessFunction<String, SpentOut
                 outputsByInputIndex.put(spentOutput.getInput_index(), spentOutput.getOutput());
             }
         }
-        TransactionInputWithOutput[] res = new TransactionInputWithOutput[transaction.getVin().length];
+        TransactionInputWithOutput[] inputsWithOutputs = new TransactionInputWithOutput[transaction.getVin().length];
         for (int i = 0; i < transaction.getVin().length; i++) {
             TransactionInput vin = transaction.getVin()[i];
             if (vin.getTxid() == null) {
-                res[i] =  new TransactionInputWithOutput(vin, null);
+                throw new Exception("VIN TXID NULL");
+                //inputsWithOutputs[i] =  new TransactionInputWithOutput(vin, null);
             } else {
-                res[i] = new TransactionInputWithOutput(vin, outputsByInputIndex.get(i));
+                inputsWithOutputs[i] = new TransactionInputWithOutput(vin, outputsByInputIndex.get(i));
             }
         }
         transactionState.remove(timestamp);
         inputState.clear();
-        out.collect(new ConfirmedTransactionWithInputs(transaction, res, timestamp));
+        out.collect(new ConfirmedTransactionWithInputs(transaction, inputsWithOutputs, timestamp));
     }
     
     @Override
@@ -62,9 +63,15 @@ public class TransactionAttacher extends KeyedCoProcessFunction<String, SpentOut
     }
 
     @Override
-    public void processElement2(ConfirmedTransaction value, Context ctx, Collector<ConfirmedTransactionWithInputs> out) throws Exception {
-        transactionState.put(ctx.timestamp(), value);
-        ctx.timerService().registerEventTimeTimer(ctx.timestamp());
+    public void processElement2(ConfirmedTransaction transaction, Context ctx, Collector<ConfirmedTransactionWithInputs> out) throws Exception {
+        if (transaction.getTxN() == 0) {
+            TransactionInputWithOutput[] inputs = new TransactionInputWithOutput[transaction.getVin().length];
+            inputs[0] = new TransactionInputWithOutput(transaction.getVin()[0], null);
+            out.collect(new ConfirmedTransactionWithInputs(transaction, inputs, ctx.timestamp()));
+        } else {
+            transactionState.put(ctx.timestamp(), transaction);
+            ctx.timerService().registerEventTimeTimer(ctx.timestamp());
+        }
     }
     
 }

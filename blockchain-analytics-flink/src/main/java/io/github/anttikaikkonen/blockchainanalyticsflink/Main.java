@@ -11,6 +11,7 @@ import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SocketOptions;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.exceptions.DriverException;
@@ -20,8 +21,6 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSes
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransaction;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.TransactionInputWithOutput;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.UnionFindSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.UnionFindFunction;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.LeastConnectionsRpcClient;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.LimitedCapacityRpcClient;
@@ -39,6 +38,7 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockCluster
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockClustering;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.ConfirmedTransactionToDisjointSets;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.DisjointSetForest;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.UnionFindSink;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -88,10 +88,12 @@ public class Main {
     public static final int CASSANDRA_CONCURRENT_REQUESTS = 100;
     
     public static final String PROPERTIES_CASSANDRA_HOST = "cassandra.host";
-    public static final String PROPERTIES_CASSANDRA_KEYSPACE = "cassandra.namespace";
+    public static final String PROPERTIES_CASSANDRA_KEYSPACE = "cassandra.keyspace";
     public static final String PROPERTIES_BLOCKCHAIN_RPC_URL = "blockchain.rpc.url";
     public static final String PROPERTIES_BLOCKCHAIN_RPC_USERNAME = "blockchain.rpc.username";
     public static final String PROPERTIES_BLOCKCHAIN_RPC_PASSWORD = "blockchain.rpc.password";
+    
+    public static final String PROPERTIES_CONCURRENT_BLOCKS = "concurrent_blocks";
     
     public static void main(String[] args) throws Exception {
         
@@ -102,21 +104,27 @@ public class Main {
             properties = fileProperties.mergeWith(properties);//arguments overwrite file properties
         }
         
-        String cassandraHost = properties.getRequired(PROPERTIES_CASSANDRA_HOST);
+        String cassandraHost = properties.get(PROPERTIES_CASSANDRA_HOST, "localhost");
         String[] cassandraHosts = cassandraHost.split("\\s+");
         
         
-        String cassandraKeyspace = properties.getRequired(PROPERTIES_CASSANDRA_KEYSPACE);
-        String blockchainRpcURL = properties.getRequired(PROPERTIES_BLOCKCHAIN_RPC_URL);
+        String cassandraKeyspace = properties.get(PROPERTIES_CASSANDRA_KEYSPACE, "bitcoin");
+        
+        String blockchainRpcURL = properties.get(PROPERTIES_BLOCKCHAIN_RPC_URL, "http://localhost:8332");
         String[] blockchainRpcURLS = blockchainRpcURL.split("\\s+");
         String blockchainUsername = properties.getRequired(PROPERTIES_BLOCKCHAIN_RPC_USERNAME);
         String blockchainPassword = properties.getRequired(PROPERTIES_BLOCKCHAIN_RPC_PASSWORD);
+        
+        int concurrentBlocks = properties.getInt(PROPERTIES_CONCURRENT_BLOCKS, 200);
         
         CassandraSessionBuilder sessionBuilder = new CassandraSessionBuilder() {
             @Override
             protected Session createSession(Cluster.Builder builder) {
                 Cluster cluster = builder
                         .addContactPoints(cassandraHosts)
+                        .withSocketOptions(
+                                new SocketOptions().setReadTimeoutMillis(120000)
+                        )
                         .withPoolingOptions(
                                 new PoolingOptions()
                                         .setConnectionsPerHost(HostDistance.LOCAL, 1, 1)
@@ -128,9 +136,9 @@ public class Main {
                             @Override
                             public RetryPolicy.RetryDecision onReadTimeout(Statement statement, ConsistencyLevel cl, int requiredResponses, int receivedResponses, boolean dataRetrieved, int nbRetry) {
                                 System.out.println("onReadTimeout "+nbRetry);
-                                if (nbRetry < 10) {
+                                if (nbRetry < 5) {
                                     try {
-                                        Thread.sleep(nbRetry*100);
+                                        Thread.sleep((nbRetry+1)*1000);
                                     } catch (InterruptedException ex) {
                                         Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
@@ -143,9 +151,9 @@ public class Main {
                             @Override
                             public RetryPolicy.RetryDecision onWriteTimeout(Statement statement, ConsistencyLevel cl, WriteType arg2, int requiredAcks, int receivedAcks, int nbRetry) {
                                 System.out.println("onWriteTimeout "+nbRetry);
-                                if (nbRetry < 10) {
+                                if (nbRetry < 5) {
                                     try {
-                                        Thread.sleep(nbRetry*100);
+                                        Thread.sleep((nbRetry+1)*1000);
                                     } catch (InterruptedException ex) {
                                         Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
@@ -158,9 +166,9 @@ public class Main {
                             @Override
                             public RetryPolicy.RetryDecision onUnavailable(Statement statement, ConsistencyLevel cl, int requiredReplica, int aliveReplica, int nbRetry) {
                                 System.out.println("onUnavailable "+nbRetry);
-                                if (nbRetry < 10) {
+                                if (nbRetry < 5) {
                                     try {
-                                        Thread.sleep(nbRetry*100);
+                                        Thread.sleep((nbRetry+1)*1000);
                                     } catch (InterruptedException ex) {
                                         Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
@@ -171,11 +179,11 @@ public class Main {
                             }
 
                             @Override
-                            public RetryPolicy.RetryDecision onRequestError(Statement statement, ConsistencyLevel cl, DriverException arg2, int nbRetry) {
-                                System.out.println("onRequestError "+nbRetry);
-                                if (nbRetry < 10) {
+                            public RetryPolicy.RetryDecision onRequestError(Statement statement, ConsistencyLevel cl, DriverException driverException, int nbRetry) {
+                                System.out.println("onRequestError "+nbRetry+", ex:"+driverException);
+                                if (nbRetry < 5) {
                                     try {
-                                        Thread.sleep(nbRetry*100);
+                                        Thread.sleep((nbRetry+1)*1000);
                                     } catch (InterruptedException ex) {
                                         Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                                     }
@@ -229,12 +237,16 @@ public class Main {
         //End of schema creation
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+        //env.setStateBackend(new RocksDBStateBackend(""))
+        
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-        env.enableCheckpointing(60000*15, CheckpointingMode.EXACTLY_ONCE);
+        env.enableCheckpointing(60000*10, CheckpointingMode.EXACTLY_ONCE);
         env.setRestartStrategy(RestartStrategies.failureRateRestart(5, Time.of(3, TimeUnit.MINUTES), Time.of(10, TimeUnit.SECONDS)));//Allow 5 restarts within 3 minutes
         env.getConfig().disableAutoGeneratedUIDs();
+        //env.getConfig().disableGenericTypes();
         CheckpointConfig checkpointConfig = env.getCheckpointConfig();
-        checkpointConfig.setMinPauseBetweenCheckpoints(60000*15);
+        checkpointConfig.setMinPauseBetweenCheckpoints(60000*10);
         checkpointConfig.setCheckpointTimeout(60000*60*2);//120 minutes
         //checkpointConfig.setMaxConcurrentCheckpoints(1);
         checkpointConfig.enableUnalignedCheckpoints(false);
@@ -306,6 +318,7 @@ public class Main {
                 .minConfirmations(5)
                 .rpcClientBuilder(rpcClientBuilder1)
                 .sessionBuilder(sessionBuilder)
+                .concurrentBlocks(concurrentBlocks)
                 .build();
         
         SingleOutputStreamOperator<Integer> blockHeights = env.addSource(blockHeightSource).uid("block_height_source").name("Block height source");
@@ -313,7 +326,7 @@ public class Main {
         SingleOutputStreamOperator<String> blockHashes = AsyncDataStream.orderedWait(
                 blockHeights,
                 new AsyncBlockHashFetcher(rpcClientBuilder1),
-                10, 
+                30, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
         ).uid("async_block_hash_fetcher").name("Block hash fetcher").forceNonParallel();
@@ -321,7 +334,7 @@ public class Main {
         SingleOutputStreamOperator<BlockHeader> blockHeaders = AsyncDataStream.orderedWait(
                 blockHashes,
                 new AsyncBlockHeadersFetcher(rpcClientBuilder1),
-                10, 
+                30, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
         ).uid("async_headers_fetcher").name("Headers fetcher").forceNonParallel();
@@ -348,7 +361,7 @@ public class Main {
                 blockHeaders.map(e -> e.getHash()).uid("headers_to_hash").name("Block hashes")
                 .forceNonParallel(), 
                 new AsyncBlockFetcher(rpcClientBuilder2), 
-                10, 
+                30, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY
         ).startNewChain().uid("async_block_fetcher").name("Block fetcher");//.setParallelism(1);
@@ -356,8 +369,8 @@ public class Main {
 
         AsyncDataStream.unorderedWait(blocks,
                 new BlockSink(sessionBuilder),
-                30, 
-                TimeUnit.SECONDS, 
+                10, 
+                TimeUnit.MINUTES, 
                 CASSANDRA_CONCURRENT_REQUESTS
         ).uid("async_block_saver").name("Block saver");//.setParallelism(sinkParallelism);
 
@@ -409,8 +422,8 @@ public class Main {
         AsyncDataStream.unorderedWait(
                 fullTxs, 
                 new TransactionSink(sessionBuilder), 
-                30, 
-                TimeUnit.SECONDS, 
+                10, 
+                TimeUnit.MINUTES, 
                 CASSANDRA_CONCURRENT_REQUESTS
         ).uid("async_transaction_sink").name("TransactionSink");//.setParallelism(sinkParallelism);
         
@@ -441,12 +454,6 @@ public class Main {
             }
         }).uid("address_transaction_deltas").name("Address Transaction Deltas").keyBy(e -> e.f0);
         
-        AsyncDataStream.unorderedWait(addressTransactionDeltas.process(new AddressBalanceProcessor()).uid("address_balance_processor").name("Address Balance Processor"), 
-                new AddressSink(sessionBuilder), 
-                30, 
-                TimeUnit.SECONDS, 
-                CASSANDRA_CONCURRENT_REQUESTS
-        ).uid("address_sink").name("Address Sink");
        
         String flinkJobName = StringUtils.capitalize(cassandraKeyspace) + " Blockchain Analysis";
 
@@ -469,9 +476,16 @@ public class Main {
                 .withEgressId(UnionFindFunction.EGRESS)
                 .build(env);
         
-        DataStream<AddressOperation> cassandraAddressOperations = out.getDataStreamForEgressId(UnionFindFunction.EGRESS);
-        UnionFindSink sink = new UnionFindSink(cassandraAddressOperations.getType().createSerializer(cassandraAddressOperations.getExecutionEnvironment().getConfig()), sessionBuilder);
-        SingleOutputStreamOperator<AddressOperation> nothing = cassandraAddressOperations.transform("Address Clustering Sink", null, sink).uid("address_clustering_sink");//.setParallelism(SINK_PARALLELISM);
+        SingleOutputStreamOperator<Object> unionFindOps = out.getDataStreamForEgressId(UnionFindFunction.EGRESS).keyBy(e -> e.getAddress()).process(new UnionFindSink(sessionBuilder, checkpointConfig.getCheckpointInterval())).uid("address_clustering_sink").name("Address Clustering Sink");
+       
+        SingleOutputStreamOperator<Object> addressOps = addressTransactionDeltas.process(new AddressBalanceProcessor()).uid("address_balance_processor").name("Address Balance Processor");
+        
+        AsyncDataStream.unorderedWait(addressOps.union(unionFindOps), 
+                new AddressSink(sessionBuilder), 
+                10, 
+                TimeUnit.MINUTES, 
+                CASSANDRA_CONCURRENT_REQUESTS
+        ).uid("address_sink").name("Address Sink");
         
         env.execute(flinkJobName);
     }

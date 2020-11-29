@@ -22,7 +22,7 @@ public class BlockClustering extends KeyedProcessFunction<Integer, Tuple2<Intege
         this.persistedParent = getRuntimeContext().getMapState(new MapStateDescriptor<>("parent", String.class, String.class));
         this.persistedSize = getRuntimeContext().getMapState(new MapStateDescriptor<>("size", String.class, Integer.class));
         //MapStateDescriptor<String, Map<Integer, Long>> d = new MapStateDescriptor("", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<Map<Integer, Long>>() {}));
-        this.persistedTransactions = getRuntimeContext().getMapState(new MapStateDescriptor("", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<Map<Integer, Long>>() {})));
+        this.persistedTransactions = getRuntimeContext().getMapState(new MapStateDescriptor("transactions", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<Map<Integer, Long>>() {})));
     }
     
     

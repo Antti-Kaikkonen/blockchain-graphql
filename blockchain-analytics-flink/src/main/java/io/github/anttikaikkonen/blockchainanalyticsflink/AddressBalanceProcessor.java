@@ -19,7 +19,7 @@ import org.apache.flink.util.Collector;
 
 public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2<String, Long>, Object> {
 
-    private static long MILLIS_IN_DAY = 1000*60*60*24;
+    private static final long MILLIS_IN_DAY = 1000*60*60*24;
     
     ValueState<Long> balanceState;
     MapState<Long, Long> timeToBlockDelta;
@@ -117,7 +117,6 @@ public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2
         ctx.timerService().registerEventTimeTimer(endOfDay(ctx.timestamp()));
         
         ctx.timerService().registerEventTimeTimer(ctx.timestamp());
-        //TODO emit: OHLC, TopGainers, TopLosers, RichList, AddressBalance
     }
 
 }

@@ -26,6 +26,7 @@ public class AsyncBlockHashFetcher extends RichAsyncFunction<Integer, String> {
     
     @Override
     public void close() throws Exception {
+        this.client.close();
         this.client = null;
     }
 

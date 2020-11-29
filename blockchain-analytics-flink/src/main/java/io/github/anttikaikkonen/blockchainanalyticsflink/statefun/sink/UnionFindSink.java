@@ -1,197 +1,147 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Session;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import io.github.anttikaikkonen.blockchainanalyticsflink.Main;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteAddresses;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteTransactions;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetParent;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddAddressOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddTransactionOperation;
-import java.time.Instant;
-import java.util.Date;
-import java.util.UUID;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.streaming.runtime.operators.GenericWriteAheadSink;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.state.CheckpointListener;
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
+import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
+import org.apache.flink.util.Collector;
 
-public class UnionFindSink extends GenericWriteAheadSink<AddressOperation> {
+public class UnionFindSink extends KeyedProcessFunction<String, AddressOperation, Object> implements CheckpointedFunction, CheckpointListener {
 
+    private static final int MAX_UNCOMPLETED_CHECKPOINTS = 3;
+   
     private final CassandraSessionBuilder sessionBuilder;
     
-    private transient Session session;
+    private Long completedCheckpoint = 0l;//0 = no checkpoints completed
+    private transient ListState<Long> persistedCompletedCheckpoint;
     
-    private transient PreparedStatement addTransactionStatement;
+    private ValueState<Long> addressFirstUncommittedCheckpoint;//earliest uncommitted address checkpoint
     
-    private transient PreparedStatement setParentStatement;
+    private ValueState<Long> addressLastUncommittedCheckpoint;//last uncommitted address checkpoint
     
-    private transient PreparedStatement makesetStatement;
+    private ListState<Object>[] checkpointedOperations;//Ring buffer containing up to MAX_UNCOMPLETED_CHECKPOINTS uncommitted checkpoints for an address
     
-    private transient PreparedStatement addAddressStatement;
+    private ValueState<SetParent>[] checkpointedSetParentOperations;
     
-    private transient PreparedStatement deleteAddressesStatement;
+    private final long checkpointCheckInterval;
     
-    private transient PreparedStatement deleteTransactionsStatement;
-    
-    private Semaphore semaphore;
-    
-    public UnionFindSink(TypeSerializer<AddressOperation> serializer, CassandraSessionBuilder sessionBuilder) throws Exception {
-        super(new CassandraCommitter(sessionBuilder), serializer, UUID.randomUUID().toString().replace("-", "_"));
+    public UnionFindSink(CassandraSessionBuilder sessionBuilder, long checkpointCheckInterval) {
+        this.checkpointCheckInterval = checkpointCheckInterval;
         this.sessionBuilder = sessionBuilder;
     }
 
+    /**
+     * Registers keyed states and prepares cql statements
+     * @param parameters
+     * @throws Exception 
+     */
     @Override
-    public void open() throws Exception {
-        super.open();
-        this.semaphore = new Semaphore(Main.CASSANDRA_CONCURRENT_REQUESTS, true);
-        this.session = this.sessionBuilder.build();
+    public void open(Configuration parameters) throws Exception {
+        addressFirstUncommittedCheckpoint = getRuntimeContext().getState(new ValueStateDescriptor("fromCheckpoint", Long.class));
+        addressLastUncommittedCheckpoint = getRuntimeContext().getState(new ValueStateDescriptor("toCheckpoint", Long.class));
+        checkpointedOperations = new ListState[MAX_UNCOMPLETED_CHECKPOINTS];
+        checkpointedSetParentOperations = new ValueState[MAX_UNCOMPLETED_CHECKPOINTS];
+        for (int i = 0; i < MAX_UNCOMPLETED_CHECKPOINTS; i++) {
+            checkpointedOperations[i] = getRuntimeContext().getListState(new ListStateDescriptor("checkpointedOperations"+i, Object.class));
+            checkpointedSetParentOperations[i] = getRuntimeContext().getState(new ValueStateDescriptor("checkpointedSetParentOperations"+i, SetParent.class));
+        }
         
-        this.addTransactionStatement = this.session.prepare("INSERT INTO cluster_transaction (cluster_id, timestamp, height, tx_n, balance_change) VALUES (?, ?, ?, ?, ?)");
-        this.setParentStatement = this.session.prepare("INSERT INTO union_find (address, parent) VALUES (?, ?)");
-        this.makesetStatement = this.session.prepare("INSERT INTO union_find (address) VALUES (?)");
-        this.addAddressStatement = this.session.prepare("INSERT INTO cluster_address (cluster_id, address) VALUES (?, ?)");
-
-        this.deleteAddressesStatement = this.session.prepare("DELETE FROM cluster_address WHERE cluster_id = ?");
-        this.deleteTransactionsStatement = this.session.prepare("DELETE FROM cluster_transaction WHERE cluster_id = ?");
-    }
-    
-    @Override
-    public void close() throws Exception {
-        super.close();
-        try {
-            if (session != null) {
-                session.close();
-            }
-        } catch (Exception e) {
-            LOG.error("Error while closing session.", e);
-        }
-        try {
-            if (session != null && session.getCluster() != null) {
-                session.getCluster().close();
-            }
-        } catch (Exception e) {
-            LOG.error("Error while closing cluster.", e);
-        }
     }
     
     
+    private void flush(String address, long checkpointId, Collector<Object> out) throws Exception {
+        ListState<Object> checkpointedOps = checkpointedOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+        for (Object op2 : checkpointedOps.get()) {
+            AddressOperation op = new AddressOperation(address, op2);
+            out.collect(op);
+        }
+        checkpointedOps.clear();
+        ValueState<SetParent> setParentOp = checkpointedSetParentOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+        SetParent setParent = setParentOp.value();
+        if (setParent != null) {
+            AddressOperation op = new AddressOperation(address, setParent);
+            out.collect(op);
+            setParentOp.clear();
+        }
+    }
+
     @Override
-    protected boolean sendValues(Iterable<AddressOperation> iterable, long checkpointId, long timestamp) throws Exception {
-        final AtomicInteger updatesCount = new AtomicInteger(0);
-        final AtomicInteger updatesConfirmed = new AtomicInteger(0);
-        final AtomicReference<Throwable> exception = new AtomicReference<>();
-        FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
-            @Override
-            public void onSuccess(ResultSet resultSet) {
-                semaphore.release();
-                updatesConfirmed.incrementAndGet();
-                if (updatesCount.get() > 0) { // only set if all updates have been sent
-                    if (updatesCount.get() == updatesConfirmed.get()) {
-                        synchronized (updatesConfirmed) {
-                            updatesConfirmed.notifyAll();
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                semaphore.release();
-                if (exception.compareAndSet(null, throwable)) {
-                    System.out.println("ERROR SENDING VALUE1: "+exception.get());
-                    LOG.error("Error while sending value.", throwable);
-                    synchronized (updatesConfirmed) {
-                        updatesConfirmed.notifyAll();
-                    }
-                }
-            }
-        };
-
-        
-        int updatesSent = 0;
-        
-        for (AddressOperation op : iterable) {
-            BoundStatement bind;
-            Object input = op.getOp();
-            String address = op.getAddress();
-            if (input instanceof SetParent) {
-                SetParent setParent = (SetParent) input;
-                if (setParent.getParent() == null) {
-                    bind = this.makesetStatement.bind(address);
-                } else {
-                    bind = this.setParentStatement.bind(address, setParent.getParent());
-                }
-            } else if (input instanceof DeleteTransactions) {
-                bind = this.deleteTransactionsStatement.bind(address);
-            } else if (input instanceof DeleteAddresses) {
-                bind = this.deleteAddressesStatement.bind(address);
-            } else if (input instanceof AddAddressOperation) {
-                AddAddressOperation addAddress = (AddAddressOperation) input;
-                bind = this.addAddressStatement.bind(address, addAddress.getAddress());
-            } else if (input instanceof AddTransactionOperation) {
-                AddTransactionOperation addTransaction = (AddTransactionOperation) input;
-                bind = this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), addTransaction.getDelta());
-            } else if (input instanceof AddAddressOperation[]) {
-                AddAddressOperation[] addAddresses = (AddAddressOperation[]) input;
-                for (AddAddressOperation addAddress : addAddresses) {
-                    bind = this.addAddressStatement.bind(address, addAddress.getAddress());
-                    bind.setDefaultTimestamp(timestamp);
-                    semaphore.acquire();
-                    ResultSetFuture resultFuture = this.session.executeAsync(bind);
-                    updatesSent++;
-                    if (resultFuture != null) {
-                        Futures.addCallback(resultFuture, callback);
-                    }
-                } 
-                continue;
-            } else if (input instanceof AddTransactionOperation[]) {
-                AddTransactionOperation[] addTransactions = (AddTransactionOperation[]) input;
-                for (AddTransactionOperation addTransaction : addTransactions) {
-                    bind = this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), addTransaction.getDelta());
-                    bind.setDefaultTimestamp(timestamp);
-                    semaphore.acquire();
-                    ResultSetFuture resultFuture = this.session.executeAsync(bind);
-                    updatesSent++;
-                    if (resultFuture != null) {
-                        Futures.addCallback(resultFuture, callback);
-                    }
-                }
-                continue;
-            } else {
-                throw new RuntimeException("Unsupported type "+input.getClass().toString());
-            }
-            bind.setDefaultTimestamp(timestamp);
-            semaphore.acquire();
-            ResultSetFuture resultFuture = this.session.executeAsync(bind);
-            updatesSent++;
-            if (resultFuture != null) {
-                Futures.addCallback(resultFuture, callback);
-            }
-            
+    public void onTimer(long timestamp, OnTimerContext ctx, Collector<Object> out) throws Exception {
+        String address = ctx.getCurrentKey();
+        long firstUncommittedCheckpoint = addressFirstUncommittedCheckpoint.value();
+        long lastUncommittedCheckpoint = addressLastUncommittedCheckpoint.value();
+        if (lastUncommittedCheckpoint-firstUncommittedCheckpoint >= MAX_UNCOMPLETED_CHECKPOINTS) {
+            throw new Exception("Address "+address+" has more than the maximum allowed "+MAX_UNCOMPLETED_CHECKPOINTS+" uncommitted checkpoints");
         }
-        updatesCount.set(updatesSent);
-        
-        synchronized (updatesConfirmed) {
-            while (exception.get() == null && updatesSent != updatesConfirmed.get()) {
-                updatesConfirmed.wait();
+        if (lastUncommittedCheckpoint < completedCheckpoint) {
+            for (long checkpointId = firstUncommittedCheckpoint; checkpointId <= lastUncommittedCheckpoint; checkpointId++) {
+                flush(address, checkpointId, out);
             }
-        }
-        if (exception.get() != null) {
-            System.out.println("ERROR SENDING VALUE2: "+exception.get());
-            LOG.warn("Sending a value failed.", exception.get());
-            return false;
+            addressFirstUncommittedCheckpoint.clear();
+            addressLastUncommittedCheckpoint.clear();
         } else {
-            return true;
+            for (long checkpointId = firstUncommittedCheckpoint; checkpointId < completedCheckpoint; checkpointId++) {
+                flush(address, checkpointId, out);
+                addressFirstUncommittedCheckpoint.update(checkpointId+1);
+            }
+            ctx.timerService().registerProcessingTimeTimer(timestamp+checkpointCheckInterval);
         }
+
+    }
+    
+    @Override
+    public void processElement(AddressOperation input, Context ctx, Collector<Object> out) throws Exception {
+        addressLastUncommittedCheckpoint.update(completedCheckpoint);
+        if (addressFirstUncommittedCheckpoint.value() == null) {
+            addressFirstUncommittedCheckpoint.update(completedCheckpoint);
+            //long millisToNextMinute = ctx.timerService().currentProcessingTime()%this.checkpointCheckInterval;
+            ctx.timerService().registerProcessingTimeTimer(ctx.timerService().currentProcessingTime()+this.checkpointCheckInterval);
+        } 
+        if (input.getOp() instanceof SetParent) {
+            ValueState<SetParent> checkpointedOps = this.checkpointedSetParentOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            SetParent setParent = (SetParent) input.getOp();
+            checkpointedOps.update(setParent);
+        } else {
+            ListState<Object> checkpointedOps = this.checkpointedOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            checkpointedOps.add(input.getOp());
+        }
+        
     }
 
+    @Override
+    public void snapshotState(FunctionSnapshotContext ctx) throws Exception {
+        System.out.println("UnionFindSink snapshotState"+ctx.getCheckpointId());
+        this.persistedCompletedCheckpoint.clear();
+        this.persistedCompletedCheckpoint.add(ctx.getCheckpointId());
+    }
+
+    @Override
+    public void initializeState(FunctionInitializationContext ctx) throws Exception {
+        System.out.println("InitializeState UnionFindSink");
+        this.persistedCompletedCheckpoint = ctx.getOperatorStateStore().getListState(new ListStateDescriptor("completedCheckpoint", Long.class));
+        if (ctx.isRestored()) {
+            System.out.println("UnionFindSink restoring state");
+            for (Long checkpoinintId : this.persistedCompletedCheckpoint.get()) {
+                this.completedCheckpoint = checkpoinintId;
+            }
+        }
+    }
+    
+    @Override
+    public void notifyCheckpointComplete(long checkpointId) throws Exception {
+        System.out.println("UnionFindSink notifyCheckpointComplete"+checkpointId);
+        this.completedCheckpoint = checkpointId;
+        
+    }
+
+    
 }

@@ -18,8 +18,6 @@ import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 
 public class BlockHeightSource extends RichSourceFunction<Integer> implements CheckpointedFunction {
     
-    private static final int CONCURRENT_BLOCKS = 1000;
-    
     private volatile boolean isRunning = true;
     
     private transient ListState<Integer> checkpointedHeight;
@@ -27,19 +25,21 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
     
     private final int minConfirmations;
     private final long pollingInterval;
+    private final int concurrentBlocks;
     
     private final RpcClientBuilder rpcClientBuilder;
     private final CassandraSessionBuilder sessionBuilder;
     private transient RpcClient rpcClient;
     private transient Session session;
-    private PreparedStatement heightStatement;
+    private transient PreparedStatement heightStatement;
     
     @Builder()
-    public BlockHeightSource(Integer minConfirmations, Long pollingInterval, RpcClientBuilder rpcClientBuilder, CassandraSessionBuilder sessionBuilder) {
-        this.sessionBuilder = sessionBuilder;
+    public BlockHeightSource(Integer minConfirmations, Long pollingInterval, RpcClientBuilder rpcClientBuilder, CassandraSessionBuilder sessionBuilder, Integer concurrentBlocks) {
         this.minConfirmations = minConfirmations == null ? 5 : minConfirmations;
         this.pollingInterval = pollingInterval == null ? 1000l : pollingInterval;
         this.rpcClientBuilder = rpcClientBuilder;
+        this.sessionBuilder = sessionBuilder;
+        this.concurrentBlocks = concurrentBlocks == null ? 200 : concurrentBlocks;
     }
     
     @Override
@@ -50,8 +50,8 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
             long targetHeight = blockCount-this.minConfirmations;
             if (this.height <= targetHeight) {
                 while (this.height <= targetHeight && this.isRunning) {
-                    if (this.height%5 == 0 && this.height-CONCURRENT_BLOCKS >= 0) {
-                        ResultSet res = this.session.execute(this.heightStatement.bind(this.height-CONCURRENT_BLOCKS));
+                    if (this.height%5 == 0 && this.height-this.concurrentBlocks >= 0) {
+                        ResultSet res = this.session.execute(this.heightStatement.bind(this.height-this.concurrentBlocks));
                         if (res.one() == null) {
                             Thread.sleep(10);
                             continue;
@@ -97,6 +97,7 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
             this.session.getCluster().close();
         }
         this.session = null;
+        this.rpcClient.close();
         this.rpcClient = null;
         this.heightStatement = null;
     }

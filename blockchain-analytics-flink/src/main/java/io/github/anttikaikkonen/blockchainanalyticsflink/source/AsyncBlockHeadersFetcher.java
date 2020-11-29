@@ -27,6 +27,7 @@ public class AsyncBlockHeadersFetcher extends RichAsyncFunction<String, BlockHea
     
     @Override
     public void close() throws Exception {
+        this.client.close();
         this.client = null;
     }
 

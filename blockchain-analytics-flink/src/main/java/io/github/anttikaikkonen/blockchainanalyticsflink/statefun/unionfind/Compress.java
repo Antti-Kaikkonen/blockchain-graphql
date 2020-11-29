@@ -7,5 +7,5 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class Compress {
-    String parent;
+    String to;
 }

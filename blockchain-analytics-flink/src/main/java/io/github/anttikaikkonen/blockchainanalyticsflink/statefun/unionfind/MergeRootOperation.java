@@ -1,6 +1,5 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind;
 
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -9,9 +8,14 @@ import lombok.Data;
 public class MergeRootOperation {
     String root;
     long rootSize;
-    List<String> rootVisited;
     
-    List<String> visited;
+    boolean calledFromChild;
+    //String rootFrom;
+    
+    //String from;
+    //List<String> rootVisited;
+    
+    //List<String> visited;
     
     //AddTransactionOperation transaction;
 }
