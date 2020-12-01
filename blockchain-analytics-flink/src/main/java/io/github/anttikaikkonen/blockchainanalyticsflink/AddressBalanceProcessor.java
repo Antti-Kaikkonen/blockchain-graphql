@@ -77,6 +77,14 @@ public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2
                 dailyDelta = 0;
             }
             if (dailyDelta > 0) {
+                int x = ctx.getCurrentKey().hashCode();
+                /*Integer.valueOf(x).
+                int r = x%256;
+                if (r < 0) {
+                    r -= 256; 
+                }*/
+                //int bin = ctx.getCurrentKey().hashCode()%256;
+                //if (bin)
                 TopGainers gainer = new TopGainers(LocalDate.fromDaysSinceEpoch((int)epochDate), ctx.getCurrentKey(), dailyDelta);
                 out.collect(gainer);
             } else if (dailyDelta < 0) {

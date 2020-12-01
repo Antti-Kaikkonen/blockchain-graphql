@@ -14,9 +14,20 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TopGainers {
-    @PartitionKey
+    
+    public TopGainers(LocalDate date, String address, long balanceChange) {
+        this.bin = (byte) address.hashCode();
+        this.date = date;
+        this.address = address;
+        this.balanceChange = balanceChange;
+    }
+    
+    @PartitionKey(0)
     private LocalDate date;
    
+    @PartitionKey(1)
+    private byte bin;
+    
     @ClusteringColumn(1)
     private String address;
     

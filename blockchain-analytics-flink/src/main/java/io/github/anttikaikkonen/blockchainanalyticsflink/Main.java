@@ -326,7 +326,7 @@ public class Main {
         SingleOutputStreamOperator<String> blockHashes = AsyncDataStream.orderedWait(
                 blockHeights,
                 new AsyncBlockHashFetcher(rpcClientBuilder1),
-                30, 
+                60, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
         ).uid("async_block_hash_fetcher").name("Block hash fetcher").forceNonParallel();
@@ -334,7 +334,7 @@ public class Main {
         SingleOutputStreamOperator<BlockHeader> blockHeaders = AsyncDataStream.orderedWait(
                 blockHashes,
                 new AsyncBlockHeadersFetcher(rpcClientBuilder1),
-                30, 
+                60, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
         ).uid("async_headers_fetcher").name("Headers fetcher").forceNonParallel();
@@ -361,7 +361,7 @@ public class Main {
                 blockHeaders.map(e -> e.getHash()).uid("headers_to_hash").name("Block hashes")
                 .forceNonParallel(), 
                 new AsyncBlockFetcher(rpcClientBuilder2), 
-                30, 
+                60, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY
         ).startNewChain().uid("async_block_fetcher").name("Block fetcher");//.setParallelism(1);

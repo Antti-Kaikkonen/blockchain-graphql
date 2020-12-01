@@ -77,7 +77,8 @@ public class CreateStatements {
 "	balance bigint,\n" +
 "	balance_change bigint,\n" +
 "	date date,\n" +
-"	PRIMARY KEY(date, balance, balance_change, address)\n" +
+"	bin tinyint,\n" +
+"	PRIMARY KEY((date, bin), balance, balance_change, address)\n" +
 ")\n" +
 "WITH \n" +
 "	CLUSTERING ORDER BY (balance DESC, balance_change DESC, address DESC)\n" +
@@ -88,7 +89,8 @@ public class CreateStatements {
 "        address text,\n" +
 "        balance_change bigint,\n" +
 "        date date,\n" +
-"        PRIMARY KEY(date, balance_change, address)\n" +
+"        bin tinyint,\n" +
+"        PRIMARY KEY((date, bin), balance_change, address)\n" +
 ")\n" +
 "WITH \n" +
 "	CLUSTERING ORDER BY (balance_change DESC, address DESC)\n" +
@@ -99,7 +101,8 @@ public class CreateStatements {
 "        address text,\n" +
 "        balance_change bigint,\n" +
 "        date date,\n" +
-"        PRIMARY KEY(date, balance_change, address)\n" +
+"        bin tinyint,\n" +
+"        PRIMARY KEY((date, bin), balance_change, address)\n" +
 ")\n" +
 "WITH COMPRESSION = {'sstable_compression': 'LZ4Compressor', 'chunk_length_in_kb': 16};";
     

@@ -14,14 +14,19 @@ public class RichList {
     }
     
     public RichList(String address, long balance, long previousBalance, long timestamp) {
+        this.bin = (byte) address.hashCode();
         this.address = address;
         this.balance = balance;
         this.balanceChange = balance-previousBalance;
         this.date = LocalDate.fromDaysSinceEpoch((int) (timestamp/(1000*60*60*24)));
     }
     
-    @PartitionKey
+    @PartitionKey(0)
     private LocalDate date;
+    
+    @PartitionKey(1)
+    private byte bin;
+    
     @ClusteringColumn(0)
     private long balance;
     @ClusteringColumn(1)
