@@ -16,7 +16,7 @@ export class TransactionOutputResolver {
   ): Promise<TransactionInput> {
     if (transactionOutput.spending_txid === null || transactionOutput.spending_txid === undefined) return null;
     let args: any[] = [transactionOutput.spending_txid, transactionOutput.spending_index];
-    let query: string = "SELECT * FROM dash.transaction_input WHERE spending_txid=? AND spending_index=?";
+    let query: string = "SELECT * FROM transaction_input WHERE spending_txid=? AND spending_index=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -41,7 +41,7 @@ export class TransactionOutputResolver {
   ): Promise<Transaction> {
     if (transactionOutput.txid === null || transactionOutput.txid === undefined) return null;
     let args: any[] = [transactionOutput.txid];
-    let query: string = "SELECT * FROM dash.transaction WHERE txid=?";
+    let query: string = "SELECT * FROM transaction WHERE txid=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 

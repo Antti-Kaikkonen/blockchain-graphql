@@ -14,7 +14,7 @@ export class BlockHashResolver {
   async blockHash(
     @Arg("height") height: number): Promise<BlockHash> {
     let args: any[] = [height];
-    let query: string = "SELECT * FROM dash.longest_chain WHERE height=?";
+    let query: string = "SELECT * FROM longest_chain WHERE height=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -33,7 +33,7 @@ export class BlockHashResolver {
   async block(@Root() blockHash: BlockHash, 
   ): Promise<Block> {
     let args: any[] = [blockHash.hash];
-    let query: string = "SELECT * FROM dash.block WHERE hash=?";
+    let query: string = "SELECT * FROM block WHERE hash=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 

@@ -8,13 +8,14 @@ import com.datastax.driver.mapping.annotations.Table;
 
 @Table(name="daily_richlist")
 public class RichList {
+    
+    public static final int BIN_COUNT = 10;
 
     public RichList() {
-        
     }
     
     public RichList(String address, long balance, long previousBalance, long timestamp) {
-        this.bin = (byte) address.hashCode();
+        this.bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
         this.address = address;
         this.balance = balance;
         this.balanceChange = balance-previousBalance;
@@ -29,9 +30,12 @@ public class RichList {
     
     @ClusteringColumn(0)
     private long balance;
+    
     @ClusteringColumn(1)
+    
     @Column(name="balance_change")
     private long balanceChange;
+    
     @ClusteringColumn(2)
     private String address;
 

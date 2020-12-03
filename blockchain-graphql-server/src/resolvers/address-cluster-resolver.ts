@@ -25,7 +25,7 @@ export class AddressClusterResolver {
     @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
   ): Promise<PaginatedClusterTransactionResponse> {
     let args: any[] = [cluster.clusterId];
-    let query: string = "SELECT timestamp, height, tx_n, balance_change FROM dash.cluster_transaction WHERE cluster_id=?";
+    let query: string = "SELECT timestamp, height, tx_n, balance_change FROM cluster_transaction WHERE cluster_id=?";
     if (cursor) {
       query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
       args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
@@ -55,7 +55,7 @@ export class AddressClusterResolver {
     @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
   ): Promise<PaginatedAddressResponse> {
     let args: any[] = [cluster.clusterId];
-    let query: string = "SELECT address FROM dash.cluster_address WHERE cluster_id=?";
+    let query: string = "SELECT address FROM cluster_address WHERE cluster_id=?";
     if (cursor) {
       query += " AND (address) < (?)";
       args = args.concat([cursor.address]);

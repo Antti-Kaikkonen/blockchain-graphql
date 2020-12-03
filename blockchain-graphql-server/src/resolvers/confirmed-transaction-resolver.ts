@@ -16,7 +16,7 @@ export class ConfirmedTransactionResolver {
     @Arg("height") height: number, 
     @Arg("tx_n") tx_n: number): Promise<ConfirmedTransaction> {
     let args: any[] = [height, tx_n];
-    let query: string = "SELECT * FROM dash.confirmed_transaction WHERE height=? AND tx_n=?";
+    let query: string = "SELECT * FROM confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -36,7 +36,7 @@ export class ConfirmedTransactionResolver {
   async blockHash(@Root() transaction: ConfirmedTransaction, 
   ): Promise<BlockHash> {
     let args: any[] = [transaction.height];
-    let query: string = "SELECT * FROM dash.longest_chain WHERE height=?";
+    let query: string = "SELECT * FROM longest_chain WHERE height=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -55,7 +55,7 @@ export class ConfirmedTransactionResolver {
   async transaction(@Root() transaction: ConfirmedTransaction, 
   ): Promise<Transaction> {
     let args: any[] = [transaction.txid];
-    let query: string = "SELECT * FROM dash.transaction WHERE txid=?";
+    let query: string = "SELECT * FROM transaction WHERE txid=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 

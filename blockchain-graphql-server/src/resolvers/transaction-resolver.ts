@@ -33,7 +33,7 @@ export class TransactionResolver {
   @Query(returns => Transaction, {complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async transaction(@Arg("txid") txid: string): Promise<Transaction> {
     let args: any[] = [txid];
-    let query: string = "SELECT * FROM dash.transaction WHERE txid=?";
+    let query: string = "SELECT * FROM transaction WHERE txid=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -59,7 +59,7 @@ export class TransactionResolver {
   ): Promise<BlockHash> {
     if (transaction.height === undefined || transaction.height === null) return null;
     let args: any[] = [transaction.height];
-    let query: string = "SELECT * FROM dash.longest_chain WHERE height=?";
+    let query: string = "SELECT * FROM longest_chain WHERE height=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -81,7 +81,7 @@ export class TransactionResolver {
     @Args() {cursor, limit}: TransactionInputArgs
   ): Promise<PaginatedTransactionInputResponse> {
     let args: any[] = [transaction.txid];
-    let query: string = "SELECT * FROM dash.transaction_input WHERE spending_txid=?";
+    let query: string = "SELECT * FROM transaction_input WHERE spending_txid=?";
     if (cursor) {
       query += " AND spending_index > ?";
       args = args.concat([cursor.spending_index]);
@@ -113,7 +113,7 @@ export class TransactionResolver {
     @Args() {cursor, limit}: TransactionOutputArgs
   ): Promise<PaginatedTransactionOutputResponse> {
     let args: any[] = [transaction.txid];
-    let query: string = "SELECT * FROM dash.transaction_output WHERE txid=?";
+    let query: string = "SELECT * FROM transaction_output WHERE txid=?";
     if (cursor) {
       query += " AND n > ?";
       args = args.concat([cursor.n]);

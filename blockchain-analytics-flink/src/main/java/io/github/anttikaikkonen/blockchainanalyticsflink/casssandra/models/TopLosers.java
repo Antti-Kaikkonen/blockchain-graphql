@@ -15,8 +15,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TopLosers {
     
+    public static final int BIN_COUNT = 10;
+    
     public TopLosers(LocalDate date, String address, long balanceChange) {
-        this.bin = (byte) address.hashCode();
+        this.bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
         this.date = date;
         this.address = address;
         this.balanceChange = balanceChange;

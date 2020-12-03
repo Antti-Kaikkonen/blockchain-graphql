@@ -25,7 +25,7 @@ export class BlockResolver {
   async block(
     @Arg("hash") hash: string): Promise<Block> {
     let args: any[] = [hash];
-    let query: string = "SELECT * FROM dash.block WHERE hash=?";
+    let query: string = "SELECT * FROM block WHERE hash=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -59,7 +59,7 @@ export class BlockResolver {
 
   ): Promise<PaginatedConfirmedTransactionResponse> {
     let args: any[] = [block.height];
-    let query: string = "SELECT * FROM dash.confirmed_transaction WHERE height=?";
+    let query: string = "SELECT * FROM confirmed_transaction WHERE height=?";
     if (cursor) {
       query += " AND tx_n > ?";
       args = args.concat([cursor.tx_n]);

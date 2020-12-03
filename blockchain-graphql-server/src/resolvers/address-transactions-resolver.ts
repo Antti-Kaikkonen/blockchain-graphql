@@ -15,7 +15,7 @@ export class AddressTransactionsResolver {
   async confirmedTransaction(@Root() addressTransaction: AddressTransaction, 
   ): Promise<ConfirmedTransaction> {
     let args: any[] = [addressTransaction.height, addressTransaction.tx_n];
-    let query: string = "SELECT * FROM dash.confirmed_transaction WHERE height=? AND tx_n=?";
+    let query: string = "SELECT * FROM confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 

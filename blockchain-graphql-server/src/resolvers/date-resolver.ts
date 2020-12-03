@@ -6,6 +6,7 @@ import { Address } from "../models/address";
 import { Inject } from "typedi";
 import { AddressBalanceChange, AddressBalanceChangeCursor, PaginatedAddressBalanceChangeResponse } from "../models/address-balance-change";
 import { PaginationArgs } from "./pagination-args";
+import { stdout } from "process";
 
 @ArgsType()
 class RichlistArgs extends PaginationArgs {
@@ -24,7 +25,10 @@ class AddressBalanceChangeArgs extends PaginationArgs {
 }
 
 @Resolver(of => Date)
-export class DateReolver {
+export class DateResolver {
+
+  static BIN_COUNT: number = 10;
+  static BINS: number[] = Array.from(new Array(DateResolver.BIN_COUNT).keys());
 
   constructor(@Inject("cassandra_client") private client: Client) {
   }
@@ -41,17 +45,21 @@ export class DateReolver {
       @Root() date: Date, 
     @Args() {cursor, limit}: RichlistArgs
   ): Promise<PaginatedRichlistResponse> {
-    let args: any[] = [date.date];
-    let query: string = "SELECT balance, balance_change, address FROM dash.daily_richlist WHERE date=?";
+    let args: any[] = [date.date, DateResolver.BINS];
+    let query: string = "SELECT balance, balance_change, address FROM daily_richlist WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance, balance_change, address) < (?, ?, ?)"
       args = args.concat([Math.round(cursor.balance*1e8), Math.round(cursor.balance_change*1e8), cursor.address]);
     }
+    args.push(limit+1);
+    query += " ORDER BY balance DESC, balance_change DESC, address DESC LIMIT ?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res: Richlist[] = resultSet.rows.map(row => {
         let richlist: Richlist = new Richlist();
         let address = new Address(row.get("address"));
@@ -62,7 +70,7 @@ export class DateReolver {
     });
     return {
         items: res, 
-        hasMore: resultSet.pageState !== null
+        hasMore: hasMore
     };
   }
 
@@ -71,18 +79,25 @@ export class DateReolver {
     @Args() {cursor, limit}: AddressBalanceChangeArgs
   ): Promise<PaginatedAddressBalanceChangeResponse> {
     let reverse: boolean = false;
-    let args: any[] = [date.date];
-    let query: string = "SELECT address, balance_change FROM dash.daily_top_gainers WHERE date=?";
+    let args: any[] = [date.date, DateResolver.BINS];
+    let query: string = "SELECT address, balance_change FROM daily_top_gainers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? ">" : "<") + " (?, ?)";
       args = args.concat([Math.round(cursor.balance_change*1e8), cursor.address]);
     }
-    if (reverse) query += " ORDER BY balance_change ASC, address ASC";
+    args.push(limit+1);
+    if (reverse) {
+      query += " ORDER BY balance_change ASC, address ASC LIMIT ?";
+    } else {
+      query += " ORDER BY balance_change DESC, address DESC LIMIT ?";
+    }
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res: AddressBalanceChange[] = resultSet.rows.map(row => {
         let adressBalanceChange = new AddressBalanceChange();
         let address = new Address(row.get("address"));
@@ -92,7 +107,7 @@ export class DateReolver {
     });
     return {
         items: res,
-        hasMore: resultSet.pageState !== null
+        hasMore: hasMore
     };
   }
 
@@ -101,18 +116,25 @@ export class DateReolver {
     @Args() {cursor, limit}: AddressBalanceChangeArgs
   ): Promise<PaginatedAddressBalanceChangeResponse> {
     let reverse: boolean = false;
-    let args: any[] = [date.date];
-    let query: string = "SELECT address, balance_change FROM dash.daily_top_losers WHERE date=?";
+    let args: any[] = [date.date, DateResolver.BINS];
+    let query: string = "SELECT address, balance_change FROM daily_top_losers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? "<" : ">") + " (?, ?)";
       args = args.concat([Math.round(cursor.balance_change*1e8), cursor.address]);
     }
-    if (reverse) query += " ORDER BY balance_change DESC, address DESC";
+    args.push(limit+1);
+    if (reverse) {
+      query += " ORDER BY balance_change DESC, address DESC LIMIT ?";
+    } else {
+      query += " ORDER BY balance_change ASC, address ASC LIMIT ?";
+    }
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res: AddressBalanceChange[] = resultSet.rows.map(row => {
         let adressBalanceChange = new AddressBalanceChange();
         let address = new Address(row.get("address"));
@@ -122,7 +144,7 @@ export class DateReolver {
     });
     return {
         items: res,
-        hasMore: resultSet.pageState !== null
+        hasMore: hasMore
     };
   }
 

@@ -17,7 +17,7 @@ export class TransactionInputResolver {
   ): Promise<TransactionOutput> {
     if (transactionInput.txid === null || transactionInput.txid === undefined) return null;
     let args: any[] = [transactionInput.txid, transactionInput.vout];
-    let query: string = "SELECT * FROM dash.transaction_output WHERE txid=? AND n=?";
+    let query: string = "SELECT * FROM transaction_output WHERE txid=? AND n=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -45,7 +45,7 @@ export class TransactionInputResolver {
   ): Promise<Transaction> {
     if (transactionInput.spending_txid === null || transactionInput.spending_txid === undefined) return null;
     let args: any[] = [transactionInput.spending_txid];
-    let query: string = "SELECT * FROM dash.transaction WHERE txid=?";
+    let query: string = "SELECT * FROM transaction WHERE txid=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 

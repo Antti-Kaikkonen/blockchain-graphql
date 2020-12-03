@@ -15,7 +15,7 @@ export class ClusterTransactionResolver {
   async confirmedTransaction(@Root() clusterTransaction: ClusterTransaction, 
   ): Promise<ConfirmedTransaction> {
     let args: any[] = [clusterTransaction.height, clusterTransaction.tx_n];
-    let query: string = "SELECT * FROM dash.confirmed_transaction WHERE height=? AND tx_n=?";
+    let query: string = "SELECT * FROM confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 

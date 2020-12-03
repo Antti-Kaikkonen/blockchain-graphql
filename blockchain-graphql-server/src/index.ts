@@ -6,7 +6,7 @@ import { AddressTransactionsResolver } from './resolvers/address-transactions-re
 import { ApolloServer, PubSub } from "apollo-server";
 import { Container } from "typedi";
 import { AddressResolver } from "./resolvers/address-resolver";
-import { DateReolver } from "./resolvers/date-resolver";
+import { DateResolver } from "./resolvers/date-resolver";
 import {
     getComplexity,
     simpleEstimator,
@@ -21,7 +21,6 @@ import { TransactionOutputResolver } from "./resolvers/transaction-output-resolv
 import { AddressClusterResolver } from "./resolvers/address-cluster-resolver";
 import { ClusterTransactionResolver } from "./resolvers/cluster-transaction-resolver";
 import { config } from "dotenv";
-import { resolve } from "path";
 
 
 async function run() {
@@ -34,15 +33,18 @@ async function run() {
     let contactPoints = process.env.CASSANDRA_HOST;
     let contactPointsArr = contactPoints.split(/\s+/);
 
+    let keyspace = process.env.CASSANDRA_KEYSPACE;
+
     const client = new Client({
       contactPoints: contactPointsArr,
-      localDataCenter: 'datacenter1'
+      localDataCenter: 'datacenter1',
+      keyspace: keyspace
     });
     await client.connect();
     Container.set("cassandra_client", client);
     let schema = await buildSchema({
         resolvers: [RichlistResolver, AddressTransactionsResolver, AddressResolver, 
-          DateReolver, BlockResolver, ConfirmedTransactionResolver, 
+          DateResolver, BlockResolver, ConfirmedTransactionResolver, 
           BlockHashResolver, TransactionResolver, TransactionInputResolver, 
           TransactionOutputResolver, AddressClusterResolver, ClusterTransactionResolver],
         validate: true,
