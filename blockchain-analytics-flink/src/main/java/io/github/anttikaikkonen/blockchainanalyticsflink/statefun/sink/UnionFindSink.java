@@ -2,9 +2,17 @@ package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink;
 
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteAddresses;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteTransactions;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetParent;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddAddressOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddTransactionOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.TxPointer;
+import java.util.Map;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.state.MapState;
+import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.configuration.Configuration;
@@ -24,11 +32,15 @@ public class UnionFindSink extends KeyedProcessFunction<String, AddressOperation
     private Long completedCheckpoint = 0l;//0 = no checkpoints completed
     private transient ListState<Long> persistedCompletedCheckpoint;
     
-    private ValueState<Long> addressFirstUncommittedCheckpoint;//earliest uncommitted address checkpoint
+    private ValueState<Long> addressFirstUncommittedCheckpoint;
     
-    private ValueState<Long> addressLastUncommittedCheckpoint;//last uncommitted address checkpoint
+    private ValueState<Long> addressLastUncommittedCheckpoint;
     
     private ListState<Object>[] checkpointedOperations;//Ring buffer containing up to MAX_UNCOMPLETED_CHECKPOINTS uncommitted checkpoints for an address
+    
+    private MapState<String, String>[] checkpointedAddAddressOperations;
+    
+    private MapState<TxPointer, Long>[] checkpointedAddTransactionOperations;
     
     private ValueState<SetParent>[] checkpointedSetParentOperations;
     
@@ -49,26 +61,62 @@ public class UnionFindSink extends KeyedProcessFunction<String, AddressOperation
         addressFirstUncommittedCheckpoint = getRuntimeContext().getState(new ValueStateDescriptor("fromCheckpoint", Long.class));
         addressLastUncommittedCheckpoint = getRuntimeContext().getState(new ValueStateDescriptor("toCheckpoint", Long.class));
         checkpointedOperations = new ListState[MAX_UNCOMPLETED_CHECKPOINTS];
+        checkpointedAddAddressOperations = new MapState[MAX_UNCOMPLETED_CHECKPOINTS];
+        checkpointedAddTransactionOperations = new MapState[MAX_UNCOMPLETED_CHECKPOINTS];
         checkpointedSetParentOperations = new ValueState[MAX_UNCOMPLETED_CHECKPOINTS];
         for (int i = 0; i < MAX_UNCOMPLETED_CHECKPOINTS; i++) {
             checkpointedOperations[i] = getRuntimeContext().getListState(new ListStateDescriptor("checkpointedOperations"+i, Object.class));
             checkpointedSetParentOperations[i] = getRuntimeContext().getState(new ValueStateDescriptor("checkpointedSetParentOperations"+i, SetParent.class));
+            checkpointedAddAddressOperations[i] = getRuntimeContext().getMapState(new MapStateDescriptor("checkpointedAddAddressOperations"+i, String.class, String.class));
+            checkpointedAddTransactionOperations[i] = getRuntimeContext().getMapState(new MapStateDescriptor("checkpointedAddTransactionOperations"+i, TxPointer.class, Long.class));
         }
         
     }
     
-    
-    private void flush(String address, long checkpointId, Collector<Object> out) throws Exception {
-        ListState<Object> checkpointedOps = checkpointedOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
-        for (Object op2 : checkpointedOps.get()) {
-            AddressOperation op = new AddressOperation(address, op2);
+    private void flushAddresses(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
+        MapState<String, String> addAddressOps = checkpointedAddAddressOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+        int count = 0;
+        for (String addAddress : addAddressOps.keys()) {
+            AddAddressOperation addAddressOp = new AddAddressOperation(addAddress);
+            AddressOperation op = new AddressOperation(clusterId, addAddressOp);
             out.collect(op);
+            count++;
         }
-        checkpointedOps.clear();
+        if (count > 0) addAddressOps.clear();
+    }
+    
+    private void flushTransactions(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
+        MapState<TxPointer, Long> addTransactionOps = checkpointedAddTransactionOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+        int count = 0;
+        for (Map.Entry<TxPointer, Long> e : addTransactionOps.entries()) {
+            AddTransactionOperation addTransactionOp = new AddTransactionOperation(e.getKey().getTime(), e.getKey().getHeight(), e.getKey().getTx_n(), e.getValue());
+            AddressOperation op = new AddressOperation(clusterId, addTransactionOp);
+            out.collect(op);
+            count++;
+        }
+        if (count > 0) addTransactionOps.clear();
+    }
+    
+    private void flushDeleteOperations(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
+        ListState<Object> checkpointedOps = checkpointedOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+        int count = 0;
+        for (Object op2 : checkpointedOps.get()) {
+            AddressOperation op = new AddressOperation(clusterId, op2);
+            out.collect(op);
+            count++;
+        }
+        if (count > 0) checkpointedOps.clear();
+    }
+    
+    private void flush(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
+        
+        flushAddresses(clusterId, checkpointId, out);
+        flushTransactions(clusterId, checkpointId, out);
+        flushDeleteOperations(clusterId, checkpointId, out);
         ValueState<SetParent> setParentOp = checkpointedSetParentOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
         SetParent setParent = setParentOp.value();
         if (setParent != null) {
-            AddressOperation op = new AddressOperation(address, setParent);
+            AddressOperation op = new AddressOperation(clusterId, setParent);
             out.collect(op);
             setParentOp.clear();
         }
@@ -110,7 +158,22 @@ public class UnionFindSink extends KeyedProcessFunction<String, AddressOperation
             ValueState<SetParent> checkpointedOps = this.checkpointedSetParentOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
             SetParent setParent = (SetParent) input.getOp();
             checkpointedOps.update(setParent);
-        } else {
+        } else if (input.getOp() instanceof AddAddressOperation) {
+            AddAddressOperation addAddressOp = (AddAddressOperation) input.getOp();
+            MapState<String, String> state = checkpointedAddAddressOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            state.put(addAddressOp.getAddress(), "");
+        } else if (input.getOp() instanceof AddTransactionOperation) {
+            AddTransactionOperation op = (AddTransactionOperation) input.getOp();
+            MapState<TxPointer, Long> state = checkpointedAddTransactionOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            state.put(new TxPointer(op.getTime(), op.getHeight(), op.getTx_n()), op.getDelta());
+        } else if (input.getOp() instanceof DeleteAddresses) {
+            MapState<String, String> state = checkpointedAddAddressOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            state.clear();
+            ListState<Object> checkpointedOps = this.checkpointedOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            checkpointedOps.add(input.getOp());
+        } else if (input.getOp() instanceof DeleteTransactions) {
+            MapState<TxPointer, Long> state = checkpointedAddTransactionOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            state.clear();
             ListState<Object> checkpointedOps = this.checkpointedOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
             checkpointedOps.add(input.getOp());
         }
@@ -142,6 +205,10 @@ public class UnionFindSink extends KeyedProcessFunction<String, AddressOperation
         this.completedCheckpoint = checkpointId;
         
     }
-
+    
+    @Override
+    public void notifyCheckpointAborted(long checkpointId) throws Exception {
+    }
+    
     
 }

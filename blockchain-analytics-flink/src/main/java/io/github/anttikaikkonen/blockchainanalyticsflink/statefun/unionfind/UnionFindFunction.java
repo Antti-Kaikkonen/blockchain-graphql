@@ -38,7 +38,7 @@ public class UnionFindFunction implements StatefulFunction {
     private final PersistedValue<Long> persistedClusterTransactionCount = PersistedValue.of("clusterTransactionCount", Long.class);
     
     @Persisted
-    private final PersistedValue<Long> persistedClusterAddressCount = PersistedValue.of("clusterAddressCount", Long.class);
+    private final PersistedValue<Boolean> hasClusterAddresses = PersistedValue.of("hasClusterAddresses", Boolean.class);
     
     public UnionFindFunction() {
     }
@@ -75,17 +75,12 @@ public class UnionFindFunction implements StatefulFunction {
             }
             if (newTransactions > 0) this.persistedClusterTransactionCount.set(oldTxCount+newTransactions);
             
-            long oldAddressCount = makeSet ? 0 : this.persistedClusterAddressCount.getOrDefault(0l);
-            int newAddresses = 0;
+
+            hasClusterAddresses.set(true);
             for (String addr : op.getAddresses()) {
-                String existingAddress = (oldAddressCount == 0) ? null : this.persistedAddresses.get(addr);
-                if (existingAddress == null) {
-                    newAddresses++;
-                    this.persistedAddresses.set(addr, "");
-                    sendToCassandra(context, new AddAddressOperation(addr));
-                }
+                persistedAddresses.set(addr, "");
+                sendToCassandra(context, new AddAddressOperation(addr));
             }
-            if (newAddresses > 0) this.persistedClusterAddressCount.set(oldAddressCount+newAddresses);
         }
     }
     
@@ -190,15 +185,14 @@ public class UnionFindFunction implements StatefulFunction {
                 persistentAddressCount.clear();
                 context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(size, false));
                 
-                long addressCount = persistedClusterAddressCount.getOrDefault(0l);
-                if (addressCount > 0) {
-                    long adderssesDeleted = 0;
+                //long addressCount = persistedClusterAddressCount.getOrDefault(0l);
+                boolean hasClusterAddresses = this.hasClusterAddresses.getOrDefault(false);
+                if (hasClusterAddresses) {
                     Iterable<String> addresses = this.persistedAddresses.keys();
                     for (String a : addresses) {
-                        adderssesDeleted++;
                         context.send(new Address(TYPE, mergeRoot.getRoot()), new AddAddressOperation(a));
                     }
-                    if (adderssesDeleted > 0) deleteAddresses(context);
+                    deleteAddresses(context);
                 }
                 long txCount = persistedClusterTransactionCount.getOrDefault(0l);
                 if (txCount > 0) {
@@ -305,19 +299,16 @@ public class UnionFindFunction implements StatefulFunction {
         if (!parent.equals(address)) {
             context.send(new Address(TYPE, ""+parent), addAddressOp);
         } else {
-            long oldAddressCount = makeSet ? 0 : persistedClusterAddressCount.getOrDefault(0l);
-            String existingAddress = (oldAddressCount == 0) ? null : persistedAddresses.get(addAddressOp.getAddress());
-            if (existingAddress == null) {
-                persistedAddresses.set(addAddressOp.getAddress(), "");
-                persistedClusterAddressCount.set(oldAddressCount+1);
-                sendToCassandra(context, addAddressOp);
-            }
+            persistedAddresses.set(addAddressOp.getAddress(), "");
+            hasClusterAddresses.set(true);
+            sendToCassandra(context, addAddressOp);
         }
     }
     
     public void deleteAddresses(Context context) {
         persistedAddresses.clear();
-        persistedClusterAddressCount.clear();
+        hasClusterAddresses.clear();
+        //persistedClusterAddressCount.clear();
         sendToCassandra(context, new DeleteAddresses());
     }
     
