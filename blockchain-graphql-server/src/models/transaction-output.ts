@@ -3,6 +3,7 @@ import { ScriptPubKey } from "./scriptpubkey";
 import { TransactionInput } from "./transaction-input";
 import { Transaction } from "./transaction";
 import { PaginatedResponse } from "./paginated-response";
+import { Coin } from "./coin";
 
 @ObjectType()
 export class TransactionOutput {
@@ -24,6 +25,8 @@ export class TransactionOutput {
 
     @Field(type => Transaction, {nullable: false, complexity: 1})
     transaction: Transaction;
+
+    coin: Coin;
 }
 
 @InputType()
@@ -36,4 +39,8 @@ export class TransactionOutputCursor {
 
 @ObjectType()
 export class PaginatedTransactionOutputResponse extends PaginatedResponse(TransactionOutput) {
+    
+    @Field({complexity: 0})
+    hasMore: boolean;
+
 }

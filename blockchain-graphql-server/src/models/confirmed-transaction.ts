@@ -2,6 +2,7 @@ import { ObjectType, Field, InputType, Int } from "type-graphql";
 import { Transaction } from "./transaction";
 import { BlockHash } from "./block_hash";
 import { PaginatedResponse } from "./paginated-response";
+import { Coin } from "./coin";
 
 @ObjectType()
 export class ConfirmedTransaction {
@@ -21,16 +22,20 @@ export class ConfirmedTransaction {
   @Field({nullable: false})
   transaction: Transaction;
 
+  coin: Coin;
+
 }
 
 @InputType()
 export class ConfirmedTransactionCursor {
 
-    @Field(type => Int, {nullable: false})
-    tx_n: number;
+  @Field(type => Int, {nullable: false})
+  tx_n: number;
 
 }
 
 @ObjectType()
 export class PaginatedConfirmedTransactionResponse extends PaginatedResponse(ConfirmedTransaction) {
+  @Field({complexity: 0})
+  hasMore: boolean;
 }

@@ -1,6 +1,7 @@
 import { ObjectType, Field } from "type-graphql";
 import { PaginatedClusterTransactionResponse } from "./cluster-transaction";
 import { PaginatedAddressResponse } from "./address";
+import { Coin } from "./coin";
 
 @ObjectType()
 export class AddressCluster {
@@ -13,4 +14,6 @@ export class AddressCluster {
 
     @Field(type => PaginatedAddressResponse, {nullable: false})
     clusterAddresses: PaginatedAddressResponse;
+
+    coin: Coin;
 }

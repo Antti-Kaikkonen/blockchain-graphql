@@ -16,7 +16,7 @@ export class TransactionOutputResolver {
   ): Promise<TransactionInput> {
     if (transactionOutput.spending_txid === null || transactionOutput.spending_txid === undefined) return null;
     let args: any[] = [transactionOutput.spending_txid, transactionOutput.spending_index];
-    let query: string = "SELECT * FROM transaction_input WHERE spending_txid=? AND spending_index=?";
+    let query: string = "SELECT * FROM "+transactionOutput.coin.keyspace+".transaction_input WHERE spending_txid=? AND spending_index=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -31,6 +31,7 @@ export class TransactionOutputResolver {
       vin.vout = row.get('vout');
       vin.spending_txid = row.get('spending_txid');
       vin.spending_index = row.get('spending_index');
+      vin.coin = transactionOutput.coin;
       return vin;
     });
     return res[0];
@@ -41,7 +42,7 @@ export class TransactionOutputResolver {
   ): Promise<Transaction> {
     if (transactionOutput.txid === null || transactionOutput.txid === undefined) return null;
     let args: any[] = [transactionOutput.txid];
-    let query: string = "SELECT * FROM transaction WHERE txid=?";
+    let query: string = "SELECT * FROM "+transactionOutput.coin.keyspace+".transaction WHERE txid=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -55,6 +56,7 @@ export class TransactionOutputResolver {
       tx.version = row.get('version');
       tx.height = row.get('height');
       tx.txN = row.get("tx_n");
+      tx.coin = transactionOutput.coin;
       return tx;
     });
     return res[0];

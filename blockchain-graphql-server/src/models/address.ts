@@ -2,16 +2,19 @@ import { ObjectType, Field } from "type-graphql";
 import { PaginatedAddressTransactionResponse } from "./address-transaction";
 import { PaginatedOHLCResponse } from "./ohlc";
 import { PaginatedAddressBalanceResponse } from "./address-balance";
-import { PaginatedAddressBalanceChangeResponse } from "./address-balance-change";
 import { AddressCluster } from "./address-cluster";
 import { PaginatedResponse } from "./paginated-response";
+import { Coin } from "./coin";
 
 @ObjectType()
 export class Address {
 
-  constructor(address: string) {
+  constructor(address: string, coin: Coin) {
     this.address = address;
+    this.coin = coin;
   }
+
+  coin: Coin;
 
   @Field({nullable: false, complexity: 1})
   address!: string;
@@ -32,4 +35,6 @@ export class Address {
 
 @ObjectType()
 export class PaginatedAddressResponse extends PaginatedResponse(Address) {
+  @Field({complexity: 0})
+  hasMore: boolean;
 }

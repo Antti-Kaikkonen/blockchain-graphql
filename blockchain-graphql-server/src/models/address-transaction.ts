@@ -2,6 +2,7 @@ import { ObjectType, Field, InputType, Int } from "type-graphql";
 import { type } from "os";
 import { PaginatedResponse } from "./paginated-response";
 import { ConfirmedTransaction } from "./confirmed-transaction";
+import { Coin } from "./coin";
 
 @ObjectType()
 export class AddressTransaction {
@@ -24,6 +25,8 @@ export class AddressTransaction {
   @Field({nullable: false, complexity: 1})
   balance_after_block: number;
 
+  coin: Coin;
+
 }
 
 @InputType()
@@ -42,4 +45,6 @@ export class AddressTransactionCursor {
 
 @ObjectType()
 export class PaginatedAddressTransactionResponse extends PaginatedResponse(AddressTransaction) {
+  @Field({complexity: 0})
+  hasMore: boolean;
 }

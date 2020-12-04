@@ -22,4 +22,6 @@ export class AddressBalanceCursor {
 
 @ObjectType()
 export class PaginatedAddressBalanceResponse extends PaginatedResponse(AddressBalance) {
+  @Field({complexity: 0})
+  hasMore: boolean;
 }

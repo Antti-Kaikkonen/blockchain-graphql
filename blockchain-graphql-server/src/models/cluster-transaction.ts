@@ -1,4 +1,5 @@
 import { ObjectType, Field, InputType, Int } from "type-graphql";
+import { Coin } from "./coin";
 import { ConfirmedTransaction } from "./confirmed-transaction";
 import { PaginatedResponse } from "./paginated-response";
 
@@ -20,6 +21,8 @@ export class ClusterTransaction {
   @Field({nullable: false})
   confirmedTransaction: ConfirmedTransaction;
 
+  coin: Coin;
+
 }
 
 @InputType()
@@ -38,4 +41,6 @@ export class ClusterTransactionCursor {
 
 @ObjectType()
 export class PaginatedClusterTransactionResponse extends PaginatedResponse(ClusterTransaction) {
+  @Field({complexity: 0})
+  hasMore: boolean;
 }

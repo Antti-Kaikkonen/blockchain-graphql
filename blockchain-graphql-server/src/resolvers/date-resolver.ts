@@ -46,7 +46,7 @@ export class DateResolver {
     @Args() {cursor, limit}: RichlistArgs
   ): Promise<PaginatedRichlistResponse> {
     let args: any[] = [date.date, DateResolver.BINS];
-    let query: string = "SELECT balance, balance_change, address FROM daily_richlist WHERE date=? AND bin IN ?";
+    let query: string = "SELECT balance, balance_change, address FROM "+date.coin.keyspace+".daily_richlist WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance, balance_change, address) < (?, ?, ?)"
       args = args.concat([Math.round(cursor.balance*1e8), Math.round(cursor.balance_change*1e8), cursor.address]);
@@ -62,7 +62,8 @@ export class DateResolver {
     if (hasMore) resultSet.rows.pop();
     let res: Richlist[] = resultSet.rows.map(row => {
         let richlist: Richlist = new Richlist();
-        let address = new Address(row.get("address"));
+        let address = new Address(row.get("address"), date.coin);
+        address.coin = date.coin;
         richlist.address = address;
         richlist.balance = row.get("balance")/1e8;
         richlist.balance_change = row.get("balance_change")/1e8;
@@ -80,7 +81,7 @@ export class DateResolver {
   ): Promise<PaginatedAddressBalanceChangeResponse> {
     let reverse: boolean = false;
     let args: any[] = [date.date, DateResolver.BINS];
-    let query: string = "SELECT address, balance_change FROM daily_top_gainers WHERE date=? AND bin IN ?";
+    let query: string = "SELECT address, balance_change FROM "+date.coin.keyspace+".daily_top_gainers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? ">" : "<") + " (?, ?)";
       args = args.concat([Math.round(cursor.balance_change*1e8), cursor.address]);
@@ -100,7 +101,7 @@ export class DateResolver {
     if (hasMore) resultSet.rows.pop();
     let res: AddressBalanceChange[] = resultSet.rows.map(row => {
         let adressBalanceChange = new AddressBalanceChange();
-        let address = new Address(row.get("address"));
+        let address = new Address(row.get("address"), date.coin);
         adressBalanceChange.address = address;
         adressBalanceChange.balance_change = row.get("balance_change")/1e8;
         return adressBalanceChange;
@@ -117,7 +118,7 @@ export class DateResolver {
   ): Promise<PaginatedAddressBalanceChangeResponse> {
     let reverse: boolean = false;
     let args: any[] = [date.date, DateResolver.BINS];
-    let query: string = "SELECT address, balance_change FROM daily_top_losers WHERE date=? AND bin IN ?";
+    let query: string = "SELECT address, balance_change FROM "+date.coin.keyspace+".daily_top_losers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? "<" : ">") + " (?, ?)";
       args = args.concat([Math.round(cursor.balance_change*1e8), cursor.address]);
@@ -137,7 +138,7 @@ export class DateResolver {
     if (hasMore) resultSet.rows.pop();
     let res: AddressBalanceChange[] = resultSet.rows.map(row => {
         let adressBalanceChange = new AddressBalanceChange();
-        let address = new Address(row.get("address"));
+        let address = new Address(row.get("address"), date.coin);
         adressBalanceChange.address = address;
         adressBalanceChange.balance_change = row.get("balance_change")/1e8;
         return adressBalanceChange;

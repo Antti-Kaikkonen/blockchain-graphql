@@ -11,32 +11,11 @@ export class ConfirmedTransactionResolver {
   constructor(@Inject("cassandra_client") private client: Client) {
   }
 
-  @Query(returns => ConfirmedTransaction, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
-  async confirmedTransaction(
-    @Arg("height") height: number, 
-    @Arg("tx_n") tx_n: number): Promise<ConfirmedTransaction> {
-    let args: any[] = [height, tx_n];
-    let query: string = "SELECT * FROM confirmed_transaction WHERE height=? AND tx_n=?";
-    let resultSet: types.ResultSet = await this.client.execute(
-      query, 
-      args, 
-      {prepare: true}
-    );
-    let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
-      let tx: ConfirmedTransaction = new ConfirmedTransaction();
-      tx.height = row.get('height');
-      tx.tx_n = row.get('tx_n');
-      tx.txid = row.get("txid");
-      return tx;
-    });
-    return res[0];
-  }
-
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async blockHash(@Root() transaction: ConfirmedTransaction, 
   ): Promise<BlockHash> {
     let args: any[] = [transaction.height];
-    let query: string = "SELECT * FROM longest_chain WHERE height=?";
+    let query: string = "SELECT * FROM "+transaction.coin.keyspace+".longest_chain WHERE height=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -46,6 +25,7 @@ export class ConfirmedTransactionResolver {
       let b: BlockHash = new BlockHash();
       b.hash = row.get('hash');
       b.height = row.get('height');
+      b.coin = transaction.coin;
       return b;
     });
     return res[0];
@@ -55,7 +35,7 @@ export class ConfirmedTransactionResolver {
   async transaction(@Root() transaction: ConfirmedTransaction, 
   ): Promise<Transaction> {
     let args: any[] = [transaction.txid];
-    let query: string = "SELECT * FROM transaction WHERE txid=?";
+    let query: string = "SELECT * FROM "+transaction.coin.keyspace+".transaction WHERE txid=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -70,6 +50,7 @@ export class ConfirmedTransactionResolver {
       tx.height = row.get('height');
       tx.txN = row.get("tx_n");
       tx.fee = row.get("tx_fee")/1e8;
+      tx.coin = transaction.coin;
       return tx;
     });
     return res[0];

@@ -3,6 +3,7 @@ import { AddressTransaction, PaginatedAddressTransactionResponse } from "./addre
 import { OHLC, PaginatedOHLCResponse } from "./ohlc";
 import { ConfirmedTransaction } from "./confirmed-transaction";
 import { Block } from "./block";
+import { Coin } from "./coin";
 
 @ObjectType()
 export class BlockHash {
@@ -15,5 +16,7 @@ export class BlockHash {
 
   @Field(type => Block, {nullable: false})
   block: Block;
+
+  coin: Coin;
 
 }

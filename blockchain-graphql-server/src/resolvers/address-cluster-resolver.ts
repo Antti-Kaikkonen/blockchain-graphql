@@ -4,6 +4,7 @@ import { Inject } from "typedi";
 import { Client, types } from "cassandra-driver";
 import { PaginatedClusterTransactionResponse, ClusterTransactionCursor, ClusterTransaction } from "../models/cluster-transaction";
 import { PaginatedAddressResponse, Address } from "../models/address";
+import { Coin } from "../models/coin";
 
 @InputType()
 export class AddressCursor {
@@ -25,7 +26,7 @@ export class AddressClusterResolver {
     @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
   ): Promise<PaginatedClusterTransactionResponse> {
     let args: any[] = [cluster.clusterId];
-    let query: string = "SELECT timestamp, height, tx_n, balance_change FROM cluster_transaction WHERE cluster_id=?";
+    let query: string = "SELECT timestamp, height, tx_n, balance_change FROM "+cluster.coin.keyspace+".cluster_transaction WHERE cluster_id=?";
     if (cursor) {
       query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
       args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
@@ -41,6 +42,7 @@ export class AddressClusterResolver {
       clusterTransaction.height = row.get("height");
       clusterTransaction.tx_n = row.get("tx_n");
       clusterTransaction.balance_change = row.get("balance_change")/1e8;
+      clusterTransaction.coin = cluster.coin;
       return clusterTransaction;
     });
     return {
@@ -55,7 +57,7 @@ export class AddressClusterResolver {
     @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
   ): Promise<PaginatedAddressResponse> {
     let args: any[] = [cluster.clusterId];
-    let query: string = "SELECT address FROM cluster_address WHERE cluster_id=?";
+    let query: string = "SELECT address FROM "+cluster.coin.keyspace+".cluster_address WHERE cluster_id=?";
     if (cursor) {
       query += " AND (address) < (?)";
       args = args.concat([cursor.address]);
@@ -65,7 +67,7 @@ export class AddressClusterResolver {
       args, 
       {prepare: true, fetchSize: limit}
     );
-    let res: Address[] = resultSet.rows.map(row => new Address(row.get("address")));
+    let res: Address[] = resultSet.rows.map(row => new Address(row.get("address"), cluster.coin));
     return {
       hasMore: resultSet.pageState !== null,
       items: res,

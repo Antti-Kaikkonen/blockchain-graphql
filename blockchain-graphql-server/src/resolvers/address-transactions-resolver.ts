@@ -15,7 +15,7 @@ export class AddressTransactionsResolver {
   async confirmedTransaction(@Root() addressTransaction: AddressTransaction, 
   ): Promise<ConfirmedTransaction> {
     let args: any[] = [addressTransaction.height, addressTransaction.tx_n];
-    let query: string = "SELECT * FROM confirmed_transaction WHERE height=? AND tx_n=?";
+    let query: string = "SELECT * FROM "+addressTransaction.coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -29,6 +29,7 @@ export class AddressTransactionsResolver {
       tx.height = row.get('height');
       tx.tx_n = row.get('tx_n');
       tx.txid = row.get("txid");
+      tx.coin = addressTransaction.coin;
       return tx;
     });
     return res[0];

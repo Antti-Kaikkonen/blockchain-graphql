@@ -9,31 +9,12 @@ export class BlockHashResolver {
 
   constructor(@Inject("cassandra_client") private client: Client) {
   }
-
-  @Query(returns => BlockHash, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
-  async blockHash(
-    @Arg("height") height: number): Promise<BlockHash> {
-    let args: any[] = [height];
-    let query: string = "SELECT * FROM longest_chain WHERE height=?";
-    let resultSet: types.ResultSet = await this.client.execute(
-      query, 
-      args, 
-      {prepare: true}
-    );
-    let res: BlockHash[] = resultSet.rows.map(row => {
-      let b: BlockHash = new BlockHash();
-      b.hash = row.get('hash');
-      b.height = row.get('height');
-      return b;
-    });
-    return res[0];
-  }    
-
+  
   @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async block(@Root() blockHash: BlockHash, 
   ): Promise<Block> {
     let args: any[] = [blockHash.hash];
-    let query: string = "SELECT * FROM block WHERE hash=?";
+    let query: string = "SELECT * FROM "+blockHash.coin.keyspace+".block WHERE hash=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -55,6 +36,7 @@ export class BlockHashResolver {
       b.chainwork = row.get("chainwork");
       b.previousblockhash = row.get("previousblockhash");
       b.tx_count = row.get("tx_count");
+      b.coin = blockHash.coin;
       return b;
     });
     return res[0];

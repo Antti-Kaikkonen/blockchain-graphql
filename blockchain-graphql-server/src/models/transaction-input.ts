@@ -4,6 +4,7 @@ import { ScriptSig } from "./scriptsig";
 import { TransactionOutput } from "./transaction-output";
 import { Transaction } from "./transaction";
 import { PaginatedResponse } from "./paginated-response";
+import { Coin } from "./coin";
 
 @ObjectType()
 export class TransactionInput {
@@ -31,6 +32,8 @@ export class TransactionInput {
     @Field(type => Transaction, {nullable: false, complexity: 1})
     transaction: Transaction;
 
+    coin: Coin;
+
 }
 
 @InputType()
@@ -43,4 +46,6 @@ export class TransactionInputCursor {
 
 @ObjectType()
 export class PaginatedTransactionInputResponse extends PaginatedResponse(TransactionInput) {
+    @Field({complexity: 0})
+    hasMore: boolean;
 }

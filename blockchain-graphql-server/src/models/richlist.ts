@@ -14,7 +14,6 @@ export class Richlist {
   @Field({complexity: 1})
   balance_change: number;
 
-
 }
 
 @InputType()
@@ -41,4 +40,6 @@ export class RichListCursor {
 
 @ObjectType()
 export class PaginatedRichlistResponse extends PaginatedResponse(Richlist) {
+  @Field({complexity: 0})
+  hasMore: boolean;
 }

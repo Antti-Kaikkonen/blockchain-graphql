@@ -5,7 +5,7 @@ import { PaginatedResponse } from "./paginated-response";
 @ObjectType()
 export class AddressBalanceChange {
 
-    @Field({complexity: 1})
+    @Field(type => Address, {complexity: 1})
     address: Address;
 
     @Field({complexity: 1})
@@ -26,4 +26,6 @@ export class AddressBalanceChangeCursor {
 
 @ObjectType()
 export class PaginatedAddressBalanceChangeResponse extends PaginatedResponse(AddressBalanceChange) {
+    @Field({complexity: 0})
+    hasMore: boolean;
 }

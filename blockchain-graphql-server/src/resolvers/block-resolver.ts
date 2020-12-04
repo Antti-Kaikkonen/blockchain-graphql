@@ -17,40 +17,9 @@ class ConfirmedTransactionArgs extends PaginationArgs {
 @Resolver(of => Block)
 export class BlockResolver {
 
-    constructor(@Inject("cassandra_client") private client: Client) {
-      console.log("BlockResolver constructor");
-    }
-
-  @Query(returns => Block, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
-  async block(
-    @Arg("hash") hash: string): Promise<Block> {
-    let args: any[] = [hash];
-    let query: string = "SELECT * FROM block WHERE hash=?";
-    let resultSet: types.ResultSet = await this.client.execute(
-      query, 
-      args, 
-      {prepare: true}
-    );
-    let res: Block[] = resultSet.rows.map(row => {
-      let b: Block = new Block();
-      b.height = row.get('height');
-      b.hash = row.get('hash');
-      b.height = row.get('height');
-      b.version = row.get('version');
-      b.versionhex = row.get("versionhex");
-      b.merkleroot = row.get("merkleroot");
-      b.time = row.get("time");
-      b.mediantime = row.get("mediantime");
-      b.nonce = row.get("nonce");
-      b.bits = row.get("bits");
-      b.difficulty = row.get("difficulty");
-      b.chainwork = row.get("chainwork");
-      b.previousblockhash = row.get("previousblockhash");
-      b.tx_count = row.get("tx_count");
-      return b;
-    });
-    return res[0];
-  }  
+  constructor(@Inject("cassandra_client") private client: Client) {
+    console.log("BlockResolver constructor");
+  }
 
   @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async confirmedTransactions(@Root() block: Block, 
@@ -59,7 +28,7 @@ export class BlockResolver {
 
   ): Promise<PaginatedConfirmedTransactionResponse> {
     let args: any[] = [block.height];
-    let query: string = "SELECT * FROM confirmed_transaction WHERE height=?";
+    let query: string = "SELECT * FROM "+block.coin.keyspace+".confirmed_transaction WHERE height=?";
     if (cursor) {
       query += " AND tx_n > ?";
       args = args.concat([cursor.tx_n]);
@@ -74,6 +43,7 @@ export class BlockResolver {
       tx.height = row.get('height');
       tx.tx_n = row.get('tx_n');
       tx.txid = row.get("txid");
+      tx.coin = block.coin;
       return tx;
     });
     return {

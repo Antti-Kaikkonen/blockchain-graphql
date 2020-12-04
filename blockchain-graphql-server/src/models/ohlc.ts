@@ -37,4 +37,6 @@ export class OHLCCursor {
 
 @ObjectType()
 export class PaginatedOHLCResponse extends PaginatedResponse(OHLC) {
+  @Field({complexity: 0})
+  hasMore: boolean;
 }

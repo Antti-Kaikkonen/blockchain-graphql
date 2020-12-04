@@ -1,11 +1,12 @@
 import { ObjectType, Field } from "type-graphql";
-import { AddressTransaction } from "./address-transaction";
-import { OHLC } from "./ohlc";
-import { Richlist, PaginatedRichlistResponse } from "./richlist";
-import { AddressBalanceChange, PaginatedAddressBalanceChangeResponse } from "./address-balance-change";
+import { Coin } from "./coin";
+import { PaginatedRichlistResponse } from "./richlist";
+import { PaginatedAddressBalanceChangeResponse } from "./address-balance-change";
 
 @ObjectType()
 export class Date {
+
+  coin: Coin;
 
   @Field({nullable: false, complexity: 1})
   date: string;

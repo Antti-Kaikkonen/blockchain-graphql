@@ -9,8 +9,8 @@ export function PaginatedResponse<TItem>(TItemClass: ClassType<TItem>) {
       // and here the generic type
       items: TItem[];
   
-      @Field()
-      hasMore: boolean;
+      //@Field({complexity: 0}) //Specifying complexity here does not work so we force to implement this field in the subclass where complexity works
+      abstract hasMore: boolean;
     }
     return PaginatedResponseClass;
 }

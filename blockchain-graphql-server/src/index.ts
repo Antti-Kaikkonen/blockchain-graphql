@@ -21,6 +21,7 @@ import { TransactionOutputResolver } from "./resolvers/transaction-output-resolv
 import { AddressClusterResolver } from "./resolvers/address-cluster-resolver";
 import { ClusterTransactionResolver } from "./resolvers/cluster-transaction-resolver";
 import { config } from "dotenv";
+import { CoinResolver } from "./resolvers/coin-resolver";
 
 
 async function run() {
@@ -33,22 +34,22 @@ async function run() {
     let contactPoints = process.env.CASSANDRA_HOST;
     let contactPointsArr = contactPoints.split(/\s+/);
 
-    let keyspace = process.env.CASSANDRA_KEYSPACE;
+    let coins_keyspace = process.env.CASSANDRA_COINS_KEYSPACE || "coins";
 
     let api_port: number = process.env.API_PORT !== undefined ? Number.parseInt(process.env.API_PORT) : 6545;
 
     const client = new Client({
       contactPoints: contactPointsArr,
-      localDataCenter: 'datacenter1',
-      keyspace: keyspace
+      localDataCenter: 'datacenter1'
     });
     await client.connect();
     Container.set("cassandra_client", client);
+    Container.set("coins_keyspace", coins_keyspace);
     let schema = await buildSchema({
         resolvers: [RichlistResolver, AddressTransactionsResolver, AddressResolver, 
           DateResolver, BlockResolver, ConfirmedTransactionResolver, 
           BlockHashResolver, TransactionResolver, TransactionInputResolver, 
-          TransactionOutputResolver, AddressClusterResolver, ClusterTransactionResolver],
+          TransactionOutputResolver, AddressClusterResolver, ClusterTransactionResolver, CoinResolver],
         validate: true,
         container: Container,
         dateScalarMode: "timestamp"

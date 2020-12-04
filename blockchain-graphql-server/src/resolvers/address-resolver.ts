@@ -15,15 +15,15 @@ export class AddressResolver {
   }
   
 
-  @Query(returns => Address, {complexity: 1})
+  /*@Query(returns => Address, {complexity: 1})
   async address(@Arg("address") address: string) {
     let res = new Address(address);
     return res;
-  }
+  }*/
 
   @FieldResolver(returns => AddressCluster, {complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async guestimatedWallet(@Root() address: Address): Promise<AddressCluster> {
-    let query: string = "SELECT parent FROM union_find WHERE address=?";
+    let query: string = "SELECT parent FROM "+address.coin.keyspace+".union_find WHERE address=?";
     let currentAddress = address.address;
     do {
       let resultSet: types.ResultSet = await this.client.execute(
@@ -36,6 +36,7 @@ export class AddressResolver {
       } else {
         let res: AddressCluster = new AddressCluster();
         res.clusterId = currentAddress;
+        res.coin = address.coin;
         return res;
       }
     } while(true);
@@ -52,7 +53,7 @@ export class AddressResolver {
     let reverse: boolean = false;
     console.log("interval = "+interval);
     let args: any[] = [address.address, interval];
-    let query: string = "SELECT timestamp, open, high, low, close FROM ohlc WHERE address=? AND interval=?";
+    let query: string = "SELECT timestamp, open, high, low, close FROM "+address.coin.keyspace+".ohlc WHERE address=? AND interval=?";
     if (cursor) {
       query += " AND timestamp " + (reverse ? "<" : ">") + " ?";
       args = args.concat([cursor.timestamp]);
@@ -85,7 +86,7 @@ export class AddressResolver {
     @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number, 
   ): Promise<PaginatedAddressTransactionResponse> {
     let args: any[] = [address.address];
-    let query: string = "SELECT timestamp, height, tx_n, balance_change FROM address_transaction WHERE address=?";
+    let query: string = "SELECT timestamp, height, tx_n, balance_change FROM "+address.coin.keyspace+".address_transaction WHERE address=?";
     if (cursor) {
       query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
       args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
@@ -101,12 +102,13 @@ export class AddressResolver {
       addressTransaction.height = row.get("height");
       addressTransaction.tx_n = row.get("tx_n");
       addressTransaction.balance_change = row.get("balance_change")/1e8;
+      addressTransaction.coin = address.coin;
       return addressTransaction;
     });
     if (res.length > 0) {
       let start = res[res.length-1].timestamp;
       let end = res[0].timestamp;
-      let query2: string = "SELECT timestamp, balance FROM address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?";
+      let query2: string = "SELECT timestamp, balance FROM "+address.coin.keyspace+".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?";
       let args2: any[] = [address.address, start, end];
       let resultSet2: types.ResultSet = await this.client.execute(
         query2, 
@@ -130,7 +132,7 @@ export class AddressResolver {
     //@Arg("reverse", {nullable: true, defaultValue: false}) reverse?: boolean,
   ): Promise<PaginatedAddressBalanceResponse> {
     let args: any[] = [address.address];
-    let query: string = "SELECT timestamp, balance FROM address_balance WHERE address=?";
+    let query: string = "SELECT timestamp, balance FROM "+address.coin.keyspace+".address_balance WHERE address=?";
     if (cursor) {
       query += " AND timestamp < ?";
       args = args.concat([cursor.timestamp]);

@@ -30,36 +30,12 @@ export class TransactionResolver {
   constructor(@Inject("cassandra_client") private client: Client) {
   }
 
-  @Query(returns => Transaction, {complexity: ({ childComplexity, args }) => 100 + childComplexity})
-  async transaction(@Arg("txid") txid: string): Promise<Transaction> {
-    let args: any[] = [txid];
-    let query: string = "SELECT * FROM transaction WHERE txid=?";
-    let resultSet: types.ResultSet = await this.client.execute(
-      query, 
-      args, 
-      {prepare: true}
-    );
-    let res: Transaction[] = resultSet.rows.map(row => {
-      let tx: Transaction = new Transaction();
-      tx.txid = row.get('txid');
-      tx.locktime = row.get('locktime');
-      tx.size = row.get('size');
-      tx.version = row.get('version');
-      tx.height = row.get('height');
-      tx.txN = row.get("tx_n");
-      tx.fee = row.get("tx_fee")/1e8;
-      return tx;
-    });
-    return res[0];
-  }
-
-
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async blockHash(@Root() transaction: Transaction, 
   ): Promise<BlockHash> {
     if (transaction.height === undefined || transaction.height === null) return null;
     let args: any[] = [transaction.height];
-    let query: string = "SELECT * FROM longest_chain WHERE height=?";
+    let query: string = "SELECT * FROM "+transaction.coin.keyspace+".longest_chain WHERE height=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -69,6 +45,7 @@ export class TransactionResolver {
       let b: BlockHash = new BlockHash();
       b.hash = row.get('hash');
       b.height = row.get('height');
+      b.coin = transaction.coin;
       return b;
     });
     return res[0];
@@ -81,7 +58,7 @@ export class TransactionResolver {
     @Args() {cursor, limit}: TransactionInputArgs
   ): Promise<PaginatedTransactionInputResponse> {
     let args: any[] = [transaction.txid];
-    let query: string = "SELECT * FROM transaction_input WHERE spending_txid=?";
+    let query: string = "SELECT * FROM "+transaction.coin.keyspace+".transaction_input WHERE spending_txid=?";
     if (cursor) {
       query += " AND spending_index > ?";
       args = args.concat([cursor.spending_index]);
@@ -100,6 +77,7 @@ export class TransactionResolver {
       vin.vout = row.get('vout');
       vin.spending_txid = row.get('spending_txid');
       vin.spending_index = row.get('spending_index');
+      vin.coin = transaction.coin;
       return vin;
     });
     return {
@@ -113,7 +91,7 @@ export class TransactionResolver {
     @Args() {cursor, limit}: TransactionOutputArgs
   ): Promise<PaginatedTransactionOutputResponse> {
     let args: any[] = [transaction.txid];
-    let query: string = "SELECT * FROM transaction_output WHERE txid=?";
+    let query: string = "SELECT * FROM "+transaction.coin.keyspace+".transaction_output WHERE txid=?";
     if (cursor) {
       query += " AND n > ?";
       args = args.concat([cursor.n]);
@@ -130,11 +108,12 @@ export class TransactionResolver {
       vout.value = row.get('value');
       let scriptpubkey = row.get('scriptpubkey');
       if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
-        scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address(address));
+        scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address(address, transaction.coin));
       }
       vout.scriptpubkey = scriptpubkey;
       vout.spending_txid = row.get('spending_txid');
       vout.spending_index = row.get('spending_index');
+      vout.coin = transaction.coin;
       return vout;
     });
     return {
