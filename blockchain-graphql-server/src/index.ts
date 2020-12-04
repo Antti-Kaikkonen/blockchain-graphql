@@ -35,6 +35,8 @@ async function run() {
 
     let keyspace = process.env.CASSANDRA_KEYSPACE;
 
+    let api_port: number = process.env.API_PORT !== undefined ? Number.parseInt(process.env.API_PORT) : 6545;
+
     const client = new Client({
       contactPoints: contactPointsArr,
       localDataCenter: 'datacenter1',
@@ -101,7 +103,7 @@ async function run() {
             },
           ],
     });
-    const { url } = await server.listen(6545);
+    const { url } = await server.listen(api_port);
     console.log(`Server is running, GraphQL Playground available at ${url}`);
 }
   
