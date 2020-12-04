@@ -23,10 +23,7 @@ public class UnionFindFunction implements StatefulFunction {
     public static final FunctionType TYPE = new FunctionType("address_clustering", "union_find");
     
     @Persisted
-    private final PersistedValue<String> persistedParent = PersistedValue.of("parent", String.class);
-    
-    @Persisted
-    private final PersistedValue<Long> persistentAddressCount = PersistedValue.of("addressCount", Long.class);
+    private final PersistedValue<Object> persistedParentOrSize = PersistedValue.of("parent", Object.class);//Parent address (String) or size (Long) if in the root node
     
     @Persisted
     private final PersistedTable<String, String> persistedAddresses = PersistedTable.of("addresses", String.class, String.class);
@@ -49,21 +46,16 @@ public class UnionFindFunction implements StatefulFunction {
     }
     
     public void handleAddAddressesAndTransactionsOperation(AddAddressesAndTransactionsOperation op, Context context) {
-        String address = context.self().id();
-        String parent = persistedParent.get();
-        boolean makeSet = false;
-        if (parent == null) {//Makeset
-            makeset(context);
-            parent = address;
-            makeSet = true;
-        }
-        if (!address.equals(parent)) {
+        Object parentOrSize = persistedParentOrSize.getOrDefault(Long.valueOf(1l));
+
+        if (parentOrSize instanceof String) {
+            String parent = (String) parentOrSize;
             if (context.caller() != null) {
                 context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
             }
             context.send(new Address(TYPE, parent), op);
         } else {
-            long oldTxCount = makeSet ? 0 : this.persistedClusterTransactionCount.getOrDefault(0l);
+            long oldTxCount = this.persistedClusterTransactionCount.getOrDefault(0l);
             int newTransactions = 0;
             for (BlockTx tx : op.getBlockTxs()) {
                 TxPointer key = new TxPointer(op.getTimestamp(), op.getHeight(), tx.getTxN());
@@ -77,8 +69,13 @@ public class UnionFindFunction implements StatefulFunction {
             
 
             hasClusterAddresses.set(true);
+            String address = context.self().id();
             for (String addr : op.getAddresses()) {
-                persistedAddresses.set(addr, "");
+                if (addr.equals(address)) {
+                    persistedAddresses.set("", "");//use empty string to keep state smaller
+                } else {
+                    persistedAddresses.set(addr, "");
+                }
                 sendToCassandra(context, new AddAddressOperation(addr));
             }
         }
@@ -112,14 +109,6 @@ public class UnionFindFunction implements StatefulFunction {
         }
     }
     
-    private void makeset(Context context) {
-        String address = context.self().id();
-        setParent(context, address);
-        persistentAddressCount.set(1l);
-    }
-    
-    
-    
     private void merge(Context context, MergeOperation merge) {
         final String callerAddress;
         if (context.caller() != null && context.caller().type().equals(TYPE)) {
@@ -128,24 +117,17 @@ public class UnionFindFunction implements StatefulFunction {
             callerAddress = null;
         }
         String address = context.self().id();
-        String parent = persistedParent.get();
+        Object parentOrSize = persistedParentOrSize.getOrDefault(Long.valueOf(1l));
         
-        //System.out.println(address+" MERGE "+merge.toString()+", parent="+parent+", caller="+callerAddress);
-        
-        
-        if (parent == null) {
-            makeset(context);
-            for (String from : merge.getFromAddresses()) {
-                MergeRootOperation mergeRoot = new MergeRootOperation(address, 1, false);//Crete new objects because sending the same object caused it to be reused in mergeRoot() method
-                context.send(new Address(TYPE, from), mergeRoot);
-            } 
-        } else if (address.equals(parent)) {
-            long size = persistentAddressCount.get();
+        if (parentOrSize instanceof Long) {
+            long size = (long) parentOrSize;
+            //long size = persistentAddressCount.get();
             for (String from : merge.getFromAddresses()) {
                 MergeRootOperation mergeRoot = new MergeRootOperation(address, size, false);
                 context.send(new Address(TYPE, from), mergeRoot);
             }
         } else {
+            String parent = (String) parentOrSize;
             if (callerAddress != null) {
                 context.send(new Address(TYPE, callerAddress), new Compress(parent));
             }
@@ -164,83 +146,72 @@ public class UnionFindFunction implements StatefulFunction {
     
     private void mergeRoot(Context context, MergeRootOperation mergeRoot) {
         String address = context.self().id();
-        String parent = persistedParent.get();
-        if (parent == null) {
-            if (mergeRoot.getRootSize() > 1 || (mergeRoot.getRootSize() == 1 && address.compareTo(mergeRoot.getRoot()) > 0)) {//we use a tiebreaker to avoid creating loops (merge from the lexicographically larger address to the smaller one)
-                setParent(context, mergeRoot.getRoot());
-                context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(1, false));
-            } else {
-                makeset(context);
-                parent = address;
-                context.send(new Address(TYPE, mergeRoot.getRoot()), new MergeRootOperation(parent, 1, false));
-            }
-        } else if (parent.equals(mergeRoot.getRoot())) {//already in the same set
-            if (mergeRoot.isCalledFromChild()) {
-                context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
-            }
-        } else if (address.equals(parent)) {
-            long size = persistentAddressCount.get();
+        Object parentOrSize = persistedParentOrSize.getOrDefault(Long.valueOf(1l));
+        if (parentOrSize instanceof Long) {
+            long size = (long) parentOrSize;
             if (mergeRoot.getRootSize() > size || (mergeRoot.getRootSize() == size && address.compareTo(mergeRoot.getRoot()) > 0)) {
                 setParent(context, mergeRoot.getRoot());
-                persistentAddressCount.clear();
                 context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(size, false));
-                
-                //long addressCount = persistedClusterAddressCount.getOrDefault(0l);
                 boolean hasClusterAddresses = this.hasClusterAddresses.getOrDefault(false);
                 if (hasClusterAddresses) {
                     Iterable<String> addresses = this.persistedAddresses.keys();
                     for (String a : addresses) {
-                        context.send(new Address(TYPE, mergeRoot.getRoot()), new AddAddressOperation(a));
+                        if (a.equals("")) {
+                            context.send(new Address(TYPE, mergeRoot.getRoot()), new AddAddressOperation(address));
+                        } else {
+                            context.send(new Address(TYPE, mergeRoot.getRoot()), new AddAddressOperation(a));
+                        }
                     }
                     deleteAddresses(context);
                 }
                 long txCount = persistedClusterTransactionCount.getOrDefault(0l);
                 if (txCount > 0) {
-                    long transactionsDeleted = 0;
                     Iterable<Map.Entry<TxPointer, Long>> entries = persistedTransactions.entries();
                     for (Map.Entry<TxPointer, Long> e : entries) {
-                        transactionsDeleted++;
                         AddTransactionOperation addTx = new AddTransactionOperation(e.getKey().getTime(), e.getKey().getHeight(), e.getKey().getTx_n(), e.getValue());
                         context.send(new Address(TYPE, mergeRoot.getRoot()), addTx);
                     }
-                    if (transactionsDeleted > 0) deleteTransactions(context);
+                    deleteTransactions(context);
                 }
                 
             } else {
                 context.send(new Address(TYPE, mergeRoot.getRoot()), new MergeRootOperation(address, size, false));//Merge from mergeRoot.getRoot() to this address
             }
         } else {
-            if (mergeRoot.isCalledFromChild()) {
-                context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
+            String parent = (String) parentOrSize;
+            if (parent.equals(mergeRoot.getRoot())) {//already in the same set
+                if (mergeRoot.isCalledFromChild()) {
+                    context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
+                }
+            } else  {
+                if (mergeRoot.isCalledFromChild()) {
+                    context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
+                }
+                mergeRoot.setCalledFromChild(true);
+                context.send(new Address(TYPE, parent), mergeRoot);
             }
-            mergeRoot.setCalledFromChild(true);
-            context.send(new Address(TYPE, parent), mergeRoot);
         }
     }
     
     
     private void compress(Context context, Compress compress) {
         context.caller();
-        String address = context.self().id();
-        String parent = persistedParent.get();
-        if (parent == null) {
-            throw new RuntimeException("Compress reached root1. This should never happen!");
-        } else if (address.equals(parent)) {
-            System.out.println(address+"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-            throw new RuntimeException("Compress reached root2. This should never happen!");
-        } else if (parent.equals(compress.getTo())) {
+        String parent = (String) persistedParentOrSize.get();
+        
+        if (parent.equals(compress.getTo())) {
         } else if (parent.equals(context.caller().id())) {
             setParent(context, compress.getTo());
-        } else {//already compressed to a node closer to root
+        } else {
         }
     }
     
     private void setSize(Context context, SetSize setSize) {
-        String address = context.self().id();
-        String parent = persistedParent.get();
-        if (address.equals(parent)) {
-            persistentAddressCount.updateAndGet(oldSize -> oldSize + setSize.getAdd());
+        Object parentOrSize = persistedParentOrSize.getOrDefault(Long.valueOf(1l));
+        if (parentOrSize instanceof Long) {
+            long oldSize = (long) parentOrSize;
+            persistedParentOrSize.set(oldSize+setSize.getAdd());
         } else {
+            String parent = (String) parentOrSize;
             if (setSize.isCalledFromChild()) {
                 context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
             }
@@ -249,24 +220,12 @@ public class UnionFindFunction implements StatefulFunction {
         }
     }
     
-    private void executeCassandraQuery(Context context, String query) {
-        throw new RuntimeException("Unsupported operation");
-    }
     
     public void addTransaction(Context context, AddTransactionOperation addTransactionOperation) {
-        String address = context.self().id();
-        String parent = persistedParent.get();
-        
-        boolean makeSet = false;
-        if (parent == null) {
-            makeSet = true;
-            makeset(context);
-            parent = address;
-        }
-        if (!parent.equals(address)) {
-            context.send(new Address(TYPE, parent), addTransactionOperation);
-        } else {
-            long oldTxCount = makeSet ? 0 : persistedClusterTransactionCount.getOrDefault(0l);
+        Object parentOrSize = persistedParentOrSize.getOrDefault(Long.valueOf(1l));
+
+        if (parentOrSize instanceof Long) {
+            long oldTxCount = persistedClusterTransactionCount.getOrDefault(0l);
             TxPointer key = new TxPointer(addTransactionOperation.getTime(), addTransactionOperation.getHeight(), addTransactionOperation.getTx_n());
             Long oldDelta = (oldTxCount == 0) ? null : persistedTransactions.get(key);
             long newDelta = oldDelta == null ? addTransactionOperation.getDelta() : addTransactionOperation.getDelta()+oldDelta;
@@ -274,11 +233,14 @@ public class UnionFindFunction implements StatefulFunction {
             persistedTransactions.set(key, newDelta);
             if (oldDelta == null) persistedClusterTransactionCount.set(oldTxCount+1);
             sendToCassandra(context, addTransactionOperation);
+        } else {
+            String parent = (String) parentOrSize;
+            context.send(new Address(TYPE, parent), addTransactionOperation);
         }
     }
     
     public void setParent(Context context, String parent) {
-        persistedParent.set(parent);
+        persistedParentOrSize.set(parent);
         String address = context.self().id();
         if (address.equals(parent)) {
             sendToCassandra(context, new SetParent(null));
@@ -288,27 +250,25 @@ public class UnionFindFunction implements StatefulFunction {
     }
     
     public void addAddress(Context context, AddAddressOperation addAddressOp) {
+        Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
         String address = context.self().id();
-        String parent = persistedParent.get();
-        boolean makeSet = false;
-        if (parent == null) {
-            makeSet = true;
-            makeset(context);
-            parent = address;
-        }
-        if (!parent.equals(address)) {
-            context.send(new Address(TYPE, ""+parent), addAddressOp);
-        } else {
-            persistedAddresses.set(addAddressOp.getAddress(), "");
-            hasClusterAddresses.set(true);
+        if (parentOrSize instanceof Long) {
+            if (addAddressOp.getAddress().equals(address)) {
+                persistedAddresses.set("", "");//keep state smaller
+            } else {
+                persistedAddresses.set(addAddressOp.getAddress(), "");
+            }
             sendToCassandra(context, addAddressOp);
+            hasClusterAddresses.set(true);
+        } else {
+            String parent = (String) parentOrSize;
+            context.send(new Address(TYPE, ""+parent), addAddressOp);
         }
     }
     
     public void deleteAddresses(Context context) {
         persistedAddresses.clear();
         hasClusterAddresses.clear();
-        //persistedClusterAddressCount.clear();
         sendToCassandra(context, new DeleteAddresses());
     }
     

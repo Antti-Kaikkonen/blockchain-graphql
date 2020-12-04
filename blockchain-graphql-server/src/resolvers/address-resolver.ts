@@ -32,16 +32,11 @@ export class AddressResolver {
         {prepare: true}
       );
       if (resultSet.rows.length === 1) {
-        let parent: string = resultSet.rows[0].get("parent");
-        if (parent !== null && parent !== undefined) {
-          currentAddress = parent;
-        } else {
-          let res: AddressCluster = new AddressCluster();
-          res.clusterId = currentAddress;
-          return res;
-        }
+        currentAddress = resultSet.rows[0].get("parent");
       } else {
-        return null;
+        let res: AddressCluster = new AddressCluster();
+        res.clusterId = currentAddress;
+        return res;
       }
     } while(true);
   }
