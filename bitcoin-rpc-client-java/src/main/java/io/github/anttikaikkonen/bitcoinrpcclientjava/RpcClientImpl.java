@@ -22,7 +22,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.util.EntityUtils;
 
-public class RpcClientImpl implements RpcClient, Serializable {
+public class RpcClientImpl implements RpcClient {
     
     private final ObjectMapper objectMapper;
     private final CloseableHttpAsyncClient client;

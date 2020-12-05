@@ -11,8 +11,8 @@ import java.util.List;
 public class BlockSink extends CassandraSaverFunction<Block> {
 
     
-    private Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block> blockMapper;
-    private Mapper<LongestChain> heightMapper;
+    private transient Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block> blockMapper;
+    private transient Mapper<LongestChain> heightMapper;
     
     public BlockSink(CassandraSessionBuilder sessionBuilder) {
         super(sessionBuilder);

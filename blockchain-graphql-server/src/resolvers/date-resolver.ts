@@ -33,13 +33,6 @@ export class DateResolver {
   constructor(@Inject("cassandra_client") private client: Client) {
   }
 
-  @Query(returns => Date, {complexity: 1})
-  async date(@Arg("date") date: string) {
-    let res = new Date();
-    res.date = date;
-    return res;
-  }
-
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async richlist(
       @Root() date: Date, 

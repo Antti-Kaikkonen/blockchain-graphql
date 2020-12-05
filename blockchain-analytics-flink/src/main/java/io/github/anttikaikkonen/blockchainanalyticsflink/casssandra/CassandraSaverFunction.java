@@ -12,8 +12,8 @@ import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 
 public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Void>{
 
-    private MappingManager manager;
-    private CassandraSessionBuilder sessionBuilder;
+    private transient MappingManager manager;
+    private final CassandraSessionBuilder sessionBuilder;
     
     public CassandraSaverFunction(CassandraSessionBuilder sessionBuilder) {
         this.sessionBuilder = sessionBuilder;

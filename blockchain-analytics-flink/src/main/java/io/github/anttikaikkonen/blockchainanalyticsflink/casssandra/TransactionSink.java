@@ -26,12 +26,12 @@ import org.apache.flink.configuration.Configuration;
 
 public class TransactionSink extends CassandraSaverFunction<ConfirmedTransactionWithInputs> {
 
-    private Mapper<Transaction> txMapper;
-    private Mapper<ConfirmedTransaction> ctMapper;
-    private Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput> voutMapper;
-    private Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput> vinMapper;
-    private Mapper<AddressTransaction> addressTransactionMapper;
-    private Semaphore semaphore;
+    private transient Mapper<Transaction> txMapper;
+    private transient Mapper<ConfirmedTransaction> ctMapper;
+    private transient Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput> voutMapper;
+    private transient Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput> vinMapper;
+    private transient Mapper<AddressTransaction> addressTransactionMapper;
+    private transient Semaphore semaphore;
     
     public TransactionSink(CassandraSessionBuilder sessionBuilder) {
         super(sessionBuilder);

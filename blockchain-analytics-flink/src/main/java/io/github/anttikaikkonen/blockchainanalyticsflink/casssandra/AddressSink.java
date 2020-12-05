@@ -21,11 +21,11 @@ import java.time.Instant;
 import java.util.Date;
 
 public class AddressSink extends CassandraSaverFunction<Object> {
-    private Mapper<OHLC> ohlcMapper;
-    private Mapper<TopGainers> gainersMapper;
-    private Mapper<TopLosers> losersMapper;
-    private Mapper<RichList> richListMapper;
-    private Mapper<AddressBalance> addressBalanceMapper;
+    private transient Mapper<OHLC> ohlcMapper;
+    private transient Mapper<TopGainers> gainersMapper;
+    private transient Mapper<TopLosers> losersMapper;
+    private transient Mapper<RichList> richListMapper;
+    private transient Mapper<AddressBalance> addressBalanceMapper;
     
     private transient PreparedStatement addTransactionStatement;
     
