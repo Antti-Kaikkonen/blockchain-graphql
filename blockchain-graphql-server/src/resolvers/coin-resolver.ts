@@ -1,5 +1,5 @@
 import { Client, types } from "cassandra-driver";
-import { Arg, FieldResolver, Query, Resolver, Root } from "type-graphql";
+import { Arg, FieldResolver, Int, Query, Resolver, Root } from "type-graphql";
 import { Inject } from "typedi";
 import { Address } from "../models/address";
 import { Block } from "../models/block";
@@ -99,8 +99,8 @@ export class CoinResolver {
   @FieldResolver(returns => ConfirmedTransaction, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(
     @Root() coin: Coin,
-    @Arg("height") height: number, 
-    @Arg("tx_n") tx_n: number): Promise<ConfirmedTransaction> {
+    @Arg("height", type => Int) height: number, 
+    @Arg("tx_n", type => Int) tx_n: number): Promise<ConfirmedTransaction> {
     let args: any[] = [height, tx_n];
     let query: string = "SELECT * FROM "+coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
@@ -120,9 +120,9 @@ export class CoinResolver {
   }
 
   @FieldResolver(returns => BlockHash, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
-  async blockHash(
+  async blockByHeight(
     @Root() coin: Coin,
-    @Arg("height") height: number): Promise<BlockHash> {
+    @Arg("height", type => Int) height: number): Promise<BlockHash> {
     let args: any[] = [height];
     let query: string = "SELECT * FROM "+coin.keyspace+".longest_chain WHERE height=?";
     let resultSet: types.ResultSet = await this.client.execute(
