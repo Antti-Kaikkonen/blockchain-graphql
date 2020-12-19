@@ -10,18 +10,18 @@ import lombok.NoArgsConstructor;
 public class TransactionInputWithOutput {
     
     public TransactionInputWithOutput(TransactionInput input, TransactionOutput spentOutput) {
-        this.coinbase = input.coinbase;
-        this.sequence = input.sequence;
-        this.txid = input.txid;
-        this.vout = input.vout;
-        this.scriptSig = input.scriptSig;
+        this.coinbase = input.getCoinbase();
+        this.sequence = input.getSequence();
+        this.txid = input.getTxid();
+        this.vout = input.getVout();
+        this.scriptSig = input.getScriptSig();
         this.spentOutput = spentOutput;
     }
     
-    String coinbase;
-    long sequence;
-    String txid;
-    int vout;
-    ScriptSig scriptSig;
-    TransactionOutput spentOutput;
+    private String coinbase;
+    private long sequence;
+    private String txid;
+    private int vout;
+    private ScriptSig scriptSig;
+    private TransactionOutput spentOutput;
 }

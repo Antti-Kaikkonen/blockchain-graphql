@@ -10,19 +10,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Block {
     
-    String hash;
-    int size;
-    int height;
-    int version;
-    String versionHex;
-    String merkleroot;
-    Transaction[] tx;
-    long time;
-    long mediantime;
-    long nonce;
-    String bits;
-    BigDecimal difficulty;
-    String chainwork;
-    String previousblockhash;
+    private String hash;
+    private int size;
+    private int height;
+    private int version;
+    private String versionHex;
+    private String merkleroot;
+    private Transaction[] tx;
+    private long time;
+    private long mediantime;
+    private long nonce;
+    private String bits;
+    private BigDecimal difficulty;
+    private String chainwork;
+    private String previousblockhash;
     
 }

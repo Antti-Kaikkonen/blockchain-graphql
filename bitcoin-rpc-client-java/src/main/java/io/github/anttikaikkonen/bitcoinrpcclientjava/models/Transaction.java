@@ -9,11 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Transaction {
     
-    String txid;
-    int size;
-    long version;
-    long locktime;
-    TransactionInput[] vin;
-    TransactionOutput[] vout;
+    private String txid;
+    private int size;
+    private long version;
+    private long locktime;
+    private TransactionInput[] vin;
+    private TransactionOutput[] vout;
     
 }

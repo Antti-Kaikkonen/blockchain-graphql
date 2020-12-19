@@ -1,18 +1,18 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.models;
 
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Transaction;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 public class ConfirmedTransaction extends Transaction {
     
-    int height;
-    int txN;
+    private int height;
+    private int txN;
 
     public ConfirmedTransaction(Transaction tx, int height, int txN) {
         this.height = height;

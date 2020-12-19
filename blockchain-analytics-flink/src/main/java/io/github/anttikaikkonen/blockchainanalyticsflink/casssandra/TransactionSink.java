@@ -71,7 +71,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
         tx.setOutput_count(transaction.getVout().length);
         tx.setInput_count(transaction.getVin().length);
         long fee = 0;
-        for (TransactionInputWithOutput vin : transaction.getVin()) {
+        for (TransactionInputWithOutput vin : transaction.getInputsWithOutputs()) {
 
             if (vin.getTxid() != null) {
                 io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput vout = new io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput();
@@ -140,7 +140,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
             long value = Math.round(vout.getValue()*1e8);
             addressDeltas.compute(address, (key, oldDelta) -> oldDelta == null ? value : oldDelta + value);
         }
-        for (TransactionInputWithOutput vin : transaction.getVin()) {
+        for (TransactionInputWithOutput vin : transaction.getInputsWithOutputs()) {
             if (vin.getSpentOutput() == null) continue;
             if (vin.getSpentOutput().getScriptPubKey().getAddresses() == null) continue;
             if (vin.getSpentOutput().getScriptPubKey().getAddresses().length != 1) continue;

@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TransactionInput {
     
-    String coinbase;
-    long sequence;
-    String txid;
-    int vout;
-    ScriptSig scriptSig;
+    private String coinbase;
+    private long sequence;
+    private String txid;
+    private int vout;
+    private ScriptSig scriptSig;
     
 }

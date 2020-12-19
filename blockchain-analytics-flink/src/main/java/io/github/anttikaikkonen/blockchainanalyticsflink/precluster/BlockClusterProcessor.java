@@ -24,7 +24,7 @@ import org.apache.flink.statefun.sdk.Address;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
-public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<Integer, DisjointSetForest>, RoutableMessage>  {
+public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>, RoutableMessage>  {
 
     private ListState<SimpleAddAddressesAndTransactionsOperation> persistedOps;
     private ValueState<Long> persistedTime;
@@ -62,8 +62,22 @@ public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<
     }
     
     @Override
-    public void processElement(Tuple2<Integer, DisjointSetForest> blockCluster, Context ctx, Collector<RoutableMessage> out) throws Exception {
+    public void processElement(Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]> blockCluster, Context ctx, Collector<RoutableMessage> out) throws Exception {
         
+        for (SimpleAddAddressesAndTransactionsOperation op : blockCluster.f1) {
+            this.persistedOps.add(op);
+            if (op.addresses.length > 1) {
+                String toAddress = op.addresses[0];
+                ArrayList<String> fromAddresses = new ArrayList<>();
+                for (int i = 1; i < op.addresses.length; i++) {
+                    fromAddresses.add(op.addresses[i]);
+                }
+                MergeOperation mergeOp = new MergeOperation(fromAddresses);
+                RoutableMessage rm = RoutableMessageBuilder.builder().withTargetAddress(new Address(UnionFindFunction.TYPE, toAddress)).withMessageBody(mergeOp).build();
+                out.collect(rm);
+            }
+        }
+        /*
         List<String> roots = new ArrayList();
         Map<String, List<String>> parentToChildren = new HashMap<>();
         for (final Map.Entry<String, String> kv : blockCluster.f1.parent.entrySet()) {
@@ -109,20 +123,8 @@ public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<
                 RoutableMessage rm = RoutableMessageBuilder.builder().withTargetAddress(new Address(UnionFindFunction.TYPE, toAddress)).withMessageBody(mergeOp).build();
                 out.collect(rm);
             }
-            /*List<String> fromAddresses = connectedAddresses.subList(1, connectedAddresses.size());
-            String to = connectedAddresses.get(0);
-            for (int i = 1; i < connectedAddresses.size(); i++) {
-                //String to = connectedAddresses.get(connectedAddresses.size()-1);
-                //String from = connectedAddresses.get(ii);
-                //to < from
-                String to = connectedAddresses.get(0);
-                String from = connectedAddresses.get(i);
-                MergeOperation mergeOp = new MergeOperation(from, 0);
-                RoutableMessage rm = RoutableMessageBuilder.builder().withTargetAddress(new Address(UnionFindFunction.TYPE, to)).withMessageBody(mergeOp).build();
-                out.collect(rm);
-            }*/
         }
-        
+        */
         
         persistedTime.update(ctx.timestamp());
         long currentTime = System.currentTimeMillis();

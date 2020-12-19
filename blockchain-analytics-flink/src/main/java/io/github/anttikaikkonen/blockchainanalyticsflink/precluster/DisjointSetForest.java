@@ -1,6 +1,10 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.precluster;
 
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.BlockTx;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -91,6 +95,61 @@ public class DisjointSetForest {
 
             size.put(x, xSize+ySize);
         }
+    }
+    
+    private static List<String> descendants(String root, Map<String, List<String>> parentToChildren) {
+        List<String> children = parentToChildren.get(root);
+        ArrayList<String> all = new ArrayList<>();
+        if (children != null) {
+            for (String child : children) {
+                all.add(child);
+                all.addAll(descendants(child, parentToChildren));
+            }
+        }
+        return all;
+    }
+    
+    public SimpleAddAddressesAndTransactionsOperation[] toAddOps() {
+        List<String> roots = new ArrayList();
+        Map<String, List<String>> parentToChildren = new HashMap<>();
+        for (final Map.Entry<String, String> kv : this.parent.entrySet()) {
+            String child = kv.getKey();
+            String parent = kv.getValue();
+            if (child.equals(parent)) {
+                roots.add(parent);
+            }
+            parentToChildren.compute(parent, new BiFunction<String, List<String>, List<String>>() {
+                @Override
+                public List<String> apply(String parent, List<String> oldValue) {
+                    if (oldValue == null) {
+                        oldValue = new ArrayList();
+                    }
+                    if (!parent.equals(child)) {
+                        oldValue.add(child);
+                    }
+                    return oldValue;
+                }
+            });
+        }
+        SimpleAddAddressesAndTransactionsOperation[] res = new SimpleAddAddressesAndTransactionsOperation[roots.size()];
+        int rootIndex = 0;
+        for (String root : roots) {
+            List<String> connectedAddresses = descendants(root, parentToChildren);
+            connectedAddresses.add(root);
+            Collections.sort(connectedAddresses);
+            Map<Integer, Long> txs = this.transactions.get(root);
+            BlockTx[] blockTxs = new BlockTx[txs.size()];
+            int transactionIndex = 0;
+            for (Map.Entry<Integer, Long> e : txs.entrySet()) {
+                BlockTx blockTx = new BlockTx(e.getKey(), e.getValue());
+                blockTxs[transactionIndex] = blockTx;
+                transactionIndex++;
+            }
+            SimpleAddAddressesAndTransactionsOperation op = new SimpleAddAddressesAndTransactionsOperation(connectedAddresses.toArray(new String[connectedAddresses.size()]), blockTxs);
+            res[rootIndex] = op;
+            rootIndex++;
+        }
+        return res;
     }
     
 }

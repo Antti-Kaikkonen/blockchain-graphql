@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ScriptSig {
     
-    String asm;
-    String hex;
+    private String asm;
+    private String hex;
     
 }

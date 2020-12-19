@@ -6,31 +6,33 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 public class ConfirmedTransactionWithInputs extends ConfirmedTransaction {
     
-    long timestamp;
+    private long timestamp;
     
-    TransactionInputWithOutput[] vin;
+    private TransactionInputWithOutput[] inputsWithOutputs;
+    //private TransactionInputWithOutput[] vin;
     
     public ConfirmedTransactionWithInputs(ConfirmedTransaction confirmedTransaction, TransactionInputWithOutput[] vin, long timestamp) {
-        this.height = confirmedTransaction.height;
-        this.txN = confirmedTransaction.txN;
+        this.setHeight(confirmedTransaction.getHeight());
+        this.setTxN(confirmedTransaction.getTxN());
         this.setTxid(confirmedTransaction.getTxid());
         this.setSize(confirmedTransaction.getSize());
         this.setVersion(confirmedTransaction.getVersion());
         this.setLocktime(confirmedTransaction.getLocktime());
-        this.vin = vin;
+        this.setVin(vin);
+        this.inputsWithOutputs = vin;
         //this.setVin(vin);
         this.setVout(confirmedTransaction.getVout());
         this.timestamp = timestamp;
     }
     
-    @Override
+   
+    /*@Override
     public TransactionInputWithOutput[] getVin() {
         return vin;
-    }
+    }*/
 
 }

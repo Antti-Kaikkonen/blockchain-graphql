@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TransactionOutput {
     
-    double value;
-    int n;
-    ScriptPubKey scriptPubKey;
+    private double value;
+    private int n;
+    private ScriptPubKey scriptPubKey;
     
 }

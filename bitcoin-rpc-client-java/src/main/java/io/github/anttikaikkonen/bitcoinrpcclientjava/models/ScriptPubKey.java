@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ScriptPubKey {
     
-    String asm;
-    String hex;
-    int reqSigs;
-    String type;
-    String[] addresses;
+    private String asm;
+    private String hex;
+    private int reqSigs;
+    private String type;
+    private String[] addresses;
     
 }

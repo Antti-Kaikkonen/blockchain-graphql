@@ -10,14 +10,14 @@ import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.api.java.tuple.Tuple2;
 
-public class ConfirmedTransactionToDisjointSets extends ProcessFunction<ConfirmedTransactionWithInputs, Tuple2<Integer, DisjointSetForest>> {
+public class ConfirmedTransactionToDisjointSets extends ProcessFunction<ConfirmedTransactionWithInputs, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> {
 
 
     @Override
-    public void processElement(ConfirmedTransactionWithInputs tx, Context ctx, Collector<Tuple2<Integer, DisjointSetForest>> out) throws Exception {
+    public void processElement(ConfirmedTransactionWithInputs tx, Context ctx, Collector<Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> out) throws Exception {
         //TxPointer txP = new TxPointer(ctx.timestamp(), tx.getHeight(), tx.getTxN());
         DisjointSetForest unionFind = new DisjointSetForest();
-        for (TransactionInputWithOutput vin : tx.getVin()) {
+        for (TransactionInputWithOutput vin : tx.getInputsWithOutputs()) {
             try {
                 String address = vin.getSpentOutput().getScriptPubKey().getAddresses()[0];
                 unionFind.addTx(address, tx.getTxN(), Math.round(-vin.getSpentOutput().getValue()*1e8));
@@ -33,7 +33,7 @@ public class ConfirmedTransactionToDisjointSets extends ProcessFunction<Confirme
         }
         if (!Main.possiblyCoinJoin(tx)) {
             Set<String> inputAddresses = new TreeSet<>();
-            for (TransactionInputWithOutput vin : tx.getVin()) {
+            for (TransactionInputWithOutput vin : tx.getInputsWithOutputs()) {
                 try {
                     String address = vin.getSpentOutput().getScriptPubKey().getAddresses()[0];
                     if (address != null) {
@@ -52,7 +52,7 @@ public class ConfirmedTransactionToDisjointSets extends ProcessFunction<Confirme
                 }
             }
         }
-        out.collect(Tuple2.of(tx.getHeight(), unionFind));
+        out.collect(Tuple2.of(tx.getHeight(), unionFind.toAddOps()));
     }
     
 }
