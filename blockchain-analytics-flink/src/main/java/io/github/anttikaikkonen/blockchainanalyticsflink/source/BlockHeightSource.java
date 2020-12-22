@@ -51,10 +51,14 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
             if (this.height <= targetHeight) {
                 while (this.height <= targetHeight && this.isRunning) {
                     if (this.height%5 == 0 && this.height-this.concurrentBlocks >= 0) {
-                        ResultSet res = this.session.execute(this.heightStatement.bind(this.height-this.concurrentBlocks));
-                        if (res.one() == null) {
-                            Thread.sleep(10);
-                            continue;
+                        if (this.session == null) {
+                            Thread.sleep(1);
+                        } else {
+                            ResultSet res = this.session.execute(this.heightStatement.bind(this.height-this.concurrentBlocks));
+                            if (res.one() == null) {
+                                Thread.sleep(10);
+                                continue;
+                            }
                         }
                     }
                     synchronized (ctx.getCheckpointLock()) {
@@ -106,8 +110,13 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
     public void open(Configuration parameters) throws Exception {
         System.out.println("HeightSource open");
         this.rpcClient = rpcClientBuilder.build();
-        this.session = sessionBuilder.build();
-        this.heightStatement = this.session.prepare("SELECT tx_n FROM confirmed_transaction WHERE height = :height AND tx_n = 0");
+        if (sessionBuilder != null) {
+            this.session = sessionBuilder.build();
+            this.heightStatement = this.session.prepare("SELECT tx_n FROM confirmed_transaction WHERE height = :height AND tx_n = 0");
+        } else {
+            this.session = null;
+            this.heightStatement = null;
+        }
         getRuntimeContext().getMetricGroup().gauge("Current height", new Gauge<Integer>() {
             @Override
             public Integer getValue() {

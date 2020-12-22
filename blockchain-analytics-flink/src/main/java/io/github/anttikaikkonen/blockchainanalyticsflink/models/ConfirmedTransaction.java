@@ -2,9 +2,7 @@ package io.github.anttikaikkonen.blockchainanalyticsflink.models;
 
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Transaction;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 
 @Data

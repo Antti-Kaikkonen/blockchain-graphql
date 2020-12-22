@@ -7,7 +7,6 @@ import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.state.CheckpointListener;
 import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction;
 import org.apache.flink.util.Collector;
 
@@ -21,7 +20,6 @@ public class InputAttacher extends KeyedCoProcessFunction<String, InputPointer, 
         this.outputState = getRuntimeContext().getState(new ValueStateDescriptor("output", TransactionOutput.class));
         this.inputState = getRuntimeContext().getState(new ValueStateDescriptor("input", InputPointer.class));
     }
-    
 
     @Override
     public void onTimer(long timestamp, OnTimerContext ctx, Collector<SpentOutput> out) throws Exception {
