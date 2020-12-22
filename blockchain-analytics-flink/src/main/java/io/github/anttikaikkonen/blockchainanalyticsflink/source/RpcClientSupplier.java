@@ -1,15 +1,12 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.source;
 
 import io.github.anttikaikkonen.bitcoinrpcclientjava.LeastConnectionsRpcClient;
-import io.github.anttikaikkonen.bitcoinrpcclientjava.LimitedCapacityRpcClient;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.RpcClient;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.RpcClientImpl;
 import java.io.Serializable;
 import java.util.function.Supplier;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NonNull;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;

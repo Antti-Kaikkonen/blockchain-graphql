@@ -1,36 +1,26 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink;
 
 
-import io.github.anttikaikkonen.blockchainanalyticsflink.source.RpcClientBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderTimeProcessor;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockHashFetcher;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockFetcher;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockHeadersFetcher;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.BlockHeightSource;
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.HostDistance;
-import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SocketOptions;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.WriteType;
-import com.datastax.driver.core.exceptions.DriverException;
-import com.datastax.driver.core.policies.RetryPolicy;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.BlockSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransaction;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.TransactionInputWithOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.UnionFindFunction;
-import io.github.anttikaikkonen.bitcoinrpcclientjava.LeastConnectionsRpcClient;
-import io.github.anttikaikkonen.bitcoinrpcclientjava.LimitedCapacityRpcClient;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.RpcClient;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Block;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.BlockHeader;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Transaction;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.AddressSink;
+import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilderImpl;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CreateStatements;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.TransactionSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.InputPointer;
@@ -46,8 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -71,13 +59,6 @@ import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedC
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.util.Collector;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
-import org.apache.http.impl.nio.client.HttpAsyncClients;
-import org.apache.http.impl.nio.reactor.IOReactorConfig;
 
 public class Main {
     
@@ -150,95 +131,7 @@ public class Main {
         checkpointConfig.enableUnalignedCheckpoints(false);
         checkpointConfig.enableExternalizedCheckpoints(ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
         
-        CassandraSessionBuilder sessionBuilder = new CassandraSessionBuilder() {
-            @Override
-            protected Session createSession(Cluster.Builder builder) {
-                Cluster cluster = builder
-                        .addContactPoints(cassandraHosts)
-                        .withSocketOptions(
-                                new SocketOptions().setReadTimeoutMillis(120000)
-                        )
-                        .withPoolingOptions(
-                                new PoolingOptions()
-                                        .setConnectionsPerHost(HostDistance.LOCAL, 1, 1)
-                                        .setConnectionsPerHost(HostDistance.REMOTE, 1, 1)
-                                        .setMaxRequestsPerConnection(HostDistance.LOCAL, 30000)
-                                        .setMaxRequestsPerConnection(HostDistance.REMOTE, 30000)
-                                        .setMaxQueueSize(0)
-                        ).withRetryPolicy(new RetryPolicy() {
-                            @Override
-                            public RetryPolicy.RetryDecision onReadTimeout(Statement statement, ConsistencyLevel cl, int requiredResponses, int receivedResponses, boolean dataRetrieved, int nbRetry) {
-                                System.out.println("onReadTimeout "+nbRetry);
-                                if (nbRetry < 5) {
-                                    try {
-                                        Thread.sleep((nbRetry+1)*1000);
-                                    } catch (InterruptedException ex) {
-                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-                                    }
-                                    return RetryPolicy.RetryDecision.retry(cl);
-                                } else {
-                                    return RetryPolicy.RetryDecision.rethrow();
-                                }
-                            }
-
-                            @Override
-                            public RetryPolicy.RetryDecision onWriteTimeout(Statement statement, ConsistencyLevel cl, WriteType arg2, int requiredAcks, int receivedAcks, int nbRetry) {
-                                System.out.println("onWriteTimeout "+nbRetry);
-                                if (nbRetry < 5) {
-                                    try {
-                                        Thread.sleep((nbRetry+1)*1000);
-                                    } catch (InterruptedException ex) {
-                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-                                    }
-                                    return RetryPolicy.RetryDecision.retry(cl);
-                                } else {
-                                    return RetryPolicy.RetryDecision.rethrow();
-                                }
-                            }
-
-                            @Override
-                            public RetryPolicy.RetryDecision onUnavailable(Statement statement, ConsistencyLevel cl, int requiredReplica, int aliveReplica, int nbRetry) {
-                                System.out.println("onUnavailable "+nbRetry);
-                                if (nbRetry < 5) {
-                                    try {
-                                        Thread.sleep((nbRetry+1)*1000);
-                                    } catch (InterruptedException ex) {
-                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-                                    }
-                                    return RetryPolicy.RetryDecision.retry(cl);
-                                } else {
-                                    return RetryPolicy.RetryDecision.rethrow();
-                                }
-                            }
-
-                            @Override
-                            public RetryPolicy.RetryDecision onRequestError(Statement statement, ConsistencyLevel cl, DriverException driverException, int nbRetry) {
-                                System.out.println("onRequestError "+nbRetry+", ex:"+driverException);
-                                if (nbRetry < 5) {
-                                    try {
-                                        Thread.sleep((nbRetry+1)*1000);
-                                    } catch (InterruptedException ex) {
-                                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-                                    }
-                                    return RetryPolicy.RetryDecision.retry(cl);
-                                } else {
-                                    return RetryPolicy.RetryDecision.rethrow();
-                                }
-                            }
-
-                            @Override
-                            public void init(Cluster arg0) {
-                            }
-
-                            @Override
-                            public void close() {
-                            }
-                        }).build();
-                Session session = cluster.connect(cassandraKeyspace);
-                return session;
-            }
-        };
-        
+        CassandraSessionBuilder sessionBuilder = new CassandraSessionBuilderImpl(cassandraHosts, cassandraKeyspace);
         //Create schema if it doesn't already exist
         if (!test_mode && !disable_sinks) {
             Cluster cluster = Cluster.builder().addContactPoints(cassandraHosts).build();
