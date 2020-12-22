@@ -1,10 +1,10 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.source;
 
 import io.github.anttikaikkonen.bitcoinrpcclientjava.RpcClient;
-import io.github.anttikaikkonen.blockchainanalyticsflink.RpcClientBuilder;
 import java.util.Collections;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
@@ -12,15 +12,15 @@ import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 public class AsyncBlockHashFetcher extends RichAsyncFunction<Integer, String> {
 
     private transient RpcClient client = null;
-    private final RpcClientBuilder rpcClientBuilder;
+    private final Supplier<RpcClient> rpcClientSupplier;
     
-    public AsyncBlockHashFetcher(RpcClientBuilder rpcClientBuilder) {
-        this.rpcClientBuilder = rpcClientBuilder;
+    public AsyncBlockHashFetcher(Supplier<RpcClient> rpcClientSupplier) {
+        this.rpcClientSupplier = rpcClientSupplier;
     }
 
     @Override
     public void open(Configuration parameters) throws Exception {
-        this.client = this.rpcClientBuilder.build();
+        this.client = this.rpcClientSupplier.get();
     }
     
     

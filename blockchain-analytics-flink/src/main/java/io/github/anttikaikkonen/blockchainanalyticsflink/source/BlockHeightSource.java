@@ -5,7 +5,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.RpcClient;
-import io.github.anttikaikkonen.blockchainanalyticsflink.RpcClientBuilder;
+import java.util.function.Supplier;
 import lombok.Builder;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
@@ -27,17 +27,17 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
     private final long pollingInterval;
     private final int concurrentBlocks;
     
-    private final RpcClientBuilder rpcClientBuilder;
+    private final Supplier<RpcClient> rpcClientSupplier;
     private final CassandraSessionBuilder sessionBuilder;
     private transient RpcClient rpcClient;
     private transient Session session;
     private transient PreparedStatement heightStatement;
     
     @Builder()
-    public BlockHeightSource(Integer minConfirmations, Long pollingInterval, RpcClientBuilder rpcClientBuilder, CassandraSessionBuilder sessionBuilder, Integer concurrentBlocks) {
+    public BlockHeightSource(Integer minConfirmations, Long pollingInterval, Supplier<RpcClient> rpcClientSupplier, CassandraSessionBuilder sessionBuilder, Integer concurrentBlocks) {
         this.minConfirmations = minConfirmations == null ? 5 : minConfirmations;
         this.pollingInterval = pollingInterval == null ? 1000l : pollingInterval;
-        this.rpcClientBuilder = rpcClientBuilder;
+        this.rpcClientSupplier = rpcClientSupplier;
         this.sessionBuilder = sessionBuilder;
         this.concurrentBlocks = concurrentBlocks == null ? 200 : concurrentBlocks;
     }
@@ -109,7 +109,7 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
     @Override
     public void open(Configuration parameters) throws Exception {
         System.out.println("HeightSource open");
-        this.rpcClient = rpcClientBuilder.build();
+        this.rpcClient = rpcClientSupplier.get();
         if (sessionBuilder != null) {
             this.session = sessionBuilder.build();
             this.heightStatement = this.session.prepare("SELECT tx_n FROM confirmed_transaction WHERE height = :height AND tx_n = 0");

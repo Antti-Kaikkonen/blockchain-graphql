@@ -1,6 +1,7 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink;
 
 
+import io.github.anttikaikkonen.blockchainanalyticsflink.source.RpcClientBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderTimeProcessor;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockHashFetcher;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockFetcher;
@@ -39,12 +40,12 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockCluster
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.ConfirmedTransactionToDisjointSets;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.SimpleAddAddressesAndTransactionsOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderWatermarkStrategy;
+import io.github.anttikaikkonen.blockchainanalyticsflink.source.RpcClientSupplier;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.UnionFindSink;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
@@ -268,67 +269,17 @@ public class Main {
             session.getCluster().close();
         }
         //End of schema creation
-        
         int parallelism = env.getParallelism();
-        RpcClientBuilder rpcClientBuilder1 = new RpcClientBuilder() {
-            @Override
-            public RpcClient build() {
-                CredentialsProvider provider = new BasicCredentialsProvider();
-                provider.setCredentials(
-                        AuthScope.ANY,
-                        new UsernamePasswordCredentials(blockchainUsername, blockchainPassword)
-                );
-
-
-                IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
-                        .setIoThreadCount(1)
-                        .build();
-
-                CloseableHttpAsyncClient httpClient = HttpAsyncClients.custom()
-                        .setDefaultIOReactorConfig(ioReactorConfig)
-                        .setDefaultCredentialsProvider(provider)
-                        .setMaxConnPerRoute(parallelism)
-                        .setMaxConnTotal(parallelism)
-                        .build();
-                httpClient.start();
-                
-                RpcClient[] clients =  new RpcClient[blockchainRpcURLS.length];
-                for (int i = 0; i < clients.length; i++) {
-                    clients[i] = new LimitedCapacityRpcClient(httpClient, blockchainRpcURLS[i].trim(), parallelism);
-                }
-                return new LeastConnectionsRpcClient(clients);
-            }
-        };
-
-        RpcClientBuilder rpcClientBuilder2 = new RpcClientBuilder() {
-            @Override
-            public RpcClient build() {
-                CredentialsProvider provider = new BasicCredentialsProvider();
-                provider.setCredentials(
-                        AuthScope.ANY,
-                        new UsernamePasswordCredentials(blockchainUsername, blockchainPassword)
-                );
-
-
-                IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
-                        .setIoThreadCount(1)
-                        .build();
-
-                CloseableHttpAsyncClient httpClient = HttpAsyncClients.custom()
-                        .setDefaultIOReactorConfig(ioReactorConfig)
-                        .setDefaultCredentialsProvider(provider)
-                        .setMaxConnPerRoute(1)
-                        .setMaxConnTotal(1)
-                        .build();
-                httpClient.start();
-                
-                RpcClient[] clients =  new RpcClient[blockchainRpcURLS.length];
-                for (int i = 0; i < clients.length; i++) {
-                    clients[i] = new LimitedCapacityRpcClient(httpClient, blockchainRpcURLS[i].trim(), 100);
-                }
-                return new LeastConnectionsRpcClient(clients);
-            }
-        };
+        
+        Supplier<RpcClient> rpcClientSupplier1;
+        Supplier<RpcClient> rpcClientSupplier2;
+        if (test_mode) {
+            rpcClientSupplier1 = null;
+            rpcClientSupplier2 = null;
+        } else {
+            rpcClientSupplier1 = new RpcClientSupplier(blockchainUsername, blockchainPassword, blockchainRpcURLS, parallelism, parallelism * blockchainRpcURLS.length);
+            rpcClientSupplier2 = new RpcClientSupplier(blockchainUsername, blockchainPassword, blockchainRpcURLS, 1, 1 * blockchainRpcURLS.length);
+        }
 
         SingleOutputStreamOperator<Integer> blockHeights;
         if (test_mode) {
@@ -344,7 +295,7 @@ public class Main {
         } else {
             BlockHeightSource blockHeightSource = BlockHeightSource.builder()
                     .minConfirmations(5)
-                    .rpcClientBuilder(rpcClientBuilder1)
+                    .rpcClientSupplier(rpcClientSupplier1)
                     .sessionBuilder(disable_sinks ? null : sessionBuilder)
                     .concurrentBlocks(concurrentBlocks)
                     .build();
@@ -357,7 +308,7 @@ public class Main {
         } else {
             blockHashes = AsyncDataStream.orderedWait(
                 blockHeights,
-                new AsyncBlockHashFetcher(rpcClientBuilder1),
+                new AsyncBlockHashFetcher(rpcClientSupplier1),
                 60, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
@@ -370,7 +321,7 @@ public class Main {
         } else {
             blockHeaders = AsyncDataStream.orderedWait(
                 blockHashes,
-                new AsyncBlockHeadersFetcher(rpcClientBuilder1),
+                new AsyncBlockHeadersFetcher(rpcClientSupplier1),
                 60, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
@@ -388,7 +339,7 @@ public class Main {
             blocks = AsyncDataStream.orderedWait(
                     blockHeaders.map(e -> e.getHash()).uid("headers_to_hash").name("Block hashes")
                     .forceNonParallel(), 
-                    new AsyncBlockFetcher(rpcClientBuilder2), 
+                    new AsyncBlockFetcher(rpcClientSupplier2), 
                     60, 
                     TimeUnit.SECONDS, 
                     BLOCK_FETCHER_CONCURRENCY
