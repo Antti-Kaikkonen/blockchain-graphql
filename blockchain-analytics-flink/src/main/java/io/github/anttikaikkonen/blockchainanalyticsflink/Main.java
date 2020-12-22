@@ -523,35 +523,5 @@ public class Main {
         env.execute(flinkJobName);
     }
     
-    public static boolean possiblyCoinJoin(ConfirmedTransactionWithInputs tx) {
-        Set<String> inputAddresses = new HashSet<>();
-        for (TransactionInputWithOutput vin : tx.getInputsWithOutputs()) {
-            try {
-                String address = vin.getSpentOutput().getScriptPubKey().getAddresses()[0];
-                if (address != null) {
-                    inputAddresses.add(address);
-                }
-            } catch(Exception ex) {
-            }
-        }
-        if (inputAddresses.size() < 2) return false;
-        Map<Long, String> outputAmount2Address = new HashMap<>();
-        for (TransactionOutput vout : tx.getVout()) {
-            String address;
-            try {
-                address = vout.getScriptPubKey().getAddresses()[0];
-                if (address == null) continue;
-            } catch(Exception ex) {
-                continue;
-            }
-            long value = Math.round(vout.getValue()*1e8);
-            String equalAmountAddress = outputAmount2Address.get(value);
-            if (equalAmountAddress != null && !equalAmountAddress.equals(address)) {
-                return true;
-            } else {
-                outputAmount2Address.put(value, address);
-            }
-        }
-        return false;
-      }
+ 
 }

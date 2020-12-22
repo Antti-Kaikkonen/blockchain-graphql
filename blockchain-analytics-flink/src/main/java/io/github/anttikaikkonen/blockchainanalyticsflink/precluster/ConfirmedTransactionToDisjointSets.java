@@ -31,7 +31,7 @@ public class ConfirmedTransactionToDisjointSets extends ProcessFunction<Confirme
             } catch(Exception ex) {
             }
         }
-        if (!Main.possiblyCoinJoin(tx)) {
+        if (!tx.possiblyCoinJoin()) {
             Set<String> inputAddresses = new TreeSet<>();
             for (TransactionInputWithOutput vin : tx.getInputsWithOutputs()) {
                 try {
