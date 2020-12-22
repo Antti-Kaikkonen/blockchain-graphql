@@ -9,7 +9,7 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 
-public class HeaderTimeProcessor extends ProcessFunction<BlockHeader, BlockHeader> implements CheckpointedFunction {
+public class StrictlyIncreasingHeaderTimeAssigner extends ProcessFunction<BlockHeader, BlockHeader> implements CheckpointedFunction {
 
     private transient ListState<Long> checkpointedTime;
     private long time = 0;

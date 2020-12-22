@@ -1,7 +1,7 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink;
 
 
-import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderTimeProcessor;
+import io.github.anttikaikkonen.blockchainanalyticsflink.source.StrictlyIncreasingHeaderTimeAssigner;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockHashFetcher;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockFetcher;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.AsyncBlockHeadersFetcher;
@@ -12,12 +12,10 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.BlockSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransaction;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
-import io.github.anttikaikkonen.blockchainanalyticsflink.models.TransactionInputWithOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.UnionFindFunction;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.RpcClient;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Block;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.BlockHeader;
-import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Transaction;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.AddressSink;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilderImpl;
@@ -27,17 +25,14 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.models.InputPointer;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.SpentOutput;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockClusterProcessor;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockClustering;
-import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.ConfirmedTransactionToDisjointSets;
+import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.TransactionClustering;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.SimpleAddAddressesAndTransactionsOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderWatermarkStrategy;
+import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderTimestampAssigner;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.RpcClientSupplier;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.UnionFindSink;
-import java.util.HashMap;
-import java.util.Map;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.ClusterWriteAheadLogger;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -58,7 +53,6 @@ import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.apache.flink.util.Collector;
 
 public class Main {
     
@@ -184,7 +178,7 @@ public class Main {
                 @Override
                 public void cancel() {
                 }
-            }).uid("block_height_source").name("Block height source");
+            }).uid("Block height source").name("Block height source");
         } else {
             BlockHeightSource blockHeightSource = BlockHeightSource.builder()
                     .minConfirmations(5)
@@ -192,12 +186,12 @@ public class Main {
                     .sessionBuilder(disable_sinks ? null : sessionBuilder)
                     .concurrentBlocks(concurrentBlocks)
                     .build();
-            blockHeights = env.addSource(blockHeightSource).uid("block_height_source").name("Block height source");
+            blockHeights = env.addSource(blockHeightSource).uid("Block height source").name("Block height source");
         }
         
         SingleOutputStreamOperator<String> blockHashes;
         if (test_mode) {
-            blockHashes = blockHeights.map(e -> (String)null).uid("async_block_hash_fetcher").name("Block hash fetcher").forceNonParallel();
+            blockHashes = blockHeights.map(e -> (String)null).uid("Block hash fetcher").name("Block hash fetcher").forceNonParallel();
         } else {
             blockHashes = AsyncDataStream.orderedWait(
                 blockHeights,
@@ -205,12 +199,12 @@ public class Main {
                 60, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
-            ).uid("async_block_hash_fetcher").name("Block hash fetcher").forceNonParallel();
+            ).uid("Block hash fetcher").name("Block hash fetcher").forceNonParallel();
         }
         
         SingleOutputStreamOperator<BlockHeader> blockHeaders;
         if (test_mode) {
-            blockHeaders = blockHashes.map(e -> (BlockHeader)null).uid("async_headers_fetcher").name("Headers fetcher").forceNonParallel();
+            blockHeaders = blockHashes.map(e -> (BlockHeader)null).uid("Block headers fetcher").name("Block headers fetcher").forceNonParallel();
         } else {
             blockHeaders = AsyncDataStream.orderedWait(
                 blockHashes,
@@ -218,25 +212,27 @@ public class Main {
                 60, 
                 TimeUnit.SECONDS, 
                 BLOCK_FETCHER_CONCURRENCY*env.getParallelism()
-            ).uid("async_headers_fetcher").name("Headers fetcher").forceNonParallel();
+            ).uid("Block headers fetcher").name("Block headers fetcher").forceNonParallel();
         }
         
-        blockHeaders = blockHeaders.process(new HeaderTimeProcessor()).uid("header_time_processor").name("Header time processor").forceNonParallel();
+        blockHeaders = blockHeaders.process(new StrictlyIncreasingHeaderTimeAssigner())
+                .uid("Strictly increasing header time assigner").name("Strictly increasing header time assigner").forceNonParallel();
 
-        blockHeaders = blockHeaders.assignTimestampsAndWatermarks(new HeaderWatermarkStrategy()).uid("timestampamp_assigner").name("Timestamp assigner").forceNonParallel();
+        blockHeaders = blockHeaders.assignTimestampsAndWatermarks(new HeaderTimestampAssigner())
+                .uid("Header timestamp assigner").name("Header timestamp assigner").forceNonParallel();
 
         SingleOutputStreamOperator<Block> blocks;
         if (test_mode) {
-            blocks = blockHeaders.map(e -> (Block)null).startNewChain().uid("async_block_fetcher").name("Block fetcher");
+            blocks = blockHeaders.map(e -> (Block)null).startNewChain().uid("Block fetcher").name("Block fetcher");
         } else {
             blocks = AsyncDataStream.orderedWait(
-                    blockHeaders.map(e -> e.getHash()).uid("headers_to_hash").name("Block hashes")
+                    blockHeaders.map(e -> e.getHash()).uid("Header to block hash").name("Header to block hash")
                     .forceNonParallel(), 
                     new AsyncBlockFetcher(rpcClientSupplier2), 
                     60, 
                     TimeUnit.SECONDS, 
                     BLOCK_FETCHER_CONCURRENCY
-            ).startNewChain().uid("async_block_fetcher").name("Block fetcher");
+            ).startNewChain().uid("Block fetcher").name("Block fetcher");
         }
         
         if (!test_mode && !disable_sinks) {
@@ -245,53 +241,30 @@ public class Main {
                     10, 
                     TimeUnit.MINUTES, 
                     CASSANDRA_CONCURRENT_REQUESTS
-            ).uid("async_block_saver").name("Block saver");//.setParallelism(sinkParallelism);
+            ).uid("Block sink").name("Block sink");
         }
         
-        SingleOutputStreamOperator<ConfirmedTransaction> transactions = blocks.flatMap(new FlatMapFunction<Block, ConfirmedTransaction>() {
-            @Override
-            public void flatMap(Block value, Collector<ConfirmedTransaction> out) throws Exception {
-                int txN = 0;
-                for (Transaction tx : value.getTx()) {
-                    out.collect(new ConfirmedTransaction(tx, value.getHeight(), txN));
-                    txN++;
-                }
-            }
-        }).uid("blocks_to_transactions").name("Blocks To Transactions");//.setParallelism(sinkParallelism);
+        SingleOutputStreamOperator<ConfirmedTransaction> transactions = blocks.flatMap(new BlocksToTransactions())
+                .uid("Blocks to transactions").name("Blocks to transactions");
 
-        SingleOutputStreamOperator<Tuple2<TransactionOutput, String>> outputs = transactions.flatMap(new FlatMapFunction<ConfirmedTransaction, Tuple2<TransactionOutput, String>>() {
-        @Override
-        public void flatMap(ConfirmedTransaction value, Collector<Tuple2<TransactionOutput, String>> out) throws Exception {
-                for (TransactionOutput vout : value.getVout()) {
-                    out.collect(new Tuple2(vout, value.getTxid()));
-                }
-            }
-        })
-        .uid("transactions_to_outputs").name("Outputs");
+        SingleOutputStreamOperator<Tuple2<TransactionOutput, String>> outputs = transactions.flatMap(new TransactionsToOutputs())
+                .uid("Transactions to outputs").name("Transactions to outputs");
 
         KeyedStream<Tuple2<TransactionOutput, String>, String> outputsByOutpoint = outputs.keyBy(e -> e.f1 + e.f0.getN());
 
-        SingleOutputStreamOperator<InputPointer> inputPointers = transactions.flatMap(new FlatMapFunction<ConfirmedTransaction, InputPointer>() {
-            @Override
-            public void flatMap(ConfirmedTransaction value, Collector<InputPointer> out) throws Exception {
-                if (value.getTxN() == 0) return;
-                
-                for (int i = 0; i < value.getVin().length; i++) {
-                    out.collect(new InputPointer(value.getTxid(), value.getVin()[i].getTxid(), value.getVin()[i].getVout(), i));
-                }
-            }
-        }).uid("transactions_to_input_pointers").name("Input Pointers");
+        SingleOutputStreamOperator<InputPointer> inputPointers = transactions.flatMap(new TransactionsToInputPointers())
+                .uid("Transactions to input pointers").name("Transactions to input pointers");
         
 
         SingleOutputStreamOperator<SpentOutput> spentOutputs = inputPointers.keyBy(e -> e.getTxid()+e.getVout())
                 .connect(outputsByOutpoint)
                 .process(new InputAttacher())
-                .uid("input_attacher").name("Input attacher");
+                .uid("Input attacher").name("Input attacher");
 
         KeyedStream<SpentOutput, String> spentOutputsByTxid = spentOutputs.keyBy(e -> e.getSpending_txid());
 
         SingleOutputStreamOperator<ConfirmedTransactionWithInputs> fullTxs = spentOutputsByTxid.connect(transactions.keyBy(e -> e.getTxid())).process(new TransactionAttacher())
-                .uid("transaction_attacher").name("Transaction attacher");
+                .uid("Transaction attacher").name("Transaction attacher");
         
         if (!test_mode && !disable_sinks) {
             AsyncDataStream.unorderedWait(
@@ -300,47 +273,27 @@ public class Main {
                 10, 
                 TimeUnit.MINUTES, 
                 CASSANDRA_CONCURRENT_REQUESTS
-            ).uid("async_transaction_sink").name("TransactionSink");//.setParallelism(sinkParallelism);
+            ).uid("Transaction sink").name("Transaction sink");
         }
         
         
-        KeyedStream<Tuple2<String, Long>, String> addressTransactionDeltas = fullTxs.flatMap(new FlatMapFunction<ConfirmedTransactionWithInputs, Tuple2<String, Long>>() {
-            @Override
-            public void flatMap(ConfirmedTransactionWithInputs transaction, Collector<Tuple2<String, Long>> out) throws Exception {
-                
-                Map<String, Long> addressDeltas = new HashMap<>();
-                for (TransactionOutput vout : transaction.getVout()) {
-                    if (vout.getScriptPubKey().getAddresses() == null) continue;
-                    if (vout.getScriptPubKey().getAddresses().length != 1) continue;
-                    String address = vout.getScriptPubKey().getAddresses()[0];
-                    long value = Math.round(vout.getValue()*1e8);
-                    addressDeltas.compute(address, (key, oldDelta) -> oldDelta == null ? value : oldDelta + value);
-                }
-                for (TransactionInputWithOutput vin : transaction.getInputsWithOutputs()) {
-                    if (vin.getSpentOutput() == null) continue;
-                    if (vin.getSpentOutput().getScriptPubKey().getAddresses() == null) continue;
-                    if (vin.getSpentOutput().getScriptPubKey().getAddresses().length != 1) continue;
-                    String address = vin.getSpentOutput().getScriptPubKey().getAddresses()[0];
-                    long value = Math.round(vin.getSpentOutput().getValue()*1e8);
-                    addressDeltas.compute(address, (key, oldDelta) -> oldDelta == null ? -value : oldDelta - value);
-                }
-                for (Map.Entry<String, Long> e : addressDeltas.entrySet()) {
-                    out.collect(new Tuple2<String, Long>(e.getKey(), e.getValue()));
-                }
-            }
-        }).uid("address_transaction_deltas").name("Address Transaction Deltas").keyBy(e -> e.f0);
+        KeyedStream<Tuple2<String, Long>, String> addressTransactionDeltas = fullTxs.flatMap(new TransactionsToAddressBalanceChanges())
+                .uid("Transactions to address balance changes").name("Transactions to address balance changes").keyBy(e -> e.f0);
         
        
         String flinkJobName = StringUtils.capitalize(cassandraKeyspace) + " Blockchain Analysis";
 
-        DataStream<Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> txClusters = fullTxs.process(new ConfirmedTransactionToDisjointSets()).uid("tx_clusters").name("Tx clusters");
+        DataStream<Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> txClusters = fullTxs.process(new TransactionClustering())
+                .uid("Transaction clustering").name("Transaction clustering");
         
         DataStream<Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> blockClusters = txClusters.keyBy(t -> t.f0)
-        .process(new BlockClustering())
-        .uid("block_clusters").name("Block clusters");
+                .process(new BlockClustering())
+                .uid("Block clustering").name("Block clustering");
         
         KeyedStream<Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>, Integer> blockClustersByHeight = DataStreamUtils.reinterpretAsKeyedStream(blockClusters, e -> e.f0);
-        SingleOutputStreamOperator<RoutableMessage> rms = blockClustersByHeight.process(new BlockClusterProcessor()).uid("block_cluster_processor").name("Block cluster processor");
+        
+        SingleOutputStreamOperator<RoutableMessage> rms = blockClustersByHeight.process(new BlockClusterProcessor())
+                .uid("Block cluster processor").name("Block cluster processor");
         
         StatefulFunctionsConfig statefunConfig = StatefulFunctionsConfig.fromEnvironment(env);
         statefunConfig.setFactoryType(MessageFactoryType.WITH_KRYO_PAYLOADS);
@@ -352,9 +305,12 @@ public class Main {
                 .withEgressId(UnionFindFunction.EGRESS)
                 .build(env);
         
-        SingleOutputStreamOperator<Object> unionFindOps = out.getDataStreamForEgressId(UnionFindFunction.EGRESS).keyBy(e -> e.getAddress()).process(new UnionFindSink(sessionBuilder, checkpointConfig.getCheckpointInterval())).uid("address_clustering_sink").name("Address Clustering Sink");
+        SingleOutputStreamOperator<Object> unionFindOps = out.getDataStreamForEgressId(UnionFindFunction.EGRESS)
+                .keyBy(e -> e.getAddress()).process(new ClusterWriteAheadLogger(sessionBuilder, checkpointConfig.getCheckpointInterval()))
+                .uid("Cluster write-ahead logger").name("Cluster write-ahead logger");
        
-        SingleOutputStreamOperator<Object> addressOps = addressTransactionDeltas.process(new AddressBalanceProcessor()).uid("address_balance_processor").name("Address Balance Processor");
+        SingleOutputStreamOperator<Object> addressOps = addressTransactionDeltas.process(new AddressBalanceProcessor())
+                .uid("Address balance processor").name("Address balance processor");
         
         if (!test_mode && !disable_sinks) {
             AsyncDataStream.unorderedWait(addressOps.union(unionFindOps), 
@@ -362,7 +318,7 @@ public class Main {
                     10, 
                     TimeUnit.MINUTES, 
                     CASSANDRA_CONCURRENT_REQUESTS
-            ).uid("address_sink").name("Address Sink");
+            ).uid("Address sink").name("Address sink");
         }
         env.execute(flinkJobName);
     }

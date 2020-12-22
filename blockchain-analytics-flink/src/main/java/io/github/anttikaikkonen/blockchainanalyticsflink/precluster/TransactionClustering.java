@@ -1,7 +1,6 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.precluster;
 
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
-import io.github.anttikaikkonen.blockchainanalyticsflink.Main;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.TransactionInputWithOutput;
 import java.util.Set;
@@ -10,8 +9,7 @@ import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.api.java.tuple.Tuple2;
 
-public class ConfirmedTransactionToDisjointSets extends ProcessFunction<ConfirmedTransactionWithInputs, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> {
-
+public class TransactionClustering extends ProcessFunction<ConfirmedTransactionWithInputs, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> {
 
     @Override
     public void processElement(ConfirmedTransactionWithInputs tx, Context ctx, Collector<Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> out) throws Exception {

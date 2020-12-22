@@ -23,7 +23,7 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
-public class UnionFindSink extends KeyedProcessFunction<String, AddressOperation, Object> implements CheckpointedFunction, CheckpointListener {
+public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, AddressOperation, Object> implements CheckpointedFunction, CheckpointListener {
 
     private static final int MAX_UNCOMPLETED_CHECKPOINTS = 3;
    
@@ -46,7 +46,7 @@ public class UnionFindSink extends KeyedProcessFunction<String, AddressOperation
     
     private final long checkpointCheckInterval;
     
-    public UnionFindSink(CassandraSessionBuilder sessionBuilder, long checkpointCheckInterval) {
+    public ClusterWriteAheadLogger(CassandraSessionBuilder sessionBuilder, long checkpointCheckInterval) {
         this.checkpointCheckInterval = checkpointCheckInterval;
         this.sessionBuilder = sessionBuilder;
     }

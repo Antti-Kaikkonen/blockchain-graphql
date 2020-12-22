@@ -9,9 +9,9 @@ import org.apache.flink.api.common.eventtime.WatermarkGeneratorSupplier;
 import org.apache.flink.api.common.eventtime.WatermarkOutput;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 
-public class HeaderWatermarkStrategy implements WatermarkStrategy<BlockHeader> {
+public class HeaderTimestampAssigner implements WatermarkStrategy<BlockHeader> {
     
-    public HeaderWatermarkStrategy() {
+    public HeaderTimestampAssigner() {
     }
     
     @Override
