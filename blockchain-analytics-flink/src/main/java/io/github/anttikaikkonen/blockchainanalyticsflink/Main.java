@@ -38,6 +38,7 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockCluster
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.BlockClustering;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.ConfirmedTransactionToDisjointSets;
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.SimpleAddAddressesAndTransactionsOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderWatermarkStrategy;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.UnionFindSink;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,11 +48,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.flink.api.common.eventtime.Watermark;
-import org.apache.flink.api.common.eventtime.WatermarkGenerator;
-import org.apache.flink.api.common.eventtime.WatermarkGeneratorSupplier;
-import org.apache.flink.api.common.eventtime.WatermarkOutput;
-import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
@@ -227,7 +223,6 @@ public class Main {
                                 } else {
                                     return RetryPolicy.RetryDecision.rethrow();
                                 }
-                                //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
                             }
 
                             @Override
@@ -384,21 +379,7 @@ public class Main {
         
         blockHeaders = blockHeaders.process(new HeaderTimeProcessor()).uid("header_time_processor").name("Header time processor").forceNonParallel();
 
-        blockHeaders = blockHeaders.assignTimestampsAndWatermarks(new WatermarkStrategy<BlockHeader>() {
-            @Override
-            public WatermarkGenerator<BlockHeader> createWatermarkGenerator(WatermarkGeneratorSupplier.Context arg0) {
-                return new WatermarkGenerator<BlockHeader>() {
-                    @Override
-                    public void onEvent(BlockHeader header, long timestamp, WatermarkOutput wo) {
-                        wo.emitWatermark(new Watermark(header.getTime()));
-                    }
-
-                    @Override
-                    public void onPeriodicEmit(WatermarkOutput arg0) {
-                    }
-                };
-            }
-        }.withTimestampAssigner((event, timestamp) -> event.getTime())).uid("timestampamp_assigner").name("Timestamp assigner").forceNonParallel();
+        blockHeaders = blockHeaders.assignTimestampsAndWatermarks(new HeaderWatermarkStrategy()).uid("timestampamp_assigner").name("Timestamp assigner").forceNonParallel();
 
         SingleOutputStreamOperator<Block> blocks;
         if (test_mode) {
