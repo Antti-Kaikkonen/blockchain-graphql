@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Client } from "cassandra-driver";
+import { Client, types } from "cassandra-driver";
 import { buildSchema, PubSubEngine } from "type-graphql";
 import { RichlistResolver } from './resolvers/richlist-resolver';
 import { AddressTransactionsResolver } from './resolvers/address-transactions-resolver';
@@ -22,6 +22,11 @@ import { AddressClusterResolver } from "./resolvers/address-cluster-resolver";
 import { ClusterTransactionResolver } from "./resolvers/cluster-transaction-resolver";
 import { config } from "dotenv";
 import { CoinResolver } from "./resolvers/coin-resolver";
+import { RpcClient } from "./rpc-client";
+import { Mempool } from "./mempool";
+import { Coin } from "./models/coin";
+import { CoinsUpdater } from "./coins-updater";
+import { LimitedCapacityClient } from "./limited-capacity-client";
 
 
 async function run() {
@@ -37,14 +42,23 @@ async function run() {
     let coins_keyspace = process.env.CASSANDRA_COINS_KEYSPACE || "coins";
 
     let api_port: number = process.env.API_PORT !== undefined ? Number.parseInt(process.env.API_PORT) : 6545;
-
+    
     const client = new Client({
       contactPoints: contactPointsArr,
-      localDataCenter: 'datacenter1'
+      localDataCenter: 'datacenter1',
+      
     });
     await client.connect();
-    Container.set("cassandra_client", client);
+
+    const limitedCapcityClient = new LimitedCapacityClient(client, 100);
+
+    let nameToCoin: Map<string, Coin> = new Map();
+    let coins_updater: CoinsUpdater = new CoinsUpdater(nameToCoin, limitedCapcityClient, coins_keyspace);
+    await coins_updater.start();
+    Container.set("coins", nameToCoin);
+    Container.set("cassandra_client", limitedCapcityClient);
     Container.set("coins_keyspace", coins_keyspace);
+
     let schema = await buildSchema({
         resolvers: [RichlistResolver, AddressTransactionsResolver, AddressResolver, 
           DateResolver, BlockResolver, ConfirmedTransactionResolver, 

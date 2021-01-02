@@ -1,12 +1,12 @@
-import { Resolver, Query, Arg, Args, Int, ArgsType, Field, FieldResolver, Root } from "type-graphql";
+import { Resolver, Args, ArgsType, Field, FieldResolver, Root } from "type-graphql";
 import { Date } from "../models/date";
-import { Client, types } from "cassandra-driver";
+import { types } from "cassandra-driver";
 import { RichListCursor, Richlist, PaginatedRichlistResponse } from "../models/richlist";
 import { Address } from "../models/address";
 import { Inject } from "typedi";
 import { AddressBalanceChange, AddressBalanceChangeCursor, PaginatedAddressBalanceChangeResponse } from "../models/address-balance-change";
 import { PaginationArgs } from "./pagination-args";
-import { stdout } from "process";
+import { LimitedCapacityClient } from "../limited-capacity-client";
 
 @ArgsType()
 class RichlistArgs extends PaginationArgs {
@@ -30,7 +30,7 @@ export class DateResolver {
   static BIN_COUNT: number = 10;
   static BINS: number[] = Array.from(new Array(DateResolver.BIN_COUNT).keys());
 
-  constructor(@Inject("cassandra_client") private client: Client) {
+  constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
   }
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})

@@ -1,18 +1,24 @@
-import { Client, types } from "cassandra-driver";
+import { types } from "cassandra-driver";
 import { Arg, FieldResolver, Int, Query, Resolver, Root } from "type-graphql";
 import { Inject } from "typedi";
+import { LimitedCapacityClient } from "../limited-capacity-client";
+import { MempoolBlock, MempoolTx } from "../mempool";
 import { Address } from "../models/address";
 import { Block } from "../models/block";
 import { BlockHash } from "../models/block_hash";
 import { Coin } from "../models/coin";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
-import { Date } from "../models/date";
+import { Date as DateModel } from "../models/date";
 import { Transaction } from "../models/transaction";
 
 @Resolver(of => Coin)
 export class CoinResolver {
 
-    constructor(@Inject("cassandra_client") private client: Client, @Inject("coins_keyspace") private coins_keyspace: string) {
+    constructor(
+      @Inject("cassandra_client") private client: LimitedCapacityClient, 
+      @Inject("coins_keyspace") private coins_keyspace: string, 
+      @Inject("coins") private available_coins: Map<string, Coin>
+    ) {
         this.coins();//updates lastCoinCount;
     }
 
@@ -20,47 +26,21 @@ export class CoinResolver {
 
     @Query(returns => [Coin], {nullable: true, complexity: ({ childComplexity, args }) => 100 + CoinResolver.lastCoinCount * childComplexity})
     async coins(): Promise<Coin[]> {
-        let args: any[] = [];
-        let query: string = "SELECT * FROM "+this.coins_keyspace+".available_coins";
-        let resultSet: types.ResultSet = await this.client.execute(
-            query, 
-            args, 
-            {prepare: true}
-        );
-        let res: Coin[] = resultSet.rows.map(row => {
-            let coin: Coin = new Coin();
-            coin.name = row.get('name');
-            coin.keyspace = row.get('key_space');
-            return coin;
-        });
-        CoinResolver.lastCoinCount = res.length;
-        return res;
+      CoinResolver.lastCoinCount = this.available_coins.size;
+      return Array.from(this.available_coins.values());
     }
 
     @Query(returns => Coin, {nullable: true, complexity: 100})
     async coin(@Arg("name") name: string): Promise<Coin> {
-        let args: any[] = [name];
-        let query: string = "SELECT * FROM coins.available_coins WHERE name=?";
-        let resultSet: types.ResultSet = await this.client.execute(
-            query, 
-            args, 
-            {prepare: true}
-        );
-        let res: Coin[] = resultSet.rows.map(row => {
-            let coin: Coin = new Coin();
-            coin.name = row.get('name');
-            coin.keyspace = row.get('key_space');
-            return coin;
-        });
-        return res[0];
+      return this.available_coins.get(name);
     }
 
-    @FieldResolver(returns => Date, {complexity: 1})
+    @FieldResolver(returns => DateModel, {complexity: 1})
     async date(
         @Root() coin: Coin, 
         @Arg("date") date: string
-    ): Promise<Date> {
-        let res = new Date();
+    ): Promise<DateModel> {
+        let res = new DateModel();
         res.date = date;
         res.coin = coin;
         return res;
@@ -74,33 +54,51 @@ export class CoinResolver {
 
     @FieldResolver(returns => Transaction, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
     async transaction(@Root() coin: Coin, @Arg("txid") txid: string): Promise<Transaction> {
-    let args: any[] = [txid];
-    let query: string = "SELECT * FROM "+coin.keyspace+".transaction WHERE txid=?";
-    let resultSet: types.ResultSet = await this.client.execute(
-      query, 
-      args, 
-      {prepare: true}
-    );
-    let res: Transaction[] = resultSet.rows.map(row => {
-      let tx: Transaction = new Transaction();
-      tx.txid = row.get('txid');
-      tx.locktime = row.get('locktime');
-      tx.size = row.get('size');
-      tx.version = row.get('version');
-      tx.height = row.get('height');
-      tx.txN = row.get("tx_n");
-      tx.fee = row.get("tx_fee")/1e8;
-      tx.coin = coin;
-      return tx;
-    });
-    return res[0];
+      let mempool = coin.mempool;
+      let mempoolTransaction = mempool === undefined ? undefined : mempool.txById.get(txid);
+      if (mempoolTransaction !== undefined) {
+        return mempoolTransaction.toGraphQL(coin);
+      }
+      let args: any[] = [txid];
+      let query: string = "SELECT * FROM "+coin.keyspace+".transaction WHERE txid=?";
+      let resultSet: types.ResultSet = await this.client.execute(
+        query, 
+        args, 
+        {prepare: true}
+      );
+      let res: Transaction[] = resultSet.rows.map(row => {
+        let tx: Transaction = new Transaction();
+        tx.txid = row.get('txid');
+        tx.locktime = row.get('locktime');
+        tx.size = row.get('size');
+        tx.version = row.get('version');
+        tx.height = row.get('height');
+        tx.txN = row.get("tx_n");
+        tx.fee = row.get("tx_fee")/1e8;
+        tx.coin = coin;
+        return tx;
+      });
+      return res[0];
   }
 
   @FieldResolver(returns => ConfirmedTransaction, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(
     @Root() coin: Coin,
     @Arg("height", type => Int) height: number, 
-    @Arg("tx_n", type => Int) tx_n: number): Promise<ConfirmedTransaction> {
+    @Arg("tx_n", type => Int) tx_n: number
+  ): Promise<ConfirmedTransaction> {
+    //let mempool: Mempool = this.mempools.get(coin.name);
+    let mempool = coin.mempool;
+    let mempoolBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
+    if (mempoolBlock !== undefined) {
+      let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
+      let tx: ConfirmedTransaction = new ConfirmedTransaction();
+      tx.height = mempoolTx.height;
+      tx.tx_n = mempoolTx.txN;
+      tx.txid = mempoolTx.txid;
+      tx.coin = coin;
+      return tx;
+    }
     let args: any[] = [height, tx_n];
     let query: string = "SELECT * FROM "+coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
@@ -122,7 +120,18 @@ export class CoinResolver {
   @FieldResolver(returns => BlockHash, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async blockByHeight(
     @Root() coin: Coin,
-    @Arg("height", type => Int) height: number): Promise<BlockHash> {
+    @Arg("height", type => Int) height: number
+  ): Promise<BlockHash> {
+    //let mempool: Mempool = this.mempools.get(coin.name);
+    let mempool = coin.mempool;
+    let mempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
+    if (mempoolBlock !== undefined) {
+      let res: BlockHash = new BlockHash();
+      res.hash = mempoolBlock.hash;
+      res.height = mempoolBlock.height;
+      res.coin = coin;
+      return res;
+    }
     let args: any[] = [height];
     let query: string = "SELECT * FROM "+coin.keyspace+".longest_chain WHERE height=?";
     let resultSet: types.ResultSet = await this.client.execute(
@@ -143,7 +152,31 @@ export class CoinResolver {
   @FieldResolver(returns => Block, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async block(
     @Root() coin: Coin,
-    @Arg("hash") hash: string): Promise<Block> {
+    @Arg("hash") hash: string
+  ): Promise<Block> {
+    //let mempool: Mempool = this.mempools.get(coin.name);
+    let mempool = coin.mempool;
+    let mempooBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHash.get(hash);
+    if (mempooBlock !== undefined) {
+      let b: Block = new Block();
+      b.height = mempooBlock.height;
+      b.hash = mempooBlock.hash;
+      b.size = mempooBlock.size;
+      b.height = mempooBlock.height;
+      b.version = mempooBlock.version;
+      b.versionhex = mempooBlock.versionHex;
+      b.merkleroot = mempooBlock.merkleroot;
+      b.time = new Date(mempooBlock.time*1000);
+      b.mediantime = mempooBlock.mediantime;
+      b.nonce = mempooBlock.nonce;
+      b.bits = mempooBlock.bits;
+      b.difficulty = mempooBlock.difficulty;
+      b.chainwork = mempooBlock.chainwork;
+      b.previousblockhash = mempooBlock.previousblockhash;
+      b.tx_count = mempooBlock.tx.length;
+      b.coin = coin;
+      return b;
+    }
     let args: any[] = [hash];
     let query: string = "SELECT * FROM "+coin.keyspace+".block WHERE hash=?";
     let resultSet: types.ResultSet = await this.client.execute(
@@ -155,6 +188,7 @@ export class CoinResolver {
       let b: Block = new Block();
       b.height = row.get('height');
       b.hash = row.get('hash');
+      b.size = row.get("size");
       b.height = row.get('height');
       b.version = row.get('version');
       b.versionhex = row.get("versionhex");

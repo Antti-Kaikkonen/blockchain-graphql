@@ -1,14 +1,15 @@
 import { Resolver, FieldResolver, Root } from "type-graphql";
-import { Client, types } from "cassandra-driver";
+import { types } from "cassandra-driver";
 import { Inject } from 'typedi';
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { ClusterTransaction } from "../models/cluster-transaction";
+import { LimitedCapacityClient } from "../limited-capacity-client";
 
 @Resolver(of => ClusterTransaction)
 export class ClusterTransactionResolver {
 
 
-  constructor(@Inject("cassandra_client") private client: Client, ) {
+  constructor(@Inject("cassandra_client") private client: LimitedCapacityClient ) {
   }
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})

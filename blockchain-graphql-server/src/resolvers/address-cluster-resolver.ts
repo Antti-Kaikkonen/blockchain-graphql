@@ -1,10 +1,10 @@
 import { AddressCluster } from "../models/address-cluster";
 import { Resolver, FieldResolver, Root, Arg, InputType, Field } from "type-graphql";
 import { Inject } from "typedi";
-import { Client, types } from "cassandra-driver";
+import { types } from "cassandra-driver";
 import { PaginatedClusterTransactionResponse, ClusterTransactionCursor, ClusterTransaction } from "../models/cluster-transaction";
 import { PaginatedAddressResponse, Address } from "../models/address";
-import { Coin } from "../models/coin";
+import { LimitedCapacityClient } from "../limited-capacity-client";
 
 @InputType()
 export class AddressCursor {
@@ -17,7 +17,7 @@ export class AddressCursor {
 @Resolver(of => AddressCluster)
 export class AddressClusterResolver {
 
-  constructor(@Inject("cassandra_client") private client: Client) {
+  constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
   }
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})

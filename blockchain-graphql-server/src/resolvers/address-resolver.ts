@@ -1,25 +1,21 @@
-import { Resolver, Query, Arg, FieldResolver, Root, ArgsDictionary, Subscription, Args, PubSub, PubSubEngine } from "type-graphql";
-import { Client, types } from "cassandra-driver";
+import { Resolver, Arg, FieldResolver, Root } from "type-graphql";
+import { types } from "cassandra-driver";
 import { Inject } from 'typedi';
 import { Address } from "../models/address";
 import { AddressTransaction, AddressTransactionCursor, PaginatedAddressTransactionResponse } from "../models/address-transaction";
 import { OHLCCursor, OHLC, PaginatedOHLCResponse } from '../models/ohlc';
 import { AddressBalanceCursor, PaginatedAddressBalanceResponse, AddressBalance } from "../models/address-balance";
 import { AddressCluster } from "../models/address-cluster";
+import { LimitedCapacityClient } from "../limited-capacity-client";
 
 
 @Resolver(of => Address)
 export class AddressResolver {
 
-  constructor(@Inject("cassandra_client") private client: Client) {
-  }
-  
+  constructor(
+    @Inject("cassandra_client") private client: LimitedCapacityClient,
+  ) {}
 
-  /*@Query(returns => Address, {complexity: 1})
-  async address(@Arg("address") address: string) {
-    let res = new Address(address);
-    return res;
-  }*/
 
   @FieldResolver(returns => AddressCluster, {complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async guestimatedWallet(@Root() address: Address): Promise<AddressCluster> {
@@ -48,10 +44,8 @@ export class AddressResolver {
     @Arg("cursor", {nullable: true}) cursor: OHLCCursor,
     @Arg("interval", {nullable: true, defaultValue: 1000*60*60*24}) interval?: number,
     @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number,
-    //@Arg("reverse", {nullable: true, defaultValue: false}) reverse?: boolean,
   ): Promise<PaginatedOHLCResponse> {
     let reverse: boolean = false;
-    console.log("interval = "+interval);
     let args: any[] = [address.address, interval];
     let query: string = "SELECT timestamp, open, high, low, close FROM "+address.coin.keyspace+".ohlc WHERE address=? AND interval=?";
     if (cursor) {
@@ -59,7 +53,6 @@ export class AddressResolver {
       args = args.concat([cursor.timestamp]);
     }
     if (reverse) query += " ORDER BY timestamp DESC";
-    console.log("query: "+query+", args: "+args);
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -85,77 +78,151 @@ export class AddressResolver {
     @Arg("cursor", {nullable: true}) cursor: AddressTransactionCursor,
     @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number, 
   ): Promise<PaginatedAddressTransactionResponse> {
-    let args: any[] = [address.address];
-    let query: string = "SELECT timestamp, height, tx_n, balance_change FROM "+address.coin.keyspace+".address_transaction WHERE address=?";
-    if (cursor) {
-      query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
-      args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
+    const originalLimit: number = limit;
+    let mempool = address.coin.mempool;
+    let res: AddressTransaction[];
+    if (mempool !== undefined) {
+      res = mempool.addressTransactions.get(address.address);
     }
-    let resultSet: types.ResultSet = await this.client.execute(
-      query, 
-      args, 
-      {prepare: true, fetchSize: limit}
-    );
-    let res: AddressTransaction[] = resultSet.rows.map(row => {
-      let addressTransaction = new AddressTransaction();
-      addressTransaction.timestamp = row.get("timestamp");
-      addressTransaction.height = row.get("height");
-      addressTransaction.tx_n = row.get("tx_n");
-      addressTransaction.balance_change = row.get("balance_change")/1e8;
-      addressTransaction.coin = address.coin;
-      return addressTransaction;
-    });
-    if (res.length > 0) {
-      let start = res[res.length-1].timestamp;
-      let end = res[0].timestamp;
-      let query2: string = "SELECT timestamp, balance FROM "+address.coin.keyspace+".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?";
-      let args2: any[] = [address.address, start, end];
-      let resultSet2: types.ResultSet = await this.client.execute(
-        query2, 
-        args2, 
-        {prepare: true}
+    if (res !== undefined) {
+      if (cursor !== undefined) {
+        let lastIndex = res.findIndex((e) => {
+          if (e.timestamp.getTime() === cursor.timestamp.getTime()) {
+            if (e.height === cursor.height) {
+              return e.tx_n >= cursor.tx_n;
+            }
+            return e.height > cursor.height;
+          }
+          return e.timestamp.getTime() > cursor.timestamp.getTime();
+        });//TODO: use binary search instead
+        if (lastIndex !== -1) {
+          res = res.slice(0, lastIndex);
+          if (res.length > limit+1) res = res.slice(res.length-(limit+1));
+        }
+      }
+      res.reverse();
+      if (res.length > 0) {
+        cursor = { 
+          timestamp: res[res.length-1].timestamp,
+          height: res[res.length-1].height,
+          tx_n: res[res.length-1].tx_n
+        }
+        limit = limit - res.length;
+      }
+    } else  {
+      res = [];
+    }
+    if (limit+1 > 0) {
+
+      let args: any[] = [address.address];
+      let query: string = "SELECT timestamp, height, tx_n, balance_change FROM "+address.coin.keyspace+".address_transaction WHERE address=?";
+      if (cursor) {
+        query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
+        args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
+      }
+      let resultSet: types.ResultSet = await this.client.execute(
+        query, 
+        args, 
+        {prepare: true, fetchSize: limit+1}
       );
-      let time2Balance: Map<number, number> = new Map();
-      resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")/1e8));
-      res.forEach(r => r.balance_after_block = time2Balance.get(r.timestamp.getTime()));
+      let res2: AddressTransaction[] = resultSet.rows.map(row => {
+        let addressTransaction = new AddressTransaction();
+        addressTransaction.timestamp = row.get("timestamp");
+        addressTransaction.height = row.get("height");
+        addressTransaction.tx_n = row.get("tx_n");
+        addressTransaction.balance_change = row.get("balance_change")/1e8;
+        addressTransaction.coin = address.coin;
+        return addressTransaction;
+      });
+      
+      if (res2.length > 0) {
+        let start = res2[res2.length-1].timestamp;
+        let end = res2[0].timestamp;
+        let query2: string = "SELECT timestamp, balance FROM "+address.coin.keyspace+".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?";
+        let args2: any[] = [address.address, start, end];
+        let resultSet2: types.ResultSet = await this.client.execute(
+          query2, 
+          args2, 
+          {prepare: true}
+        );
+        let time2Balance: Map<number, number> = new Map();
+        resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")/1e8));
+        res2.forEach(r => r.balance_after_block = time2Balance.get(r.timestamp.getTime()));
+        res = res.concat(res2);
+      }
+
     }
-    return {
-      hasMore: resultSet.pageState !== null,
-      items: res,
-    };
+    if (res.length > originalLimit) {
+      return {
+        hasMore: true,
+        items: res.slice(0, originalLimit),
+      }
+    } else {
+      return {
+        hasMore: false,
+        items: res,
+      }
+    }
   }
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async addressBalances(@Root() address: Address, 
     @Arg("cursor", {nullable: true}) cursor: AddressBalanceCursor,
-    @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number,
-    //@Arg("reverse", {nullable: true, defaultValue: false}) reverse?: boolean,
+    @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number
   ): Promise<PaginatedAddressBalanceResponse> {
-    let args: any[] = [address.address];
-    let query: string = "SELECT timestamp, balance FROM "+address.coin.keyspace+".address_balance WHERE address=?";
-    if (cursor) {
-      query += " AND timestamp < ?";
-      args = args.concat([cursor.timestamp]);
+    const originalLimit: number = limit;
+    let mempool = address.coin.mempool;
+    let res: AddressBalance[];
+    if (mempool !== undefined) {
+      res = mempool.addressBalances.get(address.address);
     }
-    console.log("query: "+query+", args: "+args);
-    let resultSet: types.ResultSet = await this.client.execute(
-      query, 
-      args, 
-      {prepare: true, fetchSize: limit}
-    );
-    let res:  AddressBalance[] = resultSet.rows.map(row => {
-      let addressBalance = new AddressBalance();
-      addressBalance.timestamp = row.get("timestamp");
-      addressBalance.balance = row.get("balance")/1e8;
-      return addressBalance;
-    });
-    return {
-      hasMore: resultSet.pageState !== null,
-      items: res,
+    if (res !== undefined) {
+      if (cursor !== undefined) {
+        let lastIndex = res.findIndex((e) => e.timestamp >= cursor.timestamp);//TODO: use binary search instead
+        if (lastIndex !== -1) {
+          res = res.slice(0, lastIndex);
+        }
+      }
+      if (res.length > limit+1) res = res.slice(res.length-(limit+1));
+      res.reverse();
+      if (res.length > 0) {
+        cursor = { timestamp: res[res.length-1].timestamp }
+        limit = limit - res.length;
+      }
+    } else  {
+      res = [];
+    }
+    if (limit+1 > 0) {
+      let args: any[] = [address.address];
+      let query: string = "SELECT timestamp, balance FROM "+address.coin.keyspace+".address_balance WHERE address=?";
+      if (cursor) {
+        query += " AND timestamp < ?";
+        args = args.concat([cursor.timestamp]);
+      }
+      let resultSet: types.ResultSet = await this.client.execute(
+        query, 
+        args, 
+        {prepare: true, fetchSize: limit+1}
+      );
+      res = res.concat(resultSet.rows.map(row => {
+        let addressBalance = new AddressBalance();
+        addressBalance.timestamp = row.get("timestamp");
+        addressBalance.balance = row.get("balance")/1e8;
+        return addressBalance;
+      }));
+    }
+    if (res.length > originalLimit) {
+      return {
+        hasMore: true,
+        items: res.slice(0, originalLimit),
+      }
+    } else {
+      return {
+        hasMore: false,
+        items: res,
+      }
     }
   };
-
-  //TODO @FieldResolver() addressTransactions https://typegraphql.com/docs/resolvers.html#field-resolvers
 
 
 }

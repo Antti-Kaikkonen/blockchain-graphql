@@ -13,6 +13,9 @@ export class Block {
   @Field(type => Int, {nullable: false, complexity: 1})
   height!: number;
 
+  @Field(type => Int, {nullable: false, complexity: 1})
+  size!: number;
+
   @Field(type => Int, {nullable: true, complexity: 1})
   version: number;
 
