@@ -61,10 +61,10 @@ export class AddressResolver {
     let res:  OHLC[] = resultSet.rows.map(row => {
       let ohlc = new OHLC();
       ohlc.timestamp = row.get("timestamp");
-      ohlc.open = row.get("open")/1e8;
-      ohlc.high = row.get("high")/1e8;
-      ohlc.low = row.get("low")/1e8;
-      ohlc.close = row.get("close")/1e8;
+      ohlc.open = row.get("open");
+      ohlc.high = row.get("high");
+      ohlc.low = row.get("low");
+      ohlc.close = row.get("close");
       return ohlc;
     });
     return {
@@ -130,7 +130,7 @@ export class AddressResolver {
         addressTransaction.timestamp = row.get("timestamp");
         addressTransaction.height = row.get("height");
         addressTransaction.tx_n = row.get("tx_n");
-        addressTransaction.balance_change = row.get("balance_change")/1e8;
+        addressTransaction.balance_change = row.get("balance_change");
         addressTransaction.coin = address.coin;
         return addressTransaction;
       });
@@ -146,7 +146,7 @@ export class AddressResolver {
           {prepare: true}
         );
         let time2Balance: Map<number, number> = new Map();
-        resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")/1e8));
+        resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")));
         res2.forEach(r => r.balance_after_block = time2Balance.get(r.timestamp.getTime()));
         res = res.concat(res2);
       }
@@ -207,7 +207,7 @@ export class AddressResolver {
       res = res.concat(resultSet.rows.map(row => {
         let addressBalance = new AddressBalance();
         addressBalance.timestamp = row.get("timestamp");
-        addressBalance.balance = row.get("balance")/1e8;
+        addressBalance.balance = row.get("balance");
         return addressBalance;
       }));
     }

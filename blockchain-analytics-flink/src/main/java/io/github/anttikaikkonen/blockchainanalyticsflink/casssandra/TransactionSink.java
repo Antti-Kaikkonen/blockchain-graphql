@@ -117,9 +117,9 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
             fee -= Math.round(vout.getValue()*1e8);
         }
         if (transaction.getTxN() == 0) {
-            tx.setTx_fee(0);
+            tx.setFee(0);
         } else {
-            tx.setTx_fee(fee);
+            tx.setFee((double)fee/1e8);
         }
         this.semaphore.acquireUninterruptibly();
         ListenableFuture<Void> future = txMapper.saveAsync(tx);
@@ -150,7 +150,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
         }
         for (String address : addressDeltas.keySet()) {
             long delta = addressDeltas.get(address);
-            AddressTransaction addressTransaction = new AddressTransaction(address, null, transaction.getHeight(), transaction.getTxN(), delta);
+            AddressTransaction addressTransaction = new AddressTransaction(address, null, transaction.getHeight(), transaction.getTxN(), (double)delta/1e8);
             addressTransaction.setTimestamp(Date.from(Instant.ofEpochMilli(transaction.getTimestamp())));
             this.semaphore.acquireUninterruptibly();
             future = addressTransactionMapper.saveAsync(addressTransaction);

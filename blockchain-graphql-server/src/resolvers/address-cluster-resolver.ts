@@ -41,7 +41,7 @@ export class AddressClusterResolver {
       clusterTransaction.timestamp = row.get("timestamp");
       clusterTransaction.height = row.get("height");
       clusterTransaction.tx_n = row.get("tx_n");
-      clusterTransaction.balance_change = row.get("balance_change")/1e8;
+      clusterTransaction.balance_change = row.get("balance_change");
       clusterTransaction.coin = cluster.coin;
       return clusterTransaction;
     });

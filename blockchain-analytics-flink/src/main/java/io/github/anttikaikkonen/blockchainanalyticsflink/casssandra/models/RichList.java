@@ -14,11 +14,12 @@ public class RichList {
     public RichList() {
     }
     
-    public RichList(String address, long balance, long previousBalance, long timestamp) {
+    public RichList(String address, double balance, double previousBalance, long timestamp) {
         this.bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
         this.address = address;
         this.balance = balance;
-        this.balanceChange = balance-previousBalance;
+        long balanceChangeSats = Math.round(balance*1e8)-Math.round(previousBalance*1e8);
+        this.balanceChange = (double)balanceChangeSats/1e8;
         this.date = LocalDate.fromDaysSinceEpoch((int) (timestamp/(1000*60*60*24)));
     }
     
@@ -29,12 +30,12 @@ public class RichList {
     private byte bin;
     
     @ClusteringColumn(0)
-    private long balance;
+    private double balance;
     
     @ClusteringColumn(1)
     
     @Column(name="balance_change")
-    private long balanceChange;
+    private double balanceChange;
     
     @ClusteringColumn(2)
     private String address;
@@ -47,7 +48,7 @@ public class RichList {
         this.address = address;
     }
 
-    public long getBalance() {
+    public double getBalance() {
         return balance;
     }
 
@@ -55,7 +56,7 @@ public class RichList {
         this.balance = balance;
     }
 
-    public long getBalanceChange() {
+    public double getBalanceChange() {
         return balanceChange;
     }
 

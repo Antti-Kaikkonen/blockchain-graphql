@@ -112,7 +112,7 @@ export class Mempool {
 
     private async txDetails(tx: MempoolTx): Promise<TxDetails> {
         return new Promise(async (resolve, reject) => {
-            let fee: number = 0;
+            let feeSats: number = 0;
             let addressDeltas: Map<string, number> = new Map();
 
             tx.vout.forEach(vout => {
@@ -122,7 +122,7 @@ export class Mempool {
                     let oldValue = addressDeltas.get(address);
                     addressDeltas.set(address, oldValue === undefined ? valueSats : oldValue + valueSats);
                 }
-                if (tx.txN !== 0) fee -= valueSats;
+                if (tx.txN !== 0) feeSats -= valueSats;
             });
             if (tx.txN !== 0 && tx.vin.length > 0) {
                 let pending_promises = tx.vin.length;
@@ -135,7 +135,7 @@ export class Mempool {
                         return;
                     }
                     let valueSats = Math.round(inputDetails.value*1e8);
-                    fee+=valueSats;
+                    feeSats+=valueSats;
                     if (inputDetails.address !== undefined) {
                         let oldValue = addressDeltas.get(inputDetails.address);
                         addressDeltas.set(inputDetails.address, oldValue === undefined ? -valueSats : oldValue - valueSats);
@@ -143,14 +143,14 @@ export class Mempool {
                     pending_promises--;
                     if (pending_promises === 0) {
                         resolve({
-                            fee: fee/1e8,
+                            fee: feeSats/1e8,
                             addressDeltas: addressDeltas
                         });
                     }
                 });
             } else {
                 resolve({
-                    fee: fee/1e8,
+                    fee: feeSats/1e8,
                     addressDeltas: addressDeltas
                 });
             }
@@ -216,12 +216,12 @@ export class Mempool {
         }
     }
 
-    private async getDbAddressBalance(address: string, beforeTimestamnp: number): Promise<number> {//returns value in satoshis
+    private async getDbAddressBalance(address: string, beforeTimestamnp: number): Promise<number> {
         try {
             let res = await this.client.execute("SELECT balance FROM "+this.coin.keyspace+".address_balance WHERE address = ? AND timestamp < ? LIMIT 1;", [address, beforeTimestamnp], {prepare: true});
             let balance: number;
             res.rows.forEach(row => {
-                balance = new Number(row.get("balance")).valueOf();
+                balance = row.get("balance");
             });
             return balance;
         } catch(error) {
@@ -275,7 +275,11 @@ export class Mempool {
                 if (oldBalances === undefined) {
                     //this.addressBalances.set(address, []);
                     oldBalance = await this.getDbAddressBalance(address, block.time*1000);
-                    if (oldBalance === undefined) oldBalance = 0;
+                    if (oldBalance === undefined) {
+                        oldBalance = 0;
+                    } else {
+                        oldBalance = Math.round(oldBalance*1e8);
+                    }
                 } else {
                     oldBalance = Math.round(oldBalances[oldBalances.length-1].balance * 1e8);
                 }

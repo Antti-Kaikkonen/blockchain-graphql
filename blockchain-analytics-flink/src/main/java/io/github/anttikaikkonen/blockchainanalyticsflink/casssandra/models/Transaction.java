@@ -26,5 +26,5 @@ public class Transaction {
     
     int input_count;
     int output_count;
-    long tx_fee;
+    double fee;
 }

@@ -110,7 +110,7 @@ public class Main {
 
             concurrentBlocks = properties.getInt(PROPERTIES_CONCURRENT_BLOCKS, 200);
         }
-        
+        System.out.println("KEYSPACE = "+cassandraKeyspace);
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);

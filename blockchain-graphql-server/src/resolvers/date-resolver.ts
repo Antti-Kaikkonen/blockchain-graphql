@@ -42,7 +42,7 @@ export class DateResolver {
     let query: string = "SELECT balance, balance_change, address FROM "+date.coin.keyspace+".daily_richlist WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance, balance_change, address) < (?, ?, ?)"
-      args = args.concat([Math.round(cursor.balance*1e8), Math.round(cursor.balance_change*1e8), cursor.address]);
+      args = args.concat([Math.round(cursor.balance), Math.round(cursor.balance_change), cursor.address]);
     }
     args.push(limit+1);
     query += " ORDER BY balance DESC, balance_change DESC, address DESC LIMIT ?";
@@ -58,8 +58,8 @@ export class DateResolver {
         let address = new Address(row.get("address"), date.coin);
         address.coin = date.coin;
         richlist.address = address;
-        richlist.balance = row.get("balance")/1e8;
-        richlist.balance_change = row.get("balance_change")/1e8;
+        richlist.balance = row.get("balance");
+        richlist.balance_change = row.get("balance_change");
         return richlist;
     });
     return {
@@ -77,7 +77,7 @@ export class DateResolver {
     let query: string = "SELECT address, balance_change FROM "+date.coin.keyspace+".daily_top_gainers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? ">" : "<") + " (?, ?)";
-      args = args.concat([Math.round(cursor.balance_change*1e8), cursor.address]);
+      args = args.concat([cursor.balance_change, cursor.address]);
     }
     args.push(limit+1);
     if (reverse) {
@@ -96,7 +96,7 @@ export class DateResolver {
         let adressBalanceChange = new AddressBalanceChange();
         let address = new Address(row.get("address"), date.coin);
         adressBalanceChange.address = address;
-        adressBalanceChange.balance_change = row.get("balance_change")/1e8;
+        adressBalanceChange.balance_change = row.get("balance_change");
         return adressBalanceChange;
     });
     return {
@@ -114,7 +114,7 @@ export class DateResolver {
     let query: string = "SELECT address, balance_change FROM "+date.coin.keyspace+".daily_top_losers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? "<" : ">") + " (?, ?)";
-      args = args.concat([Math.round(cursor.balance_change*1e8), cursor.address]);
+      args = args.concat([Math.round(cursor.balance_change), cursor.address]);
     }
     args.push(limit+1);
     if (reverse) {
@@ -133,7 +133,7 @@ export class DateResolver {
         let adressBalanceChange = new AddressBalanceChange();
         let address = new Address(row.get("address"), date.coin);
         adressBalanceChange.address = address;
-        adressBalanceChange.balance_change = row.get("balance_change")/1e8;
+        adressBalanceChange.balance_change = row.get("balance_change");
         return adressBalanceChange;
     });
     return {

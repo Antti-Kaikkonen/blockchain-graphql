@@ -17,7 +17,7 @@ public class TopGainers {
     
     public static final int BIN_COUNT = 10;
     
-    public TopGainers(LocalDate date, String address, long balanceChange) {
+    public TopGainers(LocalDate date, String address, double balanceChange) {
         this.bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
         this.date = date;
         this.address = address;
@@ -35,6 +35,6 @@ public class TopGainers {
     
     @ClusteringColumn(0)
     @Column(name="balance_change")
-    private long balanceChange;
+    private double balanceChange;
     
 }

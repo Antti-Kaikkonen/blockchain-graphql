@@ -22,6 +22,6 @@ public class AddressBalance {
     @ClusteringColumn(0)
     private Date timestamp;
     
-    private long balance;
+    private double balance;
     
 }

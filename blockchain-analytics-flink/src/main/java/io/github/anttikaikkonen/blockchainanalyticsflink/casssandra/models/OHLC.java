@@ -11,10 +11,10 @@ public class OHLC {
     @PartitionKey(0)
     String address;
 
-    Long open;
-    Long high;
-    Long low;
-    Long close;
+    Double open;
+    Double high;
+    Double low;
+    Double close;
     @ClusteringColumn(0)
     Date timestamp;
     @PartitionKey(1)
@@ -32,35 +32,35 @@ public class OHLC {
         this.address = address;
     }
 
-    public Long getOpen() {
+    public Double getOpen() {
         return open;
     }
 
-    public void setOpen(Long open) {
+    public void setOpen(Double open) {
         this.open = open;
     }
 
-    public Long getHigh() {
+    public Double getHigh() {
         return high;
     }
 
-    public void setHigh(Long high) {
+    public void setHigh(Double high) {
         this.high = high;
     }
 
-    public Long getLow() {
+    public Double getLow() {
         return low;
     }
 
-    public void setLow(Long low) {
+    public void setLow(Double low) {
         this.low = low;
     }
 
-    public Long getClose() {
+    public Double getClose() {
         return close;
     }
 
-    public void setClose(Long close) {
+    public void setClose(Double close) {
         this.close = close;
     }
 
@@ -82,6 +82,6 @@ public class OHLC {
     
     @Override
     public String toString() {
-        return address+" O "+open/1.0e8+"\tH "+high/1.0e8+"\tL "+low/1.0e8+"\tC "+close/1.0e8 + "\t" + timestamp;
+        return address+" O "+open+"\tH "+high+"\tL "+low+"\tC "+close+"\t"+timestamp;
     }
 }

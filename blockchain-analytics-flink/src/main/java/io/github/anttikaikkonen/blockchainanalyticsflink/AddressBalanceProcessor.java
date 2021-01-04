@@ -44,24 +44,24 @@ public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2
         if (blockDelta != null) {
             balance = oldBalance + blockDelta;
             balanceState.update(balance);
-            AddressBalance addressBalance = new AddressBalance(ctx.getCurrentKey(), Date.from(Instant.ofEpochMilli(ctx.timestamp())), balance);
+            AddressBalance addressBalance = new AddressBalance(ctx.getCurrentKey(), Date.from(Instant.ofEpochMilli(ctx.timestamp())), (double) balance/1e8);
             out.collect(addressBalance);
             if (ohlc.getOpen() == null) {
                 ohlc.setAddress(ctx.getCurrentKey());
                 ohlc.setTimestamp(Date.from(Instant.ofEpochMilli(startOfDay(timestamp))));
                 ohlc.setInterval((int)MILLIS_IN_DAY);
                 //long previousBalance = value.getBalance()-value.getBalanceChange();
-                ohlc.setOpen(oldBalance);
-                ohlc.setHigh(Math.max(balance, oldBalance));
-                ohlc.setLow(Math.min(balance, oldBalance));
+                ohlc.setOpen((double) oldBalance / 1e8);
+                ohlc.setHigh((double) Math.max(balance, oldBalance) / 1e8);
+                ohlc.setLow((double) Math.min(balance, oldBalance) / 1e8);
             } else {
                 if (balance > ohlc.getHigh()) {
-                    ohlc.setHigh(balance);
+                    ohlc.setHigh((double) balance / 1e8);
                 } else if (balance < ohlc.getLow()) {
-                    ohlc.setLow(balance);
+                    ohlc.setLow((double) balance / 1e8);
                 }
             }
-            ohlc.setClose(balance);
+            ohlc.setClose((double) balance / 1e8);
             dateToOHLC.put(epochDate, ohlc);
             timeToBlockDelta.remove(timestamp);
         } else {
@@ -70,14 +70,14 @@ public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2
         if (timestamp == endOfDay(timestamp)) {
             long dailyDelta;
             if (ohlc.getOpen() != null) {
-                dailyDelta = ohlc.getClose()-ohlc.getOpen();
+                dailyDelta = Math.round(ohlc.getClose() * 1e8) - Math.round(ohlc.getOpen() * 1e8);
                 out.collect(ohlc);
                 dateToOHLC.remove(epochDate);
             } else {//No transactions but rich address
                 dailyDelta = 0;
             }
             if (dailyDelta > 0) {
-                int x = ctx.getCurrentKey().hashCode();
+                //int x = ctx.getCurrentKey().hashCode();
                 /*Integer.valueOf(x).
                 int r = x%256;
                 if (r < 0) {
@@ -85,14 +85,14 @@ public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2
                 }*/
                 //int bin = ctx.getCurrentKey().hashCode()%256;
                 //if (bin)
-                TopGainers gainer = new TopGainers(LocalDate.fromDaysSinceEpoch((int)epochDate), ctx.getCurrentKey(), dailyDelta);
+                TopGainers gainer = new TopGainers(LocalDate.fromDaysSinceEpoch((int)epochDate), ctx.getCurrentKey(), (double)dailyDelta/1e8);
                 out.collect(gainer);
             } else if (dailyDelta < 0) {
-                TopLosers loser = new TopLosers(LocalDate.fromDaysSinceEpoch((int)epochDate), ctx.getCurrentKey(), dailyDelta);
+                TopLosers loser = new TopLosers(LocalDate.fromDaysSinceEpoch((int)epochDate), ctx.getCurrentKey(), (double)dailyDelta/1e8);
                 out.collect(loser);
             }
             if (balance > 100e8) {
-                RichList rich = new RichList(ctx.getCurrentKey(), balance, balance-dailyDelta, timestamp);
+                RichList rich = new RichList(ctx.getCurrentKey(), (double)balance/1e8, (double)(balance-dailyDelta)/1e8, timestamp);
                 out.collect(rich);
                 ctx.timerService().registerEventTimeTimer(timestamp+MILLIS_IN_DAY);//Process rich addresses every 24 hours
             }

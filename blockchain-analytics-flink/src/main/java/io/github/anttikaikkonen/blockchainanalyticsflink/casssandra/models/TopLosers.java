@@ -17,7 +17,7 @@ public class TopLosers {
     
     public static final int BIN_COUNT = 10;
     
-    public TopLosers(LocalDate date, String address, long balanceChange) {
+    public TopLosers(LocalDate date, String address, double balanceChange) {
         this.bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
         this.date = date;
         this.address = address;
@@ -35,6 +35,6 @@ public class TopLosers {
     
     @ClusteringColumn(0)
     @Column(name="balance_change")
-    private long balanceChange;
+    private double balanceChange;
     
 }

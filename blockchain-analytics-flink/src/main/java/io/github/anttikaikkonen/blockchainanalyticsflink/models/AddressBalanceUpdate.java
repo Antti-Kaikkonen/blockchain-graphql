@@ -5,9 +5,9 @@ import java.util.Date;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
-public class AddressBalanceUpdate extends AddressBalance{
+public class AddressBalanceUpdate extends AddressBalance {
     
-    public AddressBalanceUpdate(String address, long balance, long previousBalance, Date timestamp) {
+    public AddressBalanceUpdate(String address, double balance, long previousBalance, Date timestamp) {
         this.setAddress(address);
         this.setBalance(balance);
         this.setTimestamp(timestamp);

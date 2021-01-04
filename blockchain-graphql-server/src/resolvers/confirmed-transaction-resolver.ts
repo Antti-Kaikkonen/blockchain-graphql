@@ -66,7 +66,7 @@ export class ConfirmedTransactionResolver {
       tx.version = row.get('version');
       tx.height = row.get('height');
       tx.txN = row.get("tx_n");
-      tx.fee = row.get("tx_fee")/1e8;
+      tx.fee = row.get("fee");
       tx.coin = transaction.coin;
       return tx;
     });

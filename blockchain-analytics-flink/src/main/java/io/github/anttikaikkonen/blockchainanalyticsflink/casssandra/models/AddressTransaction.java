@@ -30,7 +30,7 @@ public class AddressTransaction {
     @Column(name="tx_n")
     private int txN;
     
-    private long balance_change;
+    private double balance_change;
    
     //private String txid;
     

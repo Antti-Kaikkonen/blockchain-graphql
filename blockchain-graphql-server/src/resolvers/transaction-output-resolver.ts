@@ -90,7 +90,7 @@ export class TransactionOutputResolver {
       tx.version = row.get('version');
       tx.height = row.get('height');
       tx.txN = row.get("tx_n");
-      tx.fee = row.get("tx_fee")/1e8;
+      tx.fee = row.get("fee");
       tx.coin = transactionOutput.coin;
       return tx;
     });

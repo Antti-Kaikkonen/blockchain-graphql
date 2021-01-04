@@ -3,7 +3,7 @@ package io.github.anttikaikkonen.blockchainanalyticsflink.casssandra;
 public class CreateStatements {
     public static final String TABLE_ADDRESS_BALANCE = "CREATE TABLE IF NOT EXISTS address_balance (\n" +
 "        address text,\n" +
-"        balance bigint,\n" +
+"        balance double,\n" +
 "        timestamp timestamp,\n" +
 "        PRIMARY KEY(address, timestamp)\n" +
 ")\n" +
@@ -15,7 +15,7 @@ public class CreateStatements {
     public static final String TABLE_ADDRESS_TRANSACTION = "CREATE TABLE IF NOT EXISTS address_transaction (\n" +
 "    address text,\n" +
 "    timestamp timestamp,\n" +
-"    balance_change bigint,\n" +
+"    balance_change double,\n" +
 "    height int,\n" +
 "    tx_n int,\n" +
 "    PRIMARY KEY(address, timestamp, height, tx_n)\n" +
@@ -62,10 +62,10 @@ public class CreateStatements {
     
     public static final String TABLE_OHLC = "CREATE TABLE IF NOT EXISTS ohlc (\n" +
 "	address text,\n" +
-"	open bigint,\n" +
-"	high bigint,\n" +
-"	low bigint,\n" +
-"	close bigint,\n" +
+"	open double,\n" +
+"	high double,\n" +
+"	low double,\n" +
+"	close double,\n" +
 "	timestamp timestamp,\n" +
 "	interval int,\n" +
 "	PRIMARY KEY((address, interval), timestamp)\n" +
@@ -74,8 +74,8 @@ public class CreateStatements {
     
     public static final String TABLE_DAILY_RICHLIST = "CREATE TABLE IF NOT EXISTS daily_richlist (\n" +
 "	address text,\n" +
-"	balance bigint,\n" +
-"	balance_change bigint,\n" +
+"	balance double,\n" +
+"	balance_change double,\n" +
 "	date date,\n" +
 "	bin tinyint,\n" +
 "	PRIMARY KEY((date, bin), balance, balance_change, address)\n" +
@@ -87,7 +87,7 @@ public class CreateStatements {
     
     public static final String TABLE_DAILY_TOP_GAINERS = "CREATE TABLE IF NOT EXISTS daily_top_gainers (\n" +
 "        address text,\n" +
-"        balance_change bigint,\n" +
+"        balance_change double,\n" +
 "        date date,\n" +
 "        bin tinyint,\n" +
 "        PRIMARY KEY((date, bin), balance_change, address)\n" +
@@ -99,7 +99,7 @@ public class CreateStatements {
     
     public static final String TABLE_DAILY_TOP_LOSERS = "CREATE TABLE IF NOT EXISTS daily_top_losers (\n" +
 "        address text,\n" +
-"        balance_change bigint,\n" +
+"        balance_change double,\n" +
 "        date date,\n" +
 "        bin tinyint,\n" +
 "        PRIMARY KEY((date, bin), balance_change, address)\n" +
@@ -115,7 +115,7 @@ public class CreateStatements {
 "    locktime bigint,\n" +
 "    input_count int,\n" +
 "    output_count int,\n" +
-"    tx_fee bigint,\n" +
+"    fee double,\n" +
 "    PRIMARY KEY(txid)\n" +
 ")\n" +
 "WITH COMPRESSION = {'sstable_compression': 'LZ4Compressor', 'chunk_length_in_kb': 4};";
@@ -175,7 +175,7 @@ public class CreateStatements {
 "  timestamp timestamp,\n" +
 "  height int,\n" +
 "  tx_n int,\n" +
-"  balance_change bigint,\n" +
+"  balance_change double,\n" +
 "  PRIMARY KEY(cluster_id, timestamp, height, tx_n)\n" +
 ")\n" +
 "WITH \n" +

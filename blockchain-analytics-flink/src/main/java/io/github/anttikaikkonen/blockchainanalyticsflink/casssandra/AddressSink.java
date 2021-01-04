@@ -63,7 +63,7 @@ public class AddressSink extends CassandraSaverFunction<Object> {
                 return this.session.executeAsync(this.addAddressStatement.bind(address, addAddress.getAddress()));
             } else if (op instanceof AddTransactionOperation) {
                 AddTransactionOperation addTransaction = (AddTransactionOperation) op;
-                return this.session.executeAsync(this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), addTransaction.getDelta()));
+                return this.session.executeAsync(this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), (double) addTransaction.getDelta()/1e8));
             } else if (op instanceof DeleteAddresses) {
                 return this.session.executeAsync(this.deleteAddressesStatement.bind(address));
             } else if (op instanceof DeleteTransactions) {
