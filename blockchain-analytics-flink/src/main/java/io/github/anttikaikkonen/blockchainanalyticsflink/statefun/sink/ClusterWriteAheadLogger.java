@@ -2,8 +2,9 @@ package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink;
 
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.CassandraSessionBuilder;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteAddresses;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteTransactions;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteCluster;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetBalanceOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetDailyBalanceChange;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetParent;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddAddressOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddTransactionOperation;
@@ -36,13 +37,17 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
     
     private ValueState<Long> addressLastUncommittedCheckpoint;
     
-    private ListState<Object>[] checkpointedOperations;//Ring buffer containing up to MAX_UNCOMPLETED_CHECKPOINTS uncommitted checkpoints for an address
+    private ValueState<DeleteCluster>[] checkpointedDeleteOperations;//Ring buffer containing up to MAX_UNCOMPLETED_CHECKPOINTS uncommitted checkpoints for an address
     
     private MapState<String, String>[] checkpointedAddAddressOperations;
     
     private MapState<TxPointer, Long>[] checkpointedAddTransactionOperations;
     
     private ValueState<SetParent>[] checkpointedSetParentOperations;
+    
+    private ValueState<Long>[] checkpointedSetBalanceOperation;
+    
+    private MapState<Integer, Long>[] checkpointedDailyBalanceChangeOpearations;
     
     private final long checkpointCheckInterval;
     
@@ -51,24 +56,24 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
         this.sessionBuilder = sessionBuilder;
     }
 
-    /**
-     * Registers keyed states and prepares cql statements
-     * @param parameters
-     * @throws Exception 
-     */
+
     @Override
     public void open(Configuration parameters) throws Exception {
         addressFirstUncommittedCheckpoint = getRuntimeContext().getState(new ValueStateDescriptor("fromCheckpoint", Long.class));
         addressLastUncommittedCheckpoint = getRuntimeContext().getState(new ValueStateDescriptor("toCheckpoint", Long.class));
-        checkpointedOperations = new ListState[MAX_UNCOMPLETED_CHECKPOINTS];
+        checkpointedDeleteOperations = new ValueState[MAX_UNCOMPLETED_CHECKPOINTS];
         checkpointedAddAddressOperations = new MapState[MAX_UNCOMPLETED_CHECKPOINTS];
         checkpointedAddTransactionOperations = new MapState[MAX_UNCOMPLETED_CHECKPOINTS];
         checkpointedSetParentOperations = new ValueState[MAX_UNCOMPLETED_CHECKPOINTS];
+        checkpointedSetBalanceOperation = new ValueState[MAX_UNCOMPLETED_CHECKPOINTS];
+        checkpointedDailyBalanceChangeOpearations = new MapState[MAX_UNCOMPLETED_CHECKPOINTS];
         for (int i = 0; i < MAX_UNCOMPLETED_CHECKPOINTS; i++) {
-            checkpointedOperations[i] = getRuntimeContext().getListState(new ListStateDescriptor("checkpointedOperations"+i, Object.class));
+            checkpointedDeleteOperations[i] = getRuntimeContext().getState(new ValueStateDescriptor("checkpointedDeleteOperations"+i, DeleteCluster.class));
             checkpointedSetParentOperations[i] = getRuntimeContext().getState(new ValueStateDescriptor("checkpointedSetParentOperations"+i, SetParent.class));
             checkpointedAddAddressOperations[i] = getRuntimeContext().getMapState(new MapStateDescriptor("checkpointedAddAddressOperations"+i, String.class, String.class));
             checkpointedAddTransactionOperations[i] = getRuntimeContext().getMapState(new MapStateDescriptor("checkpointedAddTransactionOperations"+i, TxPointer.class, Long.class));
+            checkpointedSetBalanceOperation[i] = getRuntimeContext().getState(new ValueStateDescriptor("checkpointedSetBalanceOperations"+i, Long.class));
+            checkpointedDailyBalanceChangeOpearations[i] = getRuntimeContext().getMapState(new MapStateDescriptor("checkpointedDailyBalanceChangeOpearations"+i, Integer.class, Long.class));
         }
         
     }
@@ -97,21 +102,30 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
         if (count > 0) addTransactionOps.clear();
     }
     
-    private void flushDeleteOperations(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
-        ListState<Object> checkpointedOps = checkpointedOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+    private void flushDailyBalanceChanges(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
+        MapState<Integer, Long> dailyBalanceChangeOps = checkpointedDailyBalanceChangeOpearations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
         int count = 0;
-        for (Object op2 : checkpointedOps.get()) {
-            AddressOperation op = new AddressOperation(clusterId, op2);
-            out.collect(op);
+        for (Map.Entry<Integer, Long> e : dailyBalanceChangeOps.entries()) {
+            out.collect(new AddressOperation(clusterId, new SetDailyBalanceChange(e.getKey(), e.getValue())));
             count++;
         }
-        if (count > 0) checkpointedOps.clear();
+        if (count > 0) dailyBalanceChangeOps.clear();
+    }
+    
+    private void flushDeleteOperations(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
+        ValueState<DeleteCluster> deleteOp = checkpointedDeleteOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+        DeleteCluster deleteCluster = deleteOp.value();
+        if (deleteCluster != null) {
+            out.collect(new AddressOperation(clusterId, deleteCluster));
+            deleteOp.clear();
+        }
     }
     
     private void flush(String clusterId, long checkpointId, Collector<Object> out) throws Exception {
         
         flushAddresses(clusterId, checkpointId, out);
         flushTransactions(clusterId, checkpointId, out);
+        flushDailyBalanceChanges(clusterId, checkpointId, out);
         flushDeleteOperations(clusterId, checkpointId, out);
         ValueState<SetParent> setParentOp = checkpointedSetParentOperations[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
         SetParent setParent = setParentOp.value();
@@ -119,6 +133,13 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
             AddressOperation op = new AddressOperation(clusterId, setParent);
             out.collect(op);
             setParentOp.clear();
+        }
+        ValueState<Long> setBalanceOp = checkpointedSetBalanceOperation[(int)(checkpointId%MAX_UNCOMPLETED_CHECKPOINTS)];
+        Long balance = setBalanceOp.value();
+        if (balance != null) {
+            AddressOperation op = new AddressOperation(clusterId, new SetBalanceOperation(balance));
+            out.collect(op);
+            setBalanceOp.clear();
         }
     }
 
@@ -143,7 +164,6 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
             }
             ctx.timerService().registerProcessingTimeTimer(timestamp+checkpointCheckInterval);
         }
-
     }
     
     @Override
@@ -166,18 +186,24 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
             AddTransactionOperation op = (AddTransactionOperation) input.getOp();
             MapState<TxPointer, Long> state = checkpointedAddTransactionOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
             state.put(new TxPointer(op.getTime(), op.getHeight(), op.getTx_n()), op.getDelta());
-        } else if (input.getOp() instanceof DeleteAddresses) {
-            MapState<String, String> state = checkpointedAddAddressOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
-            state.clear();
-            ListState<Object> checkpointedOps = this.checkpointedOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
-            checkpointedOps.add(input.getOp());
-        } else if (input.getOp() instanceof DeleteTransactions) {
-            MapState<TxPointer, Long> state = checkpointedAddTransactionOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
-            state.clear();
-            ListState<Object> checkpointedOps = this.checkpointedOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
-            checkpointedOps.add(input.getOp());
+        } else if (input.getOp() instanceof DeleteCluster) {
+            MapState<String, String> addAddressOps = checkpointedAddAddressOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            addAddressOps.clear();
+            MapState<TxPointer, Long> addTransactionOps = checkpointedAddTransactionOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            addTransactionOps.clear();
+            ValueState<Long> setBalanceOp = checkpointedSetBalanceOperation[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            setBalanceOp.clear();
+            ValueState<DeleteCluster> deleteOp = this.checkpointedDeleteOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            deleteOp.update((DeleteCluster)input.getOp());
+        } else if (input.getOp() instanceof SetBalanceOperation) {
+            ValueState<Long> setBalanceOp = checkpointedSetBalanceOperation[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            SetBalanceOperation op = (SetBalanceOperation) input.getOp();
+            setBalanceOp.update(op.getBalance());
+        } else if (input.getOp() instanceof SetDailyBalanceChange) {
+            MapState<Integer, Long> dailyBalanceChangeOps = checkpointedDailyBalanceChangeOpearations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
+            SetDailyBalanceChange op = (SetDailyBalanceChange) input.getOp();
+            dailyBalanceChangeOps.put(op.getEpochDate(), op.getBalanceChange());
         }
-        
     }
 
     @Override

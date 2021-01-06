@@ -183,4 +183,40 @@ public class CreateStatements {
 "AND\n" +
 "	COMPRESSION = {'sstable_compression': 'LZ4Compressor', 'chunk_length_in_kb': 16};";
     
+    public static final String TABLE_CLUSTER_DETAILS = "CREATE TABLE IF NOT EXISTS cluster_details (\n" +
+"  cluster_id text,\n" +
+"  bin tinyint,\n" +
+"  balance double,\n" +
+"  PRIMARY KEY((cluster_id, bin))\n" +
+")\n" +
+"WITH \n" +
+"	COMPRESSION = {'sstable_compression': 'LZ4Compressor', 'chunk_length_in_kb': 4};";
+    
+    public static final String TABLE_CLUSTER_DAILY_BALANCE_CHANGE = "CREATE TABLE IF NOT EXISTS cluster_daily_balance_change (\n" +
+"  cluster_id text,\n" +
+"  bin tinyint,\n" +
+"  date date,\n" +
+"  balance_change double,\n" +
+"  PRIMARY KEY((cluster_id, bin), date)\n" +
+")\n" +
+"WITH \n" +
+"	COMPRESSION = {'sstable_compression': 'LZ4Compressor', 'chunk_length_in_kb': 16};";
+    
+    public static final String VIEW_CLUSTER_TOP_LOSERS = "CREATE MATERIALIZED VIEW IF NOT EXISTS daily_top_cluster_losers "
+            + "AS SELECT * FROM cluster_daily_balance_change "
+            + "WHERE date IS NOT NULL AND bin IS NOT NULL AND balance_change < 0 AND cluster_id IS NOT NULL "
+            + "PRIMARY KEY ((date, bin), balance_change, cluster_id)";
+    
+    public static final String VIEW_CLUSTER_TOP_GAINERS = "CREATE MATERIALIZED VIEW IF NOT EXISTS daily_top_cluster_gainers "
+            + "AS SELECT * FROM cluster_daily_balance_change "
+            + "WHERE date IS NOT NULL AND bin IS NOT NULL AND balance_change > 0 AND cluster_id IS NOT NULL "
+            + "PRIMARY KEY ((date, bin), balance_change, cluster_id) "
+            + "WITH CLUSTERING ORDER BY (balance_change DESC, cluster_id DESC)";
+    
+    public static final String VIEW_CLUSTER_RICHLIST = "CREATE MATERIALIZED VIEW IF NOT EXISTS cluster_richlist "
+            + "AS SELECT * FROM cluster_details "
+            + "WHERE bin IS NOT NULL AND balance > 0 AND cluster_id IS NOT NULL "
+            + "PRIMARY KEY (bin, balance, cluster_id) "
+            + "WITH CLUSTERING ORDER BY (balance DESC, cluster_id DESC)";
+    
 }

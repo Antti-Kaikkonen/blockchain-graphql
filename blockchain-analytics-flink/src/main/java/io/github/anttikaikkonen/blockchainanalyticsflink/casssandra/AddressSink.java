@@ -1,10 +1,11 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.casssandra;
 
+import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.AddressBalance;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.OHLC;
@@ -12,8 +13,9 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.RichL
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TopGainers;
 import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TopLosers;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteAddresses;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteTransactions;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteCluster;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetBalanceOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetDailyBalanceChange;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetParent;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddAddressOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddTransactionOperation;
@@ -21,6 +23,9 @@ import java.time.Instant;
 import java.util.Date;
 
 public class AddressSink extends CassandraSaverFunction<Object> {
+    
+    public static final int BIN_COUNT = 10;
+    
     private transient Mapper<OHLC> ohlcMapper;
     private transient Mapper<TopGainers> gainersMapper;
     private transient Mapper<TopLosers> losersMapper;
@@ -39,6 +44,14 @@ public class AddressSink extends CassandraSaverFunction<Object> {
     
     private transient PreparedStatement deleteTransactionsStatement;
     
+    private transient PreparedStatement setBalanceStatement;
+    
+    private transient PreparedStatement deleteBalanceStatement;
+    
+    private transient PreparedStatement deleteDailyBalanceChangesStatement;
+    
+    private transient PreparedStatement setDailyBalanceChangeStatement;
+    
     private transient Session session;
     
     public AddressSink(CassandraSessionBuilder sessionBuilder) {
@@ -51,6 +64,7 @@ public class AddressSink extends CassandraSaverFunction<Object> {
             AddressOperation addressOp = (AddressOperation) input;
             String address = addressOp.getAddress();
             Object op = addressOp.getOp();
+            byte bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
             if (op instanceof SetParent) {
                 SetParent setParent = (SetParent) op;
                 if (setParent.getParent() == null) {
@@ -64,10 +78,19 @@ public class AddressSink extends CassandraSaverFunction<Object> {
             } else if (op instanceof AddTransactionOperation) {
                 AddTransactionOperation addTransaction = (AddTransactionOperation) op;
                 return this.session.executeAsync(this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), (double) addTransaction.getDelta()/1e8));
-            } else if (op instanceof DeleteAddresses) {
-                return this.session.executeAsync(this.deleteAddressesStatement.bind(address));
-            } else if (op instanceof DeleteTransactions) {
-                return this.session.executeAsync(this.deleteTransactionsStatement.bind(address));
+            } else if (op instanceof SetDailyBalanceChange) {
+                SetDailyBalanceChange setDailyBalanceChange = (SetDailyBalanceChange) op;
+                return this.session.executeAsync(this.setDailyBalanceChangeStatement.bind(address, bin, LocalDate.fromDaysSinceEpoch((int)setDailyBalanceChange.getEpochDate()), (double) setDailyBalanceChange.getBalanceChange()/1e8));
+            } else if (op instanceof DeleteCluster) {
+                return Futures.allAsList(
+                        this.session.executeAsync(this.deleteAddressesStatement.bind(address)),
+                        this.session.executeAsync(this.deleteTransactionsStatement.bind(address)),
+                        this.session.executeAsync(this.deleteDailyBalanceChangesStatement.bind(address, bin)),
+                        this.session.executeAsync(this.deleteBalanceStatement.bind(address, bin))
+                );
+            } else if (op instanceof SetBalanceOperation) {
+                SetBalanceOperation setBalance = (SetBalanceOperation) op;
+                return this.session.executeAsync(setBalanceStatement.bind(address, bin, (double)setBalance.getBalance()/1e8));
             } else {
                 op.getClass();
                 throw new RuntimeException("Unsupported AddressOperation type");
@@ -102,6 +125,11 @@ public class AddressSink extends CassandraSaverFunction<Object> {
 
         deleteAddressesStatement = session.prepare("DELETE FROM cluster_address WHERE cluster_id = ?");
         deleteTransactionsStatement = session.prepare("DELETE FROM cluster_transaction WHERE cluster_id = ?");
+        
+        setBalanceStatement = session.prepare("INSERT INTO cluster_details (cluster_id, bin, balance) VALUES (?, ?, ?)");
+        setDailyBalanceChangeStatement = session.prepare("INSERT INTO cluster_daily_balance_change (cluster_id, bin, date, balance_change) VALUES (?, ?, ?, ?)");
+        deleteBalanceStatement = session.prepare("DELETE FROM cluster_details WHERE cluster_id = ? AND bin = ?");
+        deleteDailyBalanceChangesStatement = session.prepare("DELETE FROM cluster_daily_balance_change WHERE cluster_id = ? AND bin = ?");
     }
 
 

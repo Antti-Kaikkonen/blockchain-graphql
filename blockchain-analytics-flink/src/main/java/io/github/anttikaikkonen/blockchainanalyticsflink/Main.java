@@ -152,6 +152,11 @@ public class Main {
             session.execute(CreateStatements.TABLE_UNION_FIND);
             session.execute(CreateStatements.TABLE_CLUSTER_ADDRESS);
             session.execute(CreateStatements.TABLE_CLUSTER_TRANSACTION);
+            session.execute(CreateStatements.TABLE_CLUSTER_DETAILS);
+            session.execute(CreateStatements.TABLE_CLUSTER_DAILY_BALANCE_CHANGE);
+            session.execute(CreateStatements.VIEW_CLUSTER_TOP_GAINERS);
+            session.execute(CreateStatements.VIEW_CLUSTER_TOP_LOSERS);
+            session.execute(CreateStatements.VIEW_CLUSTER_RICHLIST);
             session.close();
             session.getCluster().close();
         }
