@@ -10,9 +10,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <flink.version>1.11.2</flink.version>
+        <flink.version>1.11.3</flink.version>
         <java.version>8</java.version>
-        <scala.binary.version>2.12</scala.binary.version>
+        <scala.binary.version>2.11</scala.binary.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <driver.version>3.10.0</driver.version>
@@ -97,7 +97,7 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>statefun-flink-datastream</artifactId>
-            <version>2.2.1</version>
+            <version>2.2.2</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

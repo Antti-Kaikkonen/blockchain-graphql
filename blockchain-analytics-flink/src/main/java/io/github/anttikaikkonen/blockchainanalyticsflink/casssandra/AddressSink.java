@@ -24,7 +24,8 @@ import java.util.Date;
 
 public class AddressSink extends CassandraSaverFunction<Object> {
     
-    public static final int BIN_COUNT = 10;
+    public static final int CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT = 20;
+    public static final int CLUSTER_BALANCE_BIN_COUNT = 100;
     
     private transient Mapper<OHLC> ohlcMapper;
     private transient Mapper<TopGainers> gainersMapper;
@@ -64,7 +65,6 @@ public class AddressSink extends CassandraSaverFunction<Object> {
             AddressOperation addressOp = (AddressOperation) input;
             String address = addressOp.getAddress();
             Object op = addressOp.getOp();
-            byte bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
             if (op instanceof SetParent) {
                 SetParent setParent = (SetParent) op;
                 if (setParent.getParent() == null) {
@@ -79,18 +79,22 @@ public class AddressSink extends CassandraSaverFunction<Object> {
                 AddTransactionOperation addTransaction = (AddTransactionOperation) op;
                 return this.session.executeAsync(this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), (double) addTransaction.getDelta()/1e8));
             } else if (op instanceof SetDailyBalanceChange) {
+                byte cluster_balance_change_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT);
                 SetDailyBalanceChange setDailyBalanceChange = (SetDailyBalanceChange) op;
-                return this.session.executeAsync(this.setDailyBalanceChangeStatement.bind(address, bin, LocalDate.fromDaysSinceEpoch((int)setDailyBalanceChange.getEpochDate()), (double) setDailyBalanceChange.getBalanceChange()/1e8));
+                return this.session.executeAsync(this.setDailyBalanceChangeStatement.bind(address, cluster_balance_change_bin, LocalDate.fromDaysSinceEpoch((int)setDailyBalanceChange.getEpochDate()), (double) setDailyBalanceChange.getBalanceChange()/1e8));
             } else if (op instanceof DeleteCluster) {
+                byte cluster_balance_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_BALANCE_BIN_COUNT);
+                byte cluster_balance_change_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT);
                 return Futures.allAsList(
                         this.session.executeAsync(this.deleteAddressesStatement.bind(address)),
                         this.session.executeAsync(this.deleteTransactionsStatement.bind(address)),
-                        this.session.executeAsync(this.deleteDailyBalanceChangesStatement.bind(address, bin)),
-                        this.session.executeAsync(this.deleteBalanceStatement.bind(address, bin))
+                        this.session.executeAsync(this.deleteDailyBalanceChangesStatement.bind(address, cluster_balance_bin)),
+                        this.session.executeAsync(this.deleteBalanceStatement.bind(address, cluster_balance_change_bin))
                 );
             } else if (op instanceof SetBalanceOperation) {
+                byte cluster_balance_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_BALANCE_BIN_COUNT);
                 SetBalanceOperation setBalance = (SetBalanceOperation) op;
-                return this.session.executeAsync(setBalanceStatement.bind(address, bin, (double)setBalance.getBalance()/1e8));
+                return this.session.executeAsync(setBalanceStatement.bind(address, cluster_balance_bin, (double)setBalance.getBalance()/1e8));
             } else {
                 op.getClass();
                 throw new RuntimeException("Unsupported AddressOperation type");

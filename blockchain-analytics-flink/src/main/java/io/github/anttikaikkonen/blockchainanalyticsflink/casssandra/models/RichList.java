@@ -9,7 +9,7 @@ import com.datastax.driver.mapping.annotations.Table;
 @Table(name="daily_richlist")
 public class RichList {
     
-    public static final int BIN_COUNT = 10;
+    public static final int BIN_COUNT = 20;
 
     public RichList() {
     }

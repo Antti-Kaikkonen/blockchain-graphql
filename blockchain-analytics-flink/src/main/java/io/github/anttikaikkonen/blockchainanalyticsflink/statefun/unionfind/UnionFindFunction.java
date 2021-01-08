@@ -74,19 +74,24 @@ public class UnionFindFunction implements StatefulFunction {
             }
             if (newTransactions > 0) this.persistedClusterTransactionCount.set(oldTxCount+newTransactions);
             final long totalBalanceChange = balanceChange;
-            long newBalance = this.persistedBalance.updateAndGet(oldBalance -> oldBalance == null ? totalBalanceChange : oldBalance + totalBalanceChange);
+            final long newBalance;
+            if (oldTxCount == 0) {
+                this.persistedBalance.set(totalBalanceChange);
+                newBalance = totalBalanceChange;
+            } else {
+                newBalance = this.persistedBalance.updateAndGet(oldBalance -> oldBalance == null ? totalBalanceChange : oldBalance + totalBalanceChange);
+            }
             sendToCassandra(context, new SetBalanceOperation(newBalance));
 
-            Long oldDayBalanceChange = this.persistedDailyBalanceChanges.get(day);
+            Long oldDayBalanceChange = oldTxCount == 0 ? null : this.persistedDailyBalanceChanges.get(day);
             long newDayBalanceChange = oldDayBalanceChange == null ? totalBalanceChange : oldDayBalanceChange + totalBalanceChange; 
             this.persistedDailyBalanceChanges.set(day, newDayBalanceChange);
             sendToCassandra(context, new SetDailyBalanceChange(day, newDayBalanceChange));
             
-            //hasClusterAddresses.set(true);
             String address = context.self().id();
             for (String addr : op.getAddresses()) {
                 if (addr.equals(address)) {
-                    persistedAddresses.set("", "");//use empty string to keep state smaller
+                    persistedAddresses.set("", "");
                 } else {
                     persistedAddresses.set(addr, "");
                 }
