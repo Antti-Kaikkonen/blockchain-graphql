@@ -29,7 +29,9 @@ import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.TransactionC
 import io.github.anttikaikkonen.blockchainanalyticsflink.precluster.SimpleAddAddressesAndTransactionsOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.HeaderTimestampAssigner;
 import io.github.anttikaikkonen.blockchainanalyticsflink.source.RpcClientSupplier;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.ClusterWriteAheadLogger;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.sink.ProcessingTimeToEventTime;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.StringUtils;
@@ -58,7 +60,7 @@ public class Main {
     
     
     private static final int BLOCK_FETCHER_CONCURRENCY = 1;
-    public static final int CASSANDRA_CONCURRENT_REQUESTS = 100;
+    public static final int CASSANDRA_CONCURRENT_REQUESTS = 50;
     
     public static final String PROPERTIES_CASSANDRA_HOST = "cassandra.host";
     public static final String PROPERTIES_CASSANDRA_KEYSPACE = "cassandra.keyspace";
@@ -67,6 +69,7 @@ public class Main {
     public static final String PROPERTIES_BLOCKCHAIN_RPC_PASSWORD = "blockchain.rpc.password";
     public static final String PROPERTIES_CONCURRENT_BLOCKS = "concurrent_blocks";
     public static final String PROPERTIES_CHECKPOINT_INTERVAL = "checkpoint_interval";
+    public static final String PROPERTIES_CREATE_VIEWS = "create_views";
     public static final String PROPERTIES_TEST_MODE = "test_mode";
     public static final String PROPERTIES_DISABLE_SINKS = "disable_sinks";
     
@@ -82,6 +85,7 @@ public class Main {
         final String blockchainPassword;
         final int concurrentBlocks;
         final int checkpointInterval;
+        final boolean create_views;
         if (test_mode) {
             cassandraHosts = null;
             cassandraKeyspace = null;
@@ -91,6 +95,7 @@ public class Main {
             concurrentBlocks = -1;
             disable_sinks=true;
             checkpointInterval = 60000*10;
+            create_views = false;
         } else {
             String propertiesFile = properties.get("properties-file");
             if (propertiesFile != null) {
@@ -114,6 +119,8 @@ public class Main {
             concurrentBlocks = properties.getInt(PROPERTIES_CONCURRENT_BLOCKS, 200);
             
             checkpointInterval = properties.getInt(PROPERTIES_CHECKPOINT_INTERVAL, 60000*10);
+            
+            create_views = properties.getBoolean(PROPERTIES_CREATE_VIEWS, true);
         }
         System.out.println("KEYSPACE = "+cassandraKeyspace);
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -159,9 +166,12 @@ public class Main {
             session.execute(CreateStatements.TABLE_CLUSTER_TRANSACTION);
             session.execute(CreateStatements.TABLE_CLUSTER_DETAILS);
             session.execute(CreateStatements.TABLE_CLUSTER_DAILY_BALANCE_CHANGE);
-            session.execute(CreateStatements.VIEW_CLUSTER_TOP_GAINERS);
-            session.execute(CreateStatements.VIEW_CLUSTER_TOP_LOSERS);
-            session.execute(CreateStatements.VIEW_CLUSTER_RICHLIST);
+            
+            if (create_views) {
+                session.execute(CreateStatements.VIEW_CLUSTER_TOP_GAINERS);
+                session.execute(CreateStatements.VIEW_CLUSTER_TOP_LOSERS);
+                session.execute(CreateStatements.VIEW_CLUSTER_RICHLIST);
+            }
             session.close();
             session.getCluster().close();
         }
@@ -316,6 +326,7 @@ public class Main {
                 .build(env);
         
         SingleOutputStreamOperator<Object> unionFindOps = out.getDataStreamForEgressId(UnionFindFunction.EGRESS)
+                .assignTimestampsAndWatermarks(new ProcessingTimeToEventTime<AddressOperation>(-checkpointInterval)).uid("Processing time to event time").name("Processing time to event time")
                 .keyBy(e -> e.getAddress()).process(new ClusterWriteAheadLogger(sessionBuilder, checkpointInterval))
                 .uid("Cluster write-ahead logger").name("Cluster write-ahead logger");
        

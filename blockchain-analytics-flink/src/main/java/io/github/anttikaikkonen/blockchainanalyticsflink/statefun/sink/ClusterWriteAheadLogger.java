@@ -149,7 +149,7 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
         long firstUncommittedCheckpoint = addressFirstUncommittedCheckpoint.value();
         long lastUncommittedCheckpoint = addressLastUncommittedCheckpoint.value();
         if (lastUncommittedCheckpoint-firstUncommittedCheckpoint >= MAX_UNCOMPLETED_CHECKPOINTS) {
-            throw new Exception("Address "+address+" has more than the maximum allowed "+MAX_UNCOMPLETED_CHECKPOINTS+" uncommitted checkpoints");
+            throw new Exception("Address "+address+" has more than the maximum allowed "+MAX_UNCOMPLETED_CHECKPOINTS+" uncommitted checkpoints. first: "+firstUncommittedCheckpoint+", last: "+lastUncommittedCheckpoint);
         }
         if (lastUncommittedCheckpoint < completedCheckpoint) {
             for (long checkpointId = firstUncommittedCheckpoint; checkpointId <= lastUncommittedCheckpoint; checkpointId++) {
@@ -160,19 +160,19 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
         } else {
             for (long checkpointId = firstUncommittedCheckpoint; checkpointId < completedCheckpoint; checkpointId++) {
                 flush(address, checkpointId, out);
-                addressFirstUncommittedCheckpoint.update(checkpointId+1);
             }
-            ctx.timerService().registerProcessingTimeTimer(timestamp+checkpointCheckInterval);
+            addressFirstUncommittedCheckpoint.update(completedCheckpoint);
+            ctx.timerService().registerEventTimeTimer(timestamp+checkpointCheckInterval);
         }
     }
+    
     
     @Override
     public void processElement(AddressOperation input, Context ctx, Collector<Object> out) throws Exception {
         addressLastUncommittedCheckpoint.update(completedCheckpoint);
         if (addressFirstUncommittedCheckpoint.value() == null) {
             addressFirstUncommittedCheckpoint.update(completedCheckpoint);
-            //long millisToNextMinute = ctx.timerService().currentProcessingTime()%this.checkpointCheckInterval;
-            ctx.timerService().registerProcessingTimeTimer(ctx.timerService().currentProcessingTime()+this.checkpointCheckInterval);
+            ctx.timerService().registerEventTimeTimer(ctx.timestamp()+checkpointCheckInterval);
         } 
         if (input.getOp() instanceof SetParent) {
             ValueState<SetParent> checkpointedOps = this.checkpointedSetParentOperations[(int)(completedCheckpoint%MAX_UNCOMPLETED_CHECKPOINTS)];
@@ -208,26 +208,26 @@ public class ClusterWriteAheadLogger extends KeyedProcessFunction<String, Addres
 
     @Override
     public void snapshotState(FunctionSnapshotContext ctx) throws Exception {
-        System.out.println("UnionFindSink snapshotState"+ctx.getCheckpointId());
+        System.out.println("ClusterWriteAheadLogger snapshotState"+ctx.getCheckpointId());
         this.persistedCompletedCheckpoint.clear();
         this.persistedCompletedCheckpoint.add(ctx.getCheckpointId());
     }
 
     @Override
     public void initializeState(FunctionInitializationContext ctx) throws Exception {
-        System.out.println("InitializeState UnionFindSink");
+        System.out.println("InitializeState ClusterWriteAheadLogger");
         this.persistedCompletedCheckpoint = ctx.getOperatorStateStore().getListState(new ListStateDescriptor("completedCheckpoint", Long.class));
         if (ctx.isRestored()) {
-            System.out.println("UnionFindSink restoring state");
             for (Long checkpoinintId : this.persistedCompletedCheckpoint.get()) {
                 this.completedCheckpoint = checkpoinintId;
             }
+            System.out.println("ClusterWriteAheadLogger restoring state. Last completed checkpoint = " + this.completedCheckpoint);
         }
     }
     
     @Override
     public void notifyCheckpointComplete(long checkpointId) throws Exception {
-        System.out.println("UnionFindSink notifyCheckpointComplete"+checkpointId);
+        System.out.println("ClusterWriteAheadLogger notifyCheckpointComplete"+checkpointId);
         this.completedCheckpoint = checkpointId;
         
     }
