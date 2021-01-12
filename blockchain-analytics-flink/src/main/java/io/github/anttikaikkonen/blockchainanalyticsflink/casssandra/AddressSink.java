@@ -88,8 +88,8 @@ public class AddressSink extends CassandraSaverFunction<Object> {
                 return Futures.allAsList(
                         this.session.executeAsync(this.deleteAddressesStatement.bind(address)),
                         this.session.executeAsync(this.deleteTransactionsStatement.bind(address)),
-                        this.session.executeAsync(this.deleteDailyBalanceChangesStatement.bind(address, cluster_balance_bin)),
-                        this.session.executeAsync(this.deleteBalanceStatement.bind(address, cluster_balance_change_bin))
+                        this.session.executeAsync(this.deleteDailyBalanceChangesStatement.bind(address, cluster_balance_change_bin)),
+                        this.session.executeAsync(this.deleteBalanceStatement.bind(address, cluster_balance_bin))
                 );
             } else if (op instanceof SetBalanceOperation) {
                 byte cluster_balance_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_BALANCE_BIN_COUNT);
