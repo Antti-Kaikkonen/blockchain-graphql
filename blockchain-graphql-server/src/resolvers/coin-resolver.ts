@@ -4,6 +4,8 @@ import { Inject } from "typedi";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 import { MempoolBlock, MempoolTx } from "../mempool";
 import { Address } from "../models/address";
+import { AddressCluster } from "../models/address-cluster";
+import { AddressClusterRichlist, AddressClusterRichlistCursor, PaginatedAddressClusterRichlistResponse } from "../models/address-cluster-richlist";
 import { Block } from "../models/block";
 import { BlockHash } from "../models/block_hash";
 import { Coin } from "../models/coin";
@@ -23,6 +25,9 @@ export class CoinResolver {
     }
 
     private static lastCoinCount: number = 1;
+
+    public static CLUSTER_RICHLIST_BIN_COUNT: number = 100;
+    static CLUSTER_RICHLIST_BINS: number[] = Array.from(new Array(CoinResolver.CLUSTER_RICHLIST_BIN_COUNT).keys());
 
     @Query(returns => [Coin], {nullable: true, complexity: ({ childComplexity, args }) => 100 + CoinResolver.lastCoinCount * childComplexity})
     async coins(): Promise<Coin[]> {
@@ -206,4 +211,38 @@ export class CoinResolver {
     });
     return res[0];
   }  
+
+  @FieldResolver(returns => PaginatedAddressClusterRichlistResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async clusterRichlist(@Root() coin: Coin, 
+    @Arg("cursor", {nullable: true}) cursor: AddressClusterRichlistCursor,
+    @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
+  ): Promise<PaginatedAddressClusterRichlistResponse> {
+    let args: any[] = [CoinResolver.CLUSTER_RICHLIST_BINS];
+    let query: string = "SELECT balance, cluster_id FROM "+coin.keyspace+".cluster_richlist WHERE bin IN ?";
+    if (cursor) {
+      query += " AND (balance, cluster_id) < (?, ?)";
+      args = args.concat([cursor.balance, cursor.clusterId]);
+    }
+    args.push(limit+1); 
+    query += " ORDER BY balance DESC LIMIT ?";
+    let resultSet: types.ResultSet = await this.client.execute(
+      query, 
+      args, 
+      {prepare: true, fetchSize: null}
+    );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
+    let res: AddressClusterRichlist[] = resultSet.rows.map(row => {
+      let e = new AddressClusterRichlist();
+      e.balance = row.get("balance");
+      e.cluster = new AddressCluster();
+      e.cluster.coin = coin;
+      e.cluster.clusterId = row.get("cluster_id");
+      return e;
+    });
+    return {
+      hasMore: hasMore,
+      items: res,
+    };
+  }
 }

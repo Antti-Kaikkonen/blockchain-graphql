@@ -7,6 +7,8 @@ import { Inject } from "typedi";
 import { AddressBalanceChange, AddressBalanceChangeCursor, PaginatedAddressBalanceChangeResponse } from "../models/address-balance-change";
 import { PaginationArgs } from "./pagination-args";
 import { LimitedCapacityClient } from "../limited-capacity-client";
+import { AddressCluster } from "../models/address-cluster";
+import { PaginatedAddressClusterBalanceChangeResponse, AddressClusterBalanceChangeCursor, AddressClusterBalanceChange } from "../models/address-cluster-balance-change";
 
 @ArgsType()
 class RichlistArgs extends PaginationArgs {
@@ -24,10 +26,18 @@ class AddressBalanceChangeArgs extends PaginationArgs {
 
 }
 
+@ArgsType()
+class AddressClusterBalanceChangeArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: AddressClusterBalanceChangeCursor;
+
+}
+
 @Resolver(of => Date)
 export class DateResolver {
 
-  static BIN_COUNT: number = 10;
+  static BIN_COUNT: number = 20;
   static BINS: number[] = Array.from(new Array(DateResolver.BIN_COUNT).keys());
 
   constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
@@ -135,6 +145,72 @@ export class DateResolver {
         adressBalanceChange.address = address;
         adressBalanceChange.balance_change = row.get("balance_change");
         return adressBalanceChange;
+    });
+    return {
+        items: res,
+        hasMore: hasMore
+    };
+  }
+
+  @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async top_cluster_gainers(@Root() date: Date, 
+    @Args() {cursor, limit}: AddressClusterBalanceChangeArgs
+  ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
+    let args: any[] = [date.date, DateResolver.BINS];
+    let query: string = "SELECT balance_change, cluster_id FROM "+date.coin.keyspace+".daily_top_cluster_gainers WHERE date=? AND bin IN ?";
+    if (cursor) {
+      query += " AND (balance_change, cluster_id) < " + " (?, ?)";
+      args = args.concat([cursor.balance_change, cursor.clusterId]);
+    }
+    args.push(limit+1); 
+    query += " ORDER BY balance_change DESC, cluster_id DESC LIMIT ?";
+    let resultSet: types.ResultSet = await this.client.execute(
+      query, 
+      args, 
+      {prepare: true, fetchSize: null}
+    );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
+    let res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
+        let clusterBalanceChange = new AddressClusterBalanceChange();
+        clusterBalanceChange.guestimatedWallet = new AddressCluster();
+        clusterBalanceChange.guestimatedWallet.clusterId = row.get("cluster_id");
+        clusterBalanceChange.guestimatedWallet.coin = date.coin;
+        clusterBalanceChange.balance_change = row.get("balance_change");
+        return clusterBalanceChange;
+    });
+    return {
+        items: res,
+        hasMore: hasMore
+    };
+  }
+
+  @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async top_cluster_losers(@Root() date: Date, 
+    @Args() {cursor, limit}: AddressClusterBalanceChangeArgs
+  ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
+    let args: any[] = [date.date, DateResolver.BINS];
+    let query: string = "SELECT balance_change, cluster_id FROM "+date.coin.keyspace+".daily_top_cluster_losers WHERE date=? AND bin IN ?";
+    if (cursor) {
+      query += " AND (balance_change, cluster_id) > " + " (?, ?)";
+      args = args.concat([cursor.balance_change, cursor.clusterId]);
+    }
+    args.push(limit+1); 
+    query += " ORDER BY balance_change ASC, cluster_id ASC LIMIT ?";
+    let resultSet: types.ResultSet = await this.client.execute(
+      query, 
+      args, 
+      {prepare: true, fetchSize: null}
+    );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
+    let res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
+        let clusterBalanceChange = new AddressClusterBalanceChange();
+        clusterBalanceChange.guestimatedWallet = new AddressCluster();
+        clusterBalanceChange.guestimatedWallet.clusterId = row.get("cluster_id");
+        clusterBalanceChange.guestimatedWallet.coin = date.coin;
+        clusterBalanceChange.balance_change = row.get("balance_change");
+        return clusterBalanceChange;
     });
     return {
         items: res,
