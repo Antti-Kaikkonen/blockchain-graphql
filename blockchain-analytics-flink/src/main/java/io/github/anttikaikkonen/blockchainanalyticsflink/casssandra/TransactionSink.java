@@ -71,6 +71,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
         tx.setOutput_count(transaction.getVout().length);
         tx.setInput_count(transaction.getVin().length);
         long fee = 0;
+        int spending_index = 0;
         for (TransactionInputWithOutput vin : transaction.getInputsWithOutputs()) {
 
             if (vin.getTxid() != null) {
@@ -78,7 +79,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
                 vout.setTxid(vin.getTxid());
                 vout.setN(vin.getVout());
                 vout.setSpending_txid(transaction.getTxid());
-                vout.setSpending_index(transaction.getTxN());
+                vout.setSpending_index(spending_index);
                 this.semaphore.acquireUninterruptibly();
                 ListenableFuture<Void> future = voutMapper.saveAsync(vout, Mapper.Option.saveNullFields(false));//Update query
                 Futures.addCallback(future, releaseSemaphore);
@@ -87,8 +88,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
 
             io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput vin2 = new TransactionInput();
             vin2.setSpending_txid(transaction.getTxid());
-            vin2.setSpending_index(transaction.getTxN());
-            vin2.setCoinbase(vin.getCoinbase());
+            vin2.setSpending_index(spending_index);
             vin2.setCoinbase(vin.getCoinbase());
             if (vin.getScriptSig() != null) {
                 ScriptSig scriptSig = new ScriptSig(vin.getScriptSig());
@@ -101,6 +101,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
             ListenableFuture<Void> future = vinMapper.saveAsync(vin2);
             Futures.addCallback(future, releaseSemaphore);
             futures.add(future);
+            spending_index++;
         }
         for (TransactionOutput vout : transaction.getVout()) {
             io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput vout2 = new io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionOutput();
