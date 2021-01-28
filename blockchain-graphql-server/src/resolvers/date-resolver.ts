@@ -45,7 +45,7 @@ export class DateResolver {
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async richlist(
-      @Root() date: Date, 
+    @Root() date: Date, 
     @Args() {cursor, limit}: RichlistArgs
   ): Promise<PaginatedRichlistResponse> {
     let args: any[] = [date.date, DateResolver.BINS];

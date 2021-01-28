@@ -1,5 +1,5 @@
 import { AddressCluster } from "../models/address-cluster";
-import { Resolver, FieldResolver, Root, Arg, InputType, Field } from "type-graphql";
+import { Resolver, FieldResolver, Root, InputType, Field, Args, ArgsType } from "type-graphql";
 import { Inject } from "typedi";
 import { types } from "cassandra-driver";
 import { PaginatedClusterTransactionResponse, ClusterTransactionCursor, ClusterTransaction } from "../models/cluster-transaction";
@@ -8,6 +8,7 @@ import { LimitedCapacityClient } from "../limited-capacity-client";
 import { AddressClusterDailyBalanceChange, AddressClusterDailyBalanceChangeCursor, PaginatedAddressClusterDailyBalanceChangeResponse } from "../models/address-cluster-daily-balance-change";
 import { AddressClusterDetails } from "../models/address-cluster-details";
 import { CoinResolver } from './coin-resolver';
+import { PaginationArgs } from "./pagination-args";
 
 @InputType()
 export class AddressCursor {
@@ -15,6 +16,28 @@ export class AddressCursor {
   @Field({nullable: false})
   address: string;
 
+}
+
+@ArgsType()
+class ClusterTransactionsArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: ClusterTransactionCursor;
+
+}
+
+@ArgsType()
+class DailyBalanceChangeArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: AddressClusterDailyBalanceChangeCursor;
+  
+}
+
+@ArgsType()
+class ClusterAddressesArgs extends PaginationArgs {
+  @Field({nullable: true})
+  cursor: AddressCursor;
 }
 
 function hashCode(s) {
@@ -35,8 +58,7 @@ export class AddressClusterResolver {
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async clusterTransactions(@Root() cluster: AddressCluster, 
-    @Arg("cursor", {nullable: true}) cursor: ClusterTransactionCursor,
-    @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
+    @Args() {limit, cursor}: ClusterTransactionsArgs
   ): Promise<PaginatedClusterTransactionResponse> {
     let args: any[] = [cluster.clusterId];
     let query: string = "SELECT timestamp, height, tx_n, balance_change FROM "+cluster.coin.keyspace+".cluster_transaction WHERE cluster_id=?";
@@ -66,8 +88,7 @@ export class AddressClusterResolver {
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async clusterAddresses(@Root() cluster: AddressCluster, 
-    @Arg("cursor", {nullable: true}) cursor: AddressCursor,
-    @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
+    @Args() {limit, cursor}: ClusterAddressesArgs
   ): Promise<PaginatedAddressResponse> {
     let args: any[] = [cluster.clusterId];
     let query: string = "SELECT address FROM "+cluster.coin.keyspace+".cluster_address WHERE cluster_id=?";
@@ -89,8 +110,7 @@ export class AddressClusterResolver {
 
   @FieldResolver(returns => PaginatedAddressClusterDailyBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async dailyBalanceChanges(@Root() cluster: AddressCluster, 
-    @Arg("cursor", {nullable: true}) cursor: AddressClusterDailyBalanceChangeCursor,
-    @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
+    @Args() {limit, cursor}: DailyBalanceChangeArgs
   ): Promise<PaginatedAddressClusterDailyBalanceChangeResponse> {
     let bin = Math.abs(hashCode(cluster.clusterId)) % AddressClusterResolver.CLUSTER_DAILY_BALANCES_BIN_COUNT;
     let args: any[] = [cluster.clusterId, bin];

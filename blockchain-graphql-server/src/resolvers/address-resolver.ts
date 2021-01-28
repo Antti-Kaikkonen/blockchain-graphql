@@ -1,4 +1,4 @@
-import { Resolver, Arg, FieldResolver, Root } from "type-graphql";
+import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType } from "type-graphql";
 import { types } from "cassandra-driver";
 import { Inject } from 'typedi';
 import { Address } from "../models/address";
@@ -7,6 +7,35 @@ import { OHLCCursor, OHLC, PaginatedOHLCResponse } from '../models/ohlc';
 import { AddressBalanceCursor, PaginatedAddressBalanceResponse, AddressBalance } from "../models/address-balance";
 import { AddressCluster } from "../models/address-cluster";
 import { LimitedCapacityClient } from "../limited-capacity-client";
+import { PaginationArgs } from "./pagination-args";
+
+@ArgsType()
+class OHLC_Args extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: OHLCCursor;
+
+  @Field(type => Int, {nullable: true})
+  interval: number = 1000*60*60*24;
+
+}
+
+@ArgsType()
+class AddressTransactionsArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: AddressTransactionCursor;
+
+}
+
+@ArgsType()
+class AddressBalancesArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: AddressBalanceCursor;
+
+}
+
 
 
 @Resolver(of => Address)
@@ -41,9 +70,7 @@ export class AddressResolver {
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async ohlc(@Root() address: Address, 
-    @Arg("cursor", {nullable: true}) cursor: OHLCCursor,
-    @Arg("interval", {nullable: true, defaultValue: 1000*60*60*24}) interval?: number,
-    @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number,
+    @Args() {limit, cursor, interval}: OHLC_Args
   ): Promise<PaginatedOHLCResponse> {
     let reverse: boolean = false;
     let args: any[] = [address.address, interval];
@@ -75,8 +102,7 @@ export class AddressResolver {
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async addressTransactions(@Root() address: Address, 
-    @Arg("cursor", {nullable: true}) cursor: AddressTransactionCursor,
-    @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number, 
+    @Args() {limit, cursor}: AddressTransactionsArgs 
   ): Promise<PaginatedAddressTransactionResponse> {
     const originalLimit: number = limit;
     let mempool = address.coin.mempool;
@@ -167,8 +193,7 @@ export class AddressResolver {
 
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async addressBalances(@Root() address: Address, 
-    @Arg("cursor", {nullable: true}) cursor: AddressBalanceCursor,
-    @Arg("limit", {nullable: true, defaultValue: 1000}) limit?: number
+    @Args() {limit, cursor}: AddressBalancesArgs
   ): Promise<PaginatedAddressBalanceResponse> {
     const originalLimit: number = limit;
     let mempool = address.coin.mempool;

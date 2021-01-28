@@ -1,5 +1,5 @@
 import { types } from "cassandra-driver";
-import { Arg, FieldResolver, Int, Query, Resolver, Root } from "type-graphql";
+import { Arg, Args, ArgsType, Field, FieldResolver, Int, Query, Resolver, Root } from "type-graphql";
 import { Inject } from "typedi";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 import { MempoolBlock, MempoolTx } from "../mempool";
@@ -12,6 +12,15 @@ import { Coin } from "../models/coin";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { Date as DateModel } from "../models/date";
 import { Transaction } from "../models/transaction";
+import { PaginationArgs } from "./pagination-args";
+
+@ArgsType()
+class ClusterRichlistArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: AddressClusterRichlistCursor;
+
+}
 
 @Resolver(of => Coin)
 export class CoinResolver {
@@ -214,8 +223,7 @@ export class CoinResolver {
 
   @FieldResolver(returns => PaginatedAddressClusterRichlistResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async clusterRichlist(@Root() coin: Coin, 
-    @Arg("cursor", {nullable: true}) cursor: AddressClusterRichlistCursor,
-    @Arg("limit", {nullable: true, defaultValue: 100}) limit?: number, 
+    @Args() {limit, cursor}: ClusterRichlistArgs
   ): Promise<PaginatedAddressClusterRichlistResponse> {
     let args: any[] = [CoinResolver.CLUSTER_RICHLIST_BINS];
     let query: string = "SELECT balance, cluster_id FROM "+coin.keyspace+".cluster_richlist WHERE bin IN ?";

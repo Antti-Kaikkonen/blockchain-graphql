@@ -32,7 +32,7 @@ export class TransactionOutput {
 @InputType()
 export class TransactionOutputCursor {
 
-    @Field({nullable: false})
+    @Field(type => Int, {nullable: false})
     n: number;
 
 }
