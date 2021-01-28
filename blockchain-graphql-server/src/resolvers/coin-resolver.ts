@@ -101,7 +101,6 @@ export class CoinResolver {
     @Arg("height", type => Int) height: number, 
     @Arg("tx_n", type => Int) tx_n: number
   ): Promise<ConfirmedTransaction> {
-    //let mempool: Mempool = this.mempools.get(coin.name);
     let mempool = coin.mempool;
     let mempoolBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
     if (mempoolBlock !== undefined) {
@@ -136,7 +135,6 @@ export class CoinResolver {
     @Root() coin: Coin,
     @Arg("height", type => Int) height: number
   ): Promise<BlockHash> {
-    //let mempool: Mempool = this.mempools.get(coin.name);
     let mempool = coin.mempool;
     let mempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
     if (mempoolBlock !== undefined) {
@@ -168,7 +166,6 @@ export class CoinResolver {
     @Root() coin: Coin,
     @Arg("hash") hash: string
   ): Promise<Block> {
-    //let mempool: Mempool = this.mempools.get(coin.name);
     let mempool = coin.mempool;
     let mempooBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHash.get(hash);
     if (mempooBlock !== undefined) {
@@ -232,7 +229,7 @@ export class CoinResolver {
       args = args.concat([cursor.balance, cursor.clusterId]);
     }
     args.push(limit+1); 
-    query += " ORDER BY balance DESC LIMIT ?";
+    query += " ORDER BY balance DESC, cluster_id DESC LIMIT ?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
@@ -250,7 +247,7 @@ export class CoinResolver {
     });
     return {
       hasMore: hasMore,
-      items: res,
+      items: res
     };
   }
 }
