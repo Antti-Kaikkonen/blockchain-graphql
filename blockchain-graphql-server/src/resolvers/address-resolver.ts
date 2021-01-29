@@ -72,19 +72,21 @@ export class AddressResolver {
   async ohlc(@Root() address: Address, 
     @Args() {limit, cursor, interval}: OHLC_Args
   ): Promise<PaginatedOHLCResponse> {
-    let reverse: boolean = false;
     let args: any[] = [address.address, interval];
     let query: string = "SELECT timestamp, open, high, low, close FROM "+address.coin.keyspace+".ohlc WHERE address=? AND interval=?";
     if (cursor) {
-      query += " AND timestamp " + (reverse ? "<" : ">") + " ?";
+      query += " AND timestamp > ?";
       args = args.concat([cursor.timestamp]);
     }
-    if (reverse) query += " ORDER BY timestamp DESC";
+    query += " LIMIT ?"
+    args.push(limit+1);
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res:  OHLC[] = resultSet.rows.map(row => {
       let ohlc = new OHLC();
       ohlc.timestamp = row.get("timestamp");
@@ -95,7 +97,7 @@ export class AddressResolver {
       return ohlc;
     });
     return {
-      hasMore: resultSet.pageState !== null,
+      hasMore: hasMore,
       items: res,
     }
   }
@@ -146,10 +148,12 @@ export class AddressResolver {
         query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
         args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
       }
+      query += " LIMIT ?"
+      args.push(limit+1);
       let resultSet: types.ResultSet = await this.client.execute(
         query, 
         args, 
-        {prepare: true, fetchSize: limit+1}
+        {prepare: true, fetchSize: null}
       );
       let res2: AddressTransaction[] = resultSet.rows.map(row => {
         let addressTransaction = new AddressTransaction();
@@ -224,10 +228,12 @@ export class AddressResolver {
         query += " AND timestamp < ?";
         args = args.concat([cursor.timestamp]);
       }
+      query += " LIMIT ?"
+      args.push(limit+1);
       let resultSet: types.ResultSet = await this.client.execute(
         query, 
         args, 
-        {prepare: true, fetchSize: limit+1}
+        {prepare: true, fetchSize: null}
       );
       res = res.concat(resultSet.rows.map(row => {
         let addressBalance = new AddressBalance();

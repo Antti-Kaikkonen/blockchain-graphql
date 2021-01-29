@@ -107,11 +107,16 @@ export class TransactionResolver {
       query += " AND spending_index > ?";
       args = args.concat([cursor.spending_index]);
     }
+    query += " LIMIT ?"
+    args.push(limit+1);
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
+    
     let res: TransactionInput[] = resultSet.rows.map(row => {
       let vin: TransactionInput = new TransactionInput();
       vin.coinbase = row.get('coinbase');
@@ -125,7 +130,7 @@ export class TransactionResolver {
       return vin;
     });
     return {
-      hasMore: resultSet.pageState !== null,
+      hasMore: hasMore,
       items: res
     };
   }
@@ -185,11 +190,15 @@ export class TransactionResolver {
       query += " AND n > ?";
       args = args.concat([cursor.n]);
     }
+    query += " LIMIT ?"
+    args.push(limit+1);
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
       {prepare: true, fetchSize: limit}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res: TransactionOutput[] = resultSet.rows.map(row => {
       let vout: TransactionOutput = new TransactionOutput();
       vout.txid = row.get('txid');
@@ -213,7 +222,7 @@ export class TransactionResolver {
       return vout;
     });
     return {
-      hasMore: resultSet.pageState !== null,
+      hasMore: hasMore,
       items: res
     };
   }

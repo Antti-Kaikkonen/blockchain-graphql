@@ -66,11 +66,15 @@ export class AddressClusterResolver {
       query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
       args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
     }
+    query += " LIMIT ?";
+    args.push(limit+1);
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res: ClusterTransaction[] = resultSet.rows.map(row => {
       let clusterTransaction = new ClusterTransaction();
       clusterTransaction.timestamp = row.get("timestamp");
@@ -81,7 +85,7 @@ export class AddressClusterResolver {
       return clusterTransaction;
     });
     return {
-      hasMore: resultSet.pageState !== null,
+      hasMore: hasMore,
       items: res,
     };
   }
@@ -96,14 +100,18 @@ export class AddressClusterResolver {
       query += " AND address > ?";
       args = args.concat([cursor.address]);
     }
+    query += " LIMIT ?";
+    args.push(limit+1);
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res: Address[] = resultSet.rows.map(row => new Address(row.get("address"), cluster.coin));
     return {
-      hasMore: resultSet.pageState !== null,
+      hasMore: hasMore,
       items: res,
     };
   }

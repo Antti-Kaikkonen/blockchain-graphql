@@ -60,11 +60,15 @@ export class BlockResolver {
       query += " AND tx_n > ?";
       args = args.concat([cursor.tx_n]);
     }
+    query += " LIMIT ?"
+    args.push(limit+1);
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
       args, 
-      {prepare: true, fetchSize: limit}
+      {prepare: true, fetchSize: null}
     );
+    let hasMore: boolean = resultSet.rows.length > limit;
+    if (hasMore) resultSet.rows.pop();
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
       let tx: ConfirmedTransaction = new ConfirmedTransaction();
       tx.height = row.get('height');
@@ -74,7 +78,7 @@ export class BlockResolver {
       return tx;
     });
     return {
-      hasMore: resultSet.pageState !== null,
+      hasMore: hasMore,
       items: res
     };
   }
