@@ -5,10 +5,10 @@ import { PaginatedResponse } from "./paginated-response";
 export class AddressBalance {
 
     @Field({nullable: false, complexity: 1})
-    balance!: number;
+    balance: number;
 
     @Field({nullable: false, complexity: 1})
-    timestamp!: Date;
+    timestamp: Date;
 
 }
 
@@ -22,6 +22,6 @@ export class AddressBalanceCursor {
 
 @ObjectType()
 export class PaginatedAddressBalanceResponse extends PaginatedResponse(AddressBalance) {
-  @Field({complexity: 0})
+  @Field({nullable: false, complexity: 0})
   hasMore: boolean;
 }

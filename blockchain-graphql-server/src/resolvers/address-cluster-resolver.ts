@@ -56,7 +56,7 @@ export class AddressClusterResolver {
 
   static CLUSTER_DAILY_BALANCES_BIN_COUNT: number = 20;
 
-  @FieldResolver(returns => PaginatedClusterTransactionResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedClusterTransactionResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async transactions(@Root() cluster: AddressCluster, 
     @Args() {limit, cursor}: ClusterTransactionsArgs
   ): Promise<PaginatedClusterTransactionResponse> {
@@ -76,13 +76,13 @@ export class AddressClusterResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: ClusterTransaction[] = resultSet.rows.map(row => {
-      let clusterTransaction = new ClusterTransaction();
-      clusterTransaction.timestamp = row.get("timestamp");
-      clusterTransaction.height = row.get("height");
-      clusterTransaction.txN = row.get("tx_n");
-      clusterTransaction.balanceChange = row.get("balance_change");
-      clusterTransaction.coin = cluster.coin;
-      return clusterTransaction;
+      return <ClusterTransaction> {
+        timestamp: row.get("timestamp"),
+        height: row.get("height"),
+        txN: row.get("tx_n"),
+        balanceChange: row.get("balance_change"),
+        coin: cluster.coin
+      };
     });
     return {
       hasMore: hasMore,
@@ -90,7 +90,7 @@ export class AddressClusterResolver {
     };
   }
 
-  @FieldResolver(returns => PaginatedAddressResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async addresses(@Root() cluster: AddressCluster, 
     @Args() {limit, cursor}: ClusterAddressesArgs
   ): Promise<PaginatedAddressResponse> {
@@ -109,14 +109,14 @@ export class AddressClusterResolver {
     );
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
-    let res: Address[] = resultSet.rows.map(row => new Address(row.get("address"), cluster.coin));
+    let res: Address[] = resultSet.rows.map(row => new Address({address: row.get("address"), coin: cluster.coin}));
     return {
       hasMore: hasMore,
       items: res,
     };
   }
 
-  @FieldResolver(returns => PaginatedAddressClusterDailyBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressClusterDailyBalanceChangeResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async dailyBalanceChanges(@Root() cluster: AddressCluster, 
     @Args() {limit, cursor}: DailyBalanceChangeArgs
   ): Promise<PaginatedAddressClusterDailyBalanceChangeResponse> {
@@ -137,10 +137,10 @@ export class AddressClusterResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: AddressClusterDailyBalanceChange[] = resultSet.rows.map(row => {
-      let e = new AddressClusterDailyBalanceChange();
-      e.date = row.get("date");
-      e.balanceChange = row.get("balance_change");
-      return e;
+      return <AddressClusterDailyBalanceChange> {
+        date: row.get("date"),
+        balanceChange: row.get("balance_change")
+      }
     });
     return {
       hasMore: hasMore,
@@ -160,9 +160,9 @@ export class AddressClusterResolver {
       {prepare: true, fetchSize: null}
     );
     let res: AddressClusterDetails[] = resultSet.rows.map(row => {
-      let e = new AddressClusterDetails();
-      e.balance = row.get("balance");
-      return e;
+      return <AddressClusterDetails> {
+        balance: row.get("balance")
+      }
     });
     return res[0];
   }

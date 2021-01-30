@@ -6,41 +6,38 @@ import { PaginatedResponse } from "./paginated-response";
 @ObjectType()
 export class ClusterTransaction {
 
-  @Field({complexity: 1})
-  timestamp!: Date;
+  @Field({nullable: false, complexity: 1})
+  timestamp: Date;
   
-  @Field(type => Int, {complexity: 1})
-  height!: number;
+  @Field(type => Int, {nullable: false, complexity: 1})
+  height: number;
 
-  @Field(type => Int, {complexity: 1})
-  txN!: number;
+  @Field(type => Int, {nullable: false, complexity: 1})
+  txN: number;
 
-  @Field({complexity: 1})
-  balanceChange!: number;
+  @Field({nullable: false, complexity: 1})
+  balanceChange: number;
 
-  @Field({nullable: false})
-  confirmedTransaction: ConfirmedTransaction;
-
-  coin: Coin;
+  readonly coin: Coin;
 
 }
 
 @InputType()
 export class ClusterTransactionCursor {
 
-  @Field()
+  @Field({nullable: false})
   timestamp: Date;
 
-  @Field(type=>Int)
+  @Field(type=>Int, {nullable: false})
   height: number;
 
-  @Field(type=>Int)
+  @Field(type=>Int, {nullable: false})
   txN: number;
 
 }
 
 @ObjectType()
 export class PaginatedClusterTransactionResponse extends PaginatedResponse(ClusterTransaction) {
-  @Field({complexity: 0})
+  @Field({nullable: false, complexity: 0})
   hasMore: boolean;
 }

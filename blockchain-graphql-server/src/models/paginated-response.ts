@@ -5,7 +5,7 @@ export function PaginatedResponse<TItem>(TItemClass: ClassType<TItem>) {
     @ObjectType({ isAbstract: true })
     abstract class PaginatedResponseClass {
       // here we use the runtime argument
-      @Field(type => [TItemClass])
+      @Field(type => [TItemClass], {nullable: false})
       // and here the generic type
       items: TItem[];
   

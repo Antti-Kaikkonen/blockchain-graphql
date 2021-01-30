@@ -7,22 +7,16 @@ import { Coin } from "./coin";
 @ObjectType()
 export class ConfirmedTransaction {
 
-  @Field({nullable: true})
-  blockHash: BlockHash;
+  @Field(type => Int, {nullable: false, complexity: 1})
+  height: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  height!: number;
-
-  @Field(type => Int, {nullable: false, complexity: 1})
-  txN!: number;
+  txN: number;
 
   @Field({nullable: false, complexity: 1})
-  txid!: string;
+  txid: string;
 
-  @Field({nullable: false})
-  transaction: Transaction;
-
-  coin: Coin;
+  readonly coin: Coin;
 
 }
 
@@ -36,6 +30,6 @@ export class ConfirmedTransactionCursor {
 
 @ObjectType()
 export class PaginatedConfirmedTransactionResponse extends PaginatedResponse(ConfirmedTransaction) {
-  @Field({complexity: 0})
+  @Field({nullable: false, complexity: 0})
   hasMore: boolean;
 }

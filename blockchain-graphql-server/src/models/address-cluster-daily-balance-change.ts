@@ -6,11 +6,11 @@ import { PaginatedResponse } from "./paginated-response";
 @ObjectType()
 export class AddressClusterDailyBalanceChange {
 
-    @Field()
+    @Field({nullable: false, complexity: 1})
     date: string;
 
-    @Field()
-    balanceChange!: number;
+    @Field({nullable: false, complexity: 1})
+    balanceChange: number;
     
 }
 
@@ -24,6 +24,6 @@ export class AddressClusterDailyBalanceChangeCursor {
 
 @ObjectType()
 export class PaginatedAddressClusterDailyBalanceChangeResponse extends PaginatedResponse(AddressClusterDailyBalanceChange) {
-    @Field({complexity: 0})
+    @Field({nullable: false, complexity: 0})
     hasMore: boolean;
 }

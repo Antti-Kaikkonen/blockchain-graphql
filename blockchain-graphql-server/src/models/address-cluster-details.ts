@@ -3,7 +3,7 @@ import { ObjectType, Field } from "type-graphql";
 @ObjectType()
 export class AddressClusterDetails {
 
-    @Field({complexity: 1, nullable: false})
+    @Field({nullable: false, complexity: 1})
     balance: number;
 
 }

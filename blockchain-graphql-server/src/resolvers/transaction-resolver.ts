@@ -35,18 +35,18 @@ export class TransactionResolver {
     @Inject("cassandra_client") private client: LimitedCapacityClient
   ) {}
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})
+  @FieldResolver(returns => BlockHash, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async blockHash(@Root() transaction: Transaction, 
   ): Promise<BlockHash> {
     if (transaction.height === undefined || transaction.height === null) return null;
     let mempool = transaction.coin.mempool;
     let mempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(transaction.height);
     if (mempoolBlock !== undefined) {
-      let res: BlockHash = new BlockHash();
-      res.hash = mempoolBlock.hash;
-      res.height = mempoolBlock.height;
-      res.coin = transaction.coin;
-      return res;
+      return <BlockHash> {
+        hash: mempoolBlock.hash,
+        height: mempoolBlock.height,
+        coin: transaction.coin
+      };
     }
     let args: any[] = [transaction.height];
     let query: string = "SELECT * FROM "+transaction.coin.keyspace+".longest_chain WHERE height=?";
@@ -56,18 +56,18 @@ export class TransactionResolver {
       {prepare: true}
     );
     let res: BlockHash[] = resultSet.rows.map(row => {
-      let b: BlockHash = new BlockHash();
-      b.hash = row.get('hash');
-      b.height = row.get('height');
-      b.coin = transaction.coin;
-      return b;
+      return <BlockHash> {
+        hash: row.get('hash'),
+        height: row.get('height'),
+        coin: transaction.coin
+      }
     });
     return res[0];
   }
 
 
 
-  @FieldResolver(returns => PaginatedTransactionInputResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedTransactionInputResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async inputs(@Root() transaction: Transaction, 
     @Args() {cursor, limit}: TransactionInputArgs
   ): Promise<PaginatedTransactionInputResponse> {
@@ -84,23 +84,22 @@ export class TransactionResolver {
           };
         }
         let rpcVin = mempoolTx.vin[spending_index];
-        let vin: TransactionInput = new TransactionInput();
-        vin.coinbase = rpcVin.coinbase;
-        vin.scriptSig = rpcVin.scriptSig;
-        vin.sequence = rpcVin.sequence;
-        vin.txid = rpcVin.txid;
-        vin.vout = rpcVin.vout;
-        vin.spendingTxid = mempoolTx.txid;
-        vin.spendingIndex = spending_index;
-        vin.coin = transaction.coin;
-        res.push(vin);
+        res.push(new TransactionInput({
+          coinbase: rpcVin.coinbase,
+          scriptSig: rpcVin.scriptSig,
+          sequence: rpcVin.sequence,
+          txid: rpcVin.txid,
+          vout: rpcVin.vout,
+          spendingTxid: mempoolTx.txid,
+          spendingIndex: spending_index, 
+          coin: transaction.coin
+        }));
       }
       return {
         hasMore: false,
         items: res
       };
     }
-    
     let args: any[] = [transaction.txid];
     let query: string = "SELECT * FROM "+transaction.coin.keyspace+".transaction_input WHERE spending_txid=?";
     if (cursor) {
@@ -118,16 +117,16 @@ export class TransactionResolver {
     if (hasMore) resultSet.rows.pop();
     
     let res: TransactionInput[] = resultSet.rows.map(row => {
-      let vin: TransactionInput = new TransactionInput();
-      vin.coinbase = row.get('coinbase');
-      vin.scriptSig = row.get('scriptsig');
-      vin.sequence = row.get('sequence');
-      vin.txid = row.get('txid');
-      vin.vout = row.get('vout');
-      vin.spendingTxid = row.get('spending_txid');
-      vin.spendingIndex = row.get('spending_index');
-      vin.coin = transaction.coin;
-      return vin;
+      return new TransactionInput({
+        coinbase: row.get('coinbase'),
+        scriptSig: row.get('scriptsig'),
+        sequence: row.get('sequence'),
+        txid: row.get('txid'),
+        vout: row.get('vout'),
+        spendingTxid: row.get('spending_txid'),
+        spendingIndex: row.get('spending_index'), 
+        coin: transaction.coin
+      });
     });
     return {
       hasMore: hasMore,
@@ -135,7 +134,7 @@ export class TransactionResolver {
     };
   }
 
-  @FieldResolver(returns => PaginatedTransactionOutputResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedTransactionOutputResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async outputs(@Root() transaction: Transaction, 
     @Args() {cursor, limit}: TransactionOutputArgs
   ): Promise<PaginatedTransactionOutputResponse> {
@@ -152,31 +151,32 @@ export class TransactionResolver {
           };
         }
         let rpcVout: RpcVout = mempoolTx.vout[n];
-        let vout: TransactionOutput = new TransactionOutput();
-        vout.txid = mempoolTx.txid;
-        vout.n = n;
-        vout.value = rpcVout.value;
-
         let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
         scriptpubkey.asm = rpcVout.scriptPubKey.asm;
         scriptpubkey.hex = rpcVout.scriptPubKey.hex;
         scriptpubkey.reqSigs = rpcVout.scriptPubKey.reqSigs;
         scriptpubkey.type = rpcVout.scriptPubKey.type;
         if (rpcVout.scriptPubKey.addresses !== undefined && rpcVout.scriptPubKey.addresses !== null) {
-          scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address(address, transaction.coin));
+          scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address({address: address, coin: transaction.coin}));
         }
-        vout.scriptPubKey = scriptpubkey;
         
-        let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(vout.txid+vout.n);
+        let spendingTxid: string;
+        let spendingIndex: number;
+        let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(mempoolTx.txid+n);
         if (spending_inpoint !== undefined) {
-          vout.spendingTxid = spending_inpoint.spending_txid;
-          vout.spendingIndex = spending_inpoint.spending_index;
+          spendingTxid= spending_inpoint.spending_txid;
+          spendingIndex = spending_inpoint.spending_index;
         }
 
-        //vout.spending_txid = row.get('spending_txid');
-        //vout.spending_index = row.get('spending_index');
-        vout.coin = transaction.coin;
-        res.push(vout);
+        res.push(new TransactionOutput({
+          txid: mempoolTx.txid,
+          n: n,
+          value: rpcVout.value,
+          scriptPubKey: scriptpubkey,
+          spendingTxid: spendingTxid,
+          spendingIndex: spendingIndex,
+          coin: transaction.coin
+        }));
       }
       return {
         hasMore: false,
@@ -200,26 +200,30 @@ export class TransactionResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: TransactionOutput[] = resultSet.rows.map(row => {
-      let vout: TransactionOutput = new TransactionOutput();
-      vout.txid = row.get('txid');
-      vout.n = row.get('n');
-      vout.value = row.get('value');
+
+      let n: number = row.get('n');
       let scriptpubkey = row.get('scriptpubkey');
       if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
-        scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address(address, transaction.coin));
+        scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address({address: address, coin: transaction.coin}));
       }
-      vout.scriptPubKey = scriptpubkey;
-      vout.spendingTxid = row.get('spending_txid');
-      vout.spendingIndex = row.get('spending_index');
-      if (vout.spendingTxid === undefined || vout.spendingTxid === null) {
-        let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(vout.txid+vout.n);
+      let spendingTxid: string = row.get('spending_txid');
+      let spendingIndex: number = row.get('spending_index');
+      if (spendingTxid === undefined || spendingTxid === null) {
+        let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(transaction.txid+n);
         if (spending_inpoint !== undefined) {
-          vout.spendingTxid = spending_inpoint.spending_txid;
-          vout.spendingIndex = spending_inpoint.spending_index;
+          spendingTxid = spending_inpoint.spending_txid;
+          spendingIndex = spending_inpoint.spending_index;
         }
       }
-      vout.coin = transaction.coin;
-      return vout;
+      return new TransactionOutput({
+        txid: transaction.txid,
+        n: n,
+        value: row.get('value'),
+        scriptPubKey: scriptpubkey,
+        spendingTxid: spendingTxid,
+        spendingIndex: spendingIndex,
+        coin: transaction.coin
+      });
     });
     return {
       hasMore: hasMore,

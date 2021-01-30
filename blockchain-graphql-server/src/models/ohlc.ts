@@ -4,20 +4,20 @@ import { PaginatedResponse } from "./paginated-response";
 @ObjectType()
 export class OHLC {
 
-  @Field({complexity: 1})
-  open!: number;
+  @Field({nullable: false, complexity: 1})
+  open: number;
 
-  @Field({complexity: 1})
-  high!: number;
+  @Field({nullable: false, complexity: 1})
+  high: number;
 
-  @Field({complexity: 1})
-  low!: number;
+  @Field({nullable: false, complexity: 1})
+  low: number;
 
-  @Field({complexity: 1})
-  close!: number;
+  @Field({nullable: false, complexity: 1})
+  close: number;
 
-  @Field({complexity: 1})
-  timestamp!: Date;
+  @Field({nullable: false, complexity: 1})
+  timestamp: Date;
 
 }
 
@@ -26,17 +26,11 @@ export class OHLCCursor {
 
   @Field({nullable: false})
   timestamp: Date;
-
-  public static max(): OHLCCursor {
-    let res = new OHLCCursor();
-    res.timestamp = new Date(0);
-    return res;
-  }
-
+  
 }
 
 @ObjectType()
 export class PaginatedOHLCResponse extends PaginatedResponse(OHLC) {
-  @Field({complexity: 0})
+  @Field({nullable: false, complexity: 0})
   hasMore: boolean;
 }

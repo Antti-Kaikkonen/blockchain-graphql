@@ -8,30 +8,27 @@ import { Coin } from "./coin";
 export class Transaction {
 
   @Field({nullable: false, complexity: 1})
-  txid!: string;
+  txid: string;
 
   @Field(type => Int, {nullable: true, complexity: 1})
-  height!: number;
+  height: number;
 
   @Field(type => Int, {nullable: true, complexity: 1})
-  txN!: number;
+  txN: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  size!: number;
+  size: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  version!: number;
+  version: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  lockTime!: number;
+  lockTime: number;
 
   @Field({nullable: false, complexity: 1})
   fee: number;
 
-  @Field(type => BlockHash, {nullable: true})
-  blockHash: BlockHash;
-
-  coin: Coin;
+  readonly coin: Coin;
 
 }
 

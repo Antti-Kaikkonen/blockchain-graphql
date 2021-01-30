@@ -7,7 +7,4 @@ export class PaginationArgs {
   @Min(1)
   @Field(type => Int)
   limit: number = 100;
-
-  /*@Field()
-  reverse: boolean = false;*/
 }

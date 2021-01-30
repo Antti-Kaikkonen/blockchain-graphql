@@ -23,7 +23,7 @@ export class BlockResolver {
     @Inject("cassandra_client") private client: LimitedCapacityClient
   ) {}
 
-  @FieldResolver(returns => PaginatedConfirmedTransactionResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedConfirmedTransactionResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async transactions(@Root() block: Block, 
 
     @Args() {cursor, limit}: ConfirmedTransactionArgs
@@ -42,12 +42,12 @@ export class BlockResolver {
           };
         }
         let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
-        let tx: ConfirmedTransaction = new ConfirmedTransaction();
-        tx.height = mempoolTx.height;
-        tx.txN = mempoolTx.txN;
-        tx.txid = mempoolTx.txid;
-        tx.coin = block.coin;
-        res.push(tx);
+        res.push(<ConfirmedTransaction> {
+          height: mempoolTx.height,
+          txN: mempoolTx.txN,
+          txid: mempoolTx.txid,
+          coin: block.coin
+        });
       }
       return {
         hasMore: false,
@@ -70,12 +70,12 @@ export class BlockResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
-      let tx: ConfirmedTransaction = new ConfirmedTransaction();
-      tx.height = row.get('height');
-      tx.txN = row.get('tx_n');
-      tx.txid = row.get("txid");
-      tx.coin = block.coin;
-      return tx;
+      return <ConfirmedTransaction> {
+        height: row.get('height'),
+        txN: row.get('tx_n'),
+        txid: row.get("txid"),
+        coin: block.coin
+      }
     });
     return {
       hasMore: hasMore,

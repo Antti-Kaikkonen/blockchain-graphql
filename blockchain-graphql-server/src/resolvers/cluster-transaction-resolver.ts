@@ -12,7 +12,7 @@ export class ClusterTransactionResolver {
   constructor(@Inject("cassandra_client") private client: LimitedCapacityClient ) {
   }
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})
+  @FieldResolver(returns => ConfirmedTransaction, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(@Root() clusterTransaction: ClusterTransaction, 
   ): Promise<ConfirmedTransaction> {
     let args: any[] = [clusterTransaction.height, clusterTransaction.txN];
@@ -26,12 +26,12 @@ export class ClusterTransactionResolver {
       return null;
     }
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
-      let tx: ConfirmedTransaction = new ConfirmedTransaction();
-      tx.height = row.get('height');
-      tx.txN = row.get('tx_n');
-      tx.txid = row.get("txid");
-      tx.coin = clusterTransaction.coin;
-      return tx;
+      return <ConfirmedTransaction> {
+        height: row.get('height'),
+        txN: row.get('tx_n'),
+        txid: row.get("txid"),
+        coin: clusterTransaction.coin
+      };
     });
     return res[0];
   }

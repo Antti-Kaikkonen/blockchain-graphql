@@ -46,7 +46,7 @@ export class AddressResolver {
   ) {}
 
 
-  @FieldResolver(returns => AddressCluster, {complexity: ({ childComplexity, args }) => 100 + childComplexity})
+  @FieldResolver(returns => AddressCluster, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async guestimatedWallet(@Root() address: Address): Promise<AddressCluster> {
     let query: string = "SELECT parent FROM "+address.coin.keyspace+".union_find WHERE address=?";
     let currentAddress = address.address;
@@ -68,7 +68,7 @@ export class AddressResolver {
   }
 
 
-  @FieldResolver(returns => PaginatedOHLCResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedOHLCResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async ohlc(@Root() address: Address, 
     @Args() {limit, cursor, interval}: OHLC_Args
   ): Promise<PaginatedOHLCResponse> {
@@ -88,13 +88,13 @@ export class AddressResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res:  OHLC[] = resultSet.rows.map(row => {
-      let ohlc = new OHLC();
-      ohlc.timestamp = row.get("timestamp");
-      ohlc.open = row.get("open");
-      ohlc.high = row.get("high");
-      ohlc.low = row.get("low");
-      ohlc.close = row.get("close");
-      return ohlc;
+      return <OHLC> {
+        timestamp: row.get("timestamp"),
+        open: row.get("open"),
+        high: row.get("high"),
+        low: row.get("low"),
+        close: row.get("close")
+      }
     });
     return {
       hasMore: hasMore,
@@ -102,7 +102,7 @@ export class AddressResolver {
     }
   }
 
-  @FieldResolver(returns => PaginatedAddressTransactionResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressTransactionResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async transactions(@Root() address: Address, 
     @Args() {limit, cursor}: AddressTransactionsArgs 
   ): Promise<PaginatedAddressTransactionResponse> {
@@ -156,13 +156,13 @@ export class AddressResolver {
         {prepare: true, fetchSize: null}
       );
       let res2: AddressTransaction[] = resultSet.rows.map(row => {
-        let addressTransaction = new AddressTransaction();
-        addressTransaction.timestamp = row.get("timestamp");
-        addressTransaction.height = row.get("height");
-        addressTransaction.txN = row.get("tx_n");
-        addressTransaction.balanceChange = row.get("balance_change");
-        addressTransaction.coin = address.coin;
-        return addressTransaction;
+        return <AddressTransaction> {
+          timestamp: row.get("timestamp"),
+          height: row.get("height"),
+          txN: row.get("tx_n"),
+          balanceChange: row.get("balance_change"),
+          coin: address.coin
+        }
       });
       
       if (res2.length > 0) {
@@ -195,7 +195,7 @@ export class AddressResolver {
     }
   }
 
-  @FieldResolver(returns => PaginatedAddressBalanceResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressBalanceResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async balances(@Root() address: Address, 
     @Args() {limit, cursor}: AddressBalancesArgs
   ): Promise<PaginatedAddressBalanceResponse> {
@@ -236,10 +236,10 @@ export class AddressResolver {
         {prepare: true, fetchSize: null}
       );
       res = res.concat(resultSet.rows.map(row => {
-        let addressBalance = new AddressBalance();
-        addressBalance.timestamp = row.get("timestamp");
-        addressBalance.balance = row.get("balance");
-        return addressBalance;
+        return <AddressBalance> {
+          timestamp: row.get("timestamp"),
+          balance: row.get("balance")
+        }
       }));
     }
     if (res.length > originalLimit) {

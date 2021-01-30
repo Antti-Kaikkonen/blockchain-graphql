@@ -9,23 +9,20 @@ import { Coin } from "./coin";
 @ObjectType()
 export class Address {
 
-  constructor(address: string, coin: Coin) {
+  constructor({address, coin}: {address: string, coin: Coin}) {
     this.address = address;
     this.coin = coin;
   }
 
-  coin: Coin;
+  readonly coin: Coin;
 
   @Field({nullable: false, complexity: 1})
-  address!: string;
-
-  @Field(type => AddressCluster, {nullable: true})
-  guestimatedWallet: AddressCluster;
+  readonly address: string;
 
 }
 
 @ObjectType()
 export class PaginatedAddressResponse extends PaginatedResponse(Address) {
-  @Field({complexity: 0})
+  @Field({nullable: false, complexity: 0})
   hasMore: boolean;
 }

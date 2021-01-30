@@ -12,30 +12,29 @@ export class BlockHashResolver {
     @Inject("cassandra_client") private client: LimitedCapacityClient
   ) {}
   
-  @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + childComplexity})
+  @FieldResolver(returns => Block, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async block(@Root() blockHash: BlockHash, 
   ): Promise<Block> {
     let mempool = blockHash.coin.mempool;
     let mempooBlock = mempool === undefined ? undefined : mempool.blockByHash.get(blockHash.hash);
     if (mempooBlock !== undefined) {
-      let b: Block = new Block();
-      b.height = mempooBlock.height;
-      b.hash = mempooBlock.hash;
-      b.size = mempooBlock.size;
-      b.height = mempooBlock.height;
-      b.version = mempooBlock.version;
-      b.versionHex = mempooBlock.versionHex;
-      b.merkleRoot = mempooBlock.merkleroot;
-      b.time = new Date(mempooBlock.time*1000);
-      b.medianTime = mempooBlock.mediantime;
-      b.nonce = mempooBlock.nonce;
-      b.bits = mempooBlock.bits;
-      b.difficulty = mempooBlock.difficulty;
-      b.chainwork = mempooBlock.chainwork;
-      b.previousBlockHash = mempooBlock.previousblockhash;
-      b.txCount = mempooBlock.tx.length;
-      b.coin = blockHash.coin;
-      return b;
+      return <Block> {
+        height: mempooBlock.height,
+        hash: mempooBlock.hash,
+        size: mempooBlock.size,
+        version: mempooBlock.version,
+        versionHex: mempooBlock.versionHex,
+        merkleRoot: mempooBlock.merkleroot,
+        time: new Date(mempooBlock.time*1000),
+        medianTime: mempooBlock.mediantime,
+        nonce: mempooBlock.nonce,
+        bits: mempooBlock.bits,
+        difficulty: mempooBlock.difficulty,
+        chainwork: mempooBlock.chainwork,
+        previousBlockHash: mempooBlock.previousblockhash,
+        txCount: mempooBlock.tx.length,
+        coin: blockHash.coin
+      }
     }
     let args: any[] = [blockHash.hash];
     let query: string = "SELECT * FROM "+blockHash.coin.keyspace+".block WHERE hash=?";
@@ -45,24 +44,23 @@ export class BlockHashResolver {
       {prepare: true}
     );
     let res: Block[] = resultSet.rows.map(row => {
-      let b: Block = new Block();
-      b.height = row.get("height");
-      b.hash = row.get("hash");
-      b.size = row.get("size");
-      b.height = row.get("height");
-      b.version = row.get("version");
-      b.versionHex = row.get("versionhex");
-      b.merkleRoot = row.get("merkleroot");
-      b.time = new Date(row.get("time")*1000);
-      b.medianTime = row.get("mediantime");
-      b.nonce = row.get("nonce");
-      b.bits = row.get("bits");
-      b.difficulty = row.get("difficulty");
-      b.chainwork = row.get("chainwork");
-      b.previousBlockHash = row.get("previousblockhash");
-      b.txCount = row.get("tx_count");
-      b.coin = blockHash.coin;
-      return b;
+      return <Block> {
+        height: row.get("height"),
+        hash: row.get("hash"),
+        size: row.get("size"),
+        version: row.get("version"),
+        versionHex: row.get("versionhex"),
+        merkleRoot: row.get("merkleroot"),
+        time: new Date(row.get("time")*1000),
+        medianTime: row.get("mediantime"),
+        nonce: row.get("nonce"),
+        bits: row.get("bits"),
+        difficulty: row.get("difficulty"),
+        chainwork: row.get("chainwork"),
+        previousBlockHash: row.get("previousblockhash"),
+        txCount: row.get("tx_count"),
+        coin: blockHash.coin
+      };
     });
     return res[0];
   }

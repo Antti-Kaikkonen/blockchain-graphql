@@ -7,20 +7,17 @@ import { Coin } from "./coin";
 @ObjectType()
 export class AddressTransaction {
   
-  @Field({complexity: 1})
-  timestamp!: Date;
-
-  @Field({nullable: false})
-  confirmedTransaction: ConfirmedTransaction;
+  @Field({nullable: false, complexity: 1})
+  timestamp: Date;
   
-  @Field(type => Int, {complexity: 1})
-  height!: number;
+  @Field(type => Int, {nullable: false, complexity: 1})
+  height: number;
 
-  @Field(type => Int, {complexity: 1})
-  txN!: number;
+  @Field(type => Int, {nullable: false, complexity: 1})
+  txN: number;
 
-  @Field({complexity: 1})
-  balanceChange!: number;
+  @Field({nullable: false, complexity: 1})
+  balanceChange: number;
 
   @Field({nullable: false, complexity: 1})
   balanceAfterBlock: number;
@@ -32,19 +29,19 @@ export class AddressTransaction {
 @InputType()
 export class AddressTransactionCursor {
 
-  @Field()
+  @Field({nullable: false})
   timestamp: Date;
 
-  @Field(type=>Int)
+  @Field(type=>Int, {nullable: false})
   height: number;
 
-  @Field(type=>Int)
+  @Field(type=>Int, {nullable: false})
   txN: number;
 
 }
 
 @ObjectType()
 export class PaginatedAddressTransactionResponse extends PaginatedResponse(AddressTransaction) {
-  @Field({complexity: 0})
+  @Field({nullable: false, complexity: 0})
   hasMore: boolean;
 }

@@ -43,7 +43,7 @@ export class DateResolver {
   constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
   }
 
-  @FieldResolver(returns => PaginatedRichlistResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedRichlistResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async richList(
     @Root() date: Date, 
     @Args() {cursor, limit}: RichlistArgs
@@ -64,21 +64,19 @@ export class DateResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: RichList[] = resultSet.rows.map(row => {
-        let richlist: RichList = new RichList();
-        let address = new Address(row.get("address"), date.coin);
-        address.coin = date.coin;
-        richlist.address = address;
-        richlist.balance = row.get("balance");
-        richlist.balanceChange = row.get("balance_change");
-        return richlist;
+        return <RichList> {
+          address: new Address({address: row.get("address"), coin: date.coin}),
+          balance: row.get("balance"),
+          balanceChange: row.get("balance_change")
+        }
     });
     return {
-        items: res, 
-        hasMore: hasMore
+      items: res, 
+      hasMore: hasMore
     };
   }
 
-  @FieldResolver(returns => PaginatedAddressBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressBalanceChangeResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async topGainers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressBalanceChangeArgs
   ): Promise<PaginatedAddressBalanceChangeResponse> {
@@ -103,19 +101,18 @@ export class DateResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: AddressBalanceChange[] = resultSet.rows.map(row => {
-        let adressBalanceChange = new AddressBalanceChange();
-        let address = new Address(row.get("address"), date.coin);
-        adressBalanceChange.address = address;
-        adressBalanceChange.balanceChange = row.get("balance_change");
-        return adressBalanceChange;
+      return <AddressBalanceChange> {
+        address: new Address({address: row.get("address"), coin: date.coin}),
+        balanceChange: row.get("balance_change")
+      }
     });
     return {
-        items: res,
-        hasMore: hasMore
+      items: res,
+      hasMore: hasMore
     };
   }
 
-  @FieldResolver(returns => PaginatedAddressBalanceChangeResponse, {complexity: ({ childComplexity, args }) => args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressBalanceChangeResponse, {nullable: false, complexity: ({ childComplexity, args }) => args.limit * childComplexity})
   async topLosers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressBalanceChangeArgs
   ): Promise<PaginatedAddressBalanceChangeResponse> {
@@ -140,19 +137,18 @@ export class DateResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: AddressBalanceChange[] = resultSet.rows.map(row => {
-        let adressBalanceChange = new AddressBalanceChange();
-        let address = new Address(row.get("address"), date.coin);
-        adressBalanceChange.address = address;
-        adressBalanceChange.balanceChange = row.get("balance_change");
-        return adressBalanceChange;
+      return <AddressBalanceChange> {
+        address: new Address({address: row.get("address"), coin: date.coin}),
+        balanceChange: row.get("balance_change")
+      }
     });
     return {
-        items: res,
-        hasMore: hasMore
+      items: res,
+      hasMore: hasMore
     };
   }
 
-  @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async topClusterGainers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressClusterBalanceChangeArgs
   ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
@@ -172,12 +168,13 @@ export class DateResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
-        let clusterBalanceChange = new AddressClusterBalanceChange();
-        clusterBalanceChange.guestimatedWallet = new AddressCluster();
-        clusterBalanceChange.guestimatedWallet.clusterId = row.get("cluster_id");
-        clusterBalanceChange.guestimatedWallet.coin = date.coin;
-        clusterBalanceChange.balanceChange = row.get("balance_change");
-        return clusterBalanceChange;
+      return <AddressClusterBalanceChange> {
+        guestimatedWallet: <AddressCluster> {
+          clusterId: row.get("cluster_id"),
+          coin: date.coin
+        },
+        balanceChange: row.get("balance_change")
+      };
     });
     return {
         items: res,
@@ -185,7 +182,7 @@ export class DateResolver {
     };
   }
 
-  @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async topClusterLosers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressClusterBalanceChangeArgs
   ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
@@ -205,12 +202,13 @@ export class DateResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
-        let clusterBalanceChange = new AddressClusterBalanceChange();
-        clusterBalanceChange.guestimatedWallet = new AddressCluster();
-        clusterBalanceChange.guestimatedWallet.clusterId = row.get("cluster_id");
-        clusterBalanceChange.guestimatedWallet.coin = date.coin;
-        clusterBalanceChange.balanceChange = row.get("balance_change");
-        return clusterBalanceChange;
+      return <AddressClusterBalanceChange> {
+        guestimatedWallet: <AddressCluster> {
+          clusterId: row.get("cluster_id"),
+          coin: date.coin
+        },
+        balanceChange: row.get("balance_change")
+      };
     });
     return {
         items: res,

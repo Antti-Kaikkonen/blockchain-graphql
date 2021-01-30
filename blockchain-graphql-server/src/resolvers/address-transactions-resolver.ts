@@ -12,9 +12,10 @@ export class AddressTransactionsResolver {
   constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
   }
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})
+  @FieldResolver(returns => ConfirmedTransaction, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(@Root() addressTransaction: AddressTransaction, 
   ): Promise<ConfirmedTransaction> {
+    //TODO: check mempool first
     let args: any[] = [addressTransaction.height, addressTransaction.txN];
     let query: string = "SELECT * FROM "+addressTransaction.coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
@@ -26,12 +27,12 @@ export class AddressTransactionsResolver {
       return null;
     }
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
-      let tx: ConfirmedTransaction = new ConfirmedTransaction();
-      tx.height = row.get('height');
-      tx.txN = row.get('tx_n');
-      tx.txid = row.get("txid");
-      tx.coin = addressTransaction.coin;
-      return tx;
+      return <ConfirmedTransaction>{
+        height: row.get("height"), 
+        txN: row.get("tx_n"), 
+        txid: row.get("txid"), 
+        coin: addressTransaction.coin
+      };
     });
     return res[0];
   }

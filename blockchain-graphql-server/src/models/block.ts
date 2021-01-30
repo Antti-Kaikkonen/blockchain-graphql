@@ -8,47 +8,47 @@ import { Coin } from "./coin";
 export class Block {
 
   @Field({nullable: false, complexity: 1})
-  hash!: string;
+  hash: string;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  height!: number;
+  height: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  size!: number;
+  size: number;
 
   @Field(type => Int, {nullable: true, complexity: 1})
   version: number;
 
   @Field({nullable: false, complexity: 1})
-  versionHex!: string;
+  versionHex: string;
 
   @Field({nullable: false, complexity: 1})
-  merkleRoot!: string;
+  merkleRoot: string;
 
   @Field({nullable: false, complexity: 1})
-  time!: Date;
+  time: Date;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  medianTime!: number;
+  medianTime: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  nonce!: number;
+  nonce: number;
 
   @Field({nullable: false, complexity: 1})
-  bits!: string;
+  bits: string;
 
   @Field({nullable: false, complexity: 1})
-  difficulty!: number;
+  difficulty: number;
 
   @Field({nullable: false, complexity: 1})
-  chainwork!: string;
+  chainwork: string;
 
   @Field({nullable: false, complexity: 1})
-  previousBlockHash!: string;
+  previousBlockHash: string;
 
   @Field(type => Int, {nullable: false, complexity: 1})
   txCount: number;
 
-  coin: Coin;
+  readonly coin: Coin;
 
 }

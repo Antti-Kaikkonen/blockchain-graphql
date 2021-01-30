@@ -9,24 +9,24 @@ export class AddressClusterBalanceChange {
     @Field(type => AddressCluster, {nullable: false})
     guestimatedWallet: AddressCluster;
 
-    @Field({complexity: 1})
-    balanceChange!: number;
+    @Field({nullable: false, complexity: 1})
+    balanceChange: number;
     
 }
 
 @InputType()
 export class AddressClusterBalanceChangeCursor {
 
-    @Field({nullable: true, defaultValue: ""})
-    clusterId: string;
-
     @Field({nullable: false})
     balanceChange: number;
+
+    @Field({nullable: false})
+    clusterId: string;
 
 }
 
 @ObjectType()
 export class PaginatedAddressClusterBalanceChangeResponse extends PaginatedResponse(AddressClusterBalanceChange) {
-    @Field({complexity: 0})
+    @Field({nullable: false, complexity: 0})
     hasMore: boolean;
 }

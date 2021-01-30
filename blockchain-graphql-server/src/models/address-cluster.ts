@@ -6,7 +6,7 @@ import { Coin } from "./coin";
 @ObjectType()
 export class AddressCluster {
 
-    @Field({complexity: 1, nullable: false})
+    @Field({nullable: false, complexity: 1})
     clusterId: string;
 
     coin: Coin;

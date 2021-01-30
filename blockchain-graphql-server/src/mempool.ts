@@ -19,7 +19,17 @@ export class MempoolTx extends RpcTx {
     fee: number;
     
     public toGraphQL(coin: Coin): Transaction {
-        let tx: Transaction = new Transaction();
+        return <Transaction> {
+            txid: this.txid,
+            lockTime: this.locktime,
+            size: this.size,
+            version: this.version,
+            height: this.height,
+            txN: this.txN,
+            fee: this.fee,
+            coin: coin
+        };
+        /*let tx: Transaction = new Transaction();
         tx.txid = this.txid;
         tx.lockTime = this.locktime;
         tx.size = this.size;
@@ -28,7 +38,7 @@ export class MempoolTx extends RpcTx {
         tx.txN = this.txN;
         tx.fee = this.fee;
         tx.coin = coin;
-        return tx;
+        return tx;*/
     }
 }
 

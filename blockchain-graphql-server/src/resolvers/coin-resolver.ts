@@ -38,7 +38,7 @@ export class CoinResolver {
     public static CLUSTER_RICHLIST_BIN_COUNT: number = 100;
     static CLUSTER_RICHLIST_BINS: number[] = Array.from(new Array(CoinResolver.CLUSTER_RICHLIST_BIN_COUNT).keys());
 
-    @Query(returns => [Coin], {nullable: true, complexity: ({ childComplexity, args }) => 100 + CoinResolver.lastCoinCount * childComplexity})
+    @Query(returns => [Coin], {nullable: false, complexity: ({ childComplexity, args }) => 100 + CoinResolver.lastCoinCount * childComplexity})
     async coins(): Promise<Coin[]> {
       CoinResolver.lastCoinCount = this.available_coins.size;
       return Array.from(this.available_coins.values());
@@ -49,20 +49,20 @@ export class CoinResolver {
       return this.available_coins.get(name);
     }
 
-    @FieldResolver(returns => DateModel, {complexity: 1})
+    @FieldResolver(returns => DateModel, {nullable: false, complexity: 1})
     async date(
         @Root() coin: Coin, 
         @Arg("date") date: string
     ): Promise<DateModel> {
-        let res = new DateModel();
-        res.date = date;
-        res.coin = coin;
-        return res;
+      return <DateModel> {
+        date: date,
+        coin: coin
+      }
     }
 
-    @FieldResolver(returns => Address, {complexity: 1})
+    @FieldResolver(returns => Address, {nullable: false, complexity: 1})
     async address(@Root() coin: Coin, @Arg("address") address: string) {
-        let res = new Address(address, coin);
+        let res = new Address({address: address, coin: coin});
         return res;
     }
 
@@ -81,16 +81,16 @@ export class CoinResolver {
         {prepare: true}
       );
       let res: Transaction[] = resultSet.rows.map(row => {
-        let tx: Transaction = new Transaction();
-        tx.txid = row.get('txid');
-        tx.lockTime = row.get('locktime');
-        tx.size = row.get('size');
-        tx.version = row.get('version');
-        tx.height = row.get('height');
-        tx.txN = row.get("tx_n");
-        tx.fee = row.get("fee");
-        tx.coin = coin;
-        return tx;
+        return <Transaction> {
+          txid: row.get('txid'),
+          lockTime: row.get('locktime'),
+          size: row.get('size'),
+          version: row.get('version'),
+          height: row.get('height'),
+          txN: row.get("tx_n"),
+          fee: row.get("fee"),
+          coin: coin
+        }
       });
       return res[0];
   }
@@ -105,12 +105,12 @@ export class CoinResolver {
     let mempoolBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
     if (mempoolBlock !== undefined) {
       let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
-      let tx: ConfirmedTransaction = new ConfirmedTransaction();
-      tx.height = mempoolTx.height;
-      tx.txN = mempoolTx.txN;
-      tx.txid = mempoolTx.txid;
-      tx.coin = coin;
-      return tx;
+      return <ConfirmedTransaction> {
+        height: mempoolTx.height,
+        txN: mempoolTx.txN,
+        txid: mempoolTx.txid,
+        coin: coin
+      };
     }
     let args: any[] = [height, tx_n];
     let query: string = "SELECT * FROM "+coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
@@ -120,12 +120,12 @@ export class CoinResolver {
       {prepare: true}
     );
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
-      let tx: ConfirmedTransaction = new ConfirmedTransaction();
-      tx.height = row.get('height');
-      tx.txN = row.get('tx_n');
-      tx.txid = row.get("txid");
-      tx.coin = coin;
-      return tx;
+      return <ConfirmedTransaction> {
+        height: row.get('height'),
+        txN: row.get('tx_n'),
+        txid: row.get("txid"),
+        coin: coin
+      };
     });
     return res[0];
   }
@@ -138,11 +138,11 @@ export class CoinResolver {
     let mempool = coin.mempool;
     let mempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
     if (mempoolBlock !== undefined) {
-      let res: BlockHash = new BlockHash();
-      res.hash = mempoolBlock.hash;
-      res.height = mempoolBlock.height;
-      res.coin = coin;
-      return res;
+      return <BlockHash> {
+        hash: mempoolBlock.hash,
+        height: mempoolBlock.height,
+        coin: coin
+      }
     }
     let args: any[] = [height];
     let query: string = "SELECT * FROM "+coin.keyspace+".longest_chain WHERE height=?";
@@ -152,11 +152,11 @@ export class CoinResolver {
       {prepare: true}
     );
     let res: BlockHash[] = resultSet.rows.map(row => {
-      let b: BlockHash = new BlockHash();
-      b.hash = row.get('hash');
-      b.height = row.get('height');
-      b.coin = coin;
-      return b;
+      return <BlockHash> {
+        hash: row.get('hash'),
+        height: row.get('height'),
+        coin: coin
+      }
     });
     return res[0];
   }    
@@ -169,24 +169,23 @@ export class CoinResolver {
     let mempool = coin.mempool;
     let mempooBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHash.get(hash);
     if (mempooBlock !== undefined) {
-      let b: Block = new Block();
-      b.height = mempooBlock.height;
-      b.hash = mempooBlock.hash;
-      b.size = mempooBlock.size;
-      b.height = mempooBlock.height;
-      b.version = mempooBlock.version;
-      b.versionHex = mempooBlock.versionHex;
-      b.merkleRoot = mempooBlock.merkleroot;
-      b.time = new Date(mempooBlock.time*1000);
-      b.medianTime = mempooBlock.mediantime;
-      b.nonce = mempooBlock.nonce;
-      b.bits = mempooBlock.bits;
-      b.difficulty = mempooBlock.difficulty;
-      b.chainwork = mempooBlock.chainwork;
-      b.previousBlockHash = mempooBlock.previousblockhash;
-      b.txCount = mempooBlock.tx.length;
-      b.coin = coin;
-      return b;
+      return <Block> {
+        height: mempooBlock.height,
+        hash: mempooBlock.hash,
+        size: mempooBlock.size,
+        version: mempooBlock.version,
+        versionHex: mempooBlock.versionHex,
+        merkleRoot: mempooBlock.merkleroot,
+        time: new Date(mempooBlock.time*1000),
+        medianTime: mempooBlock.mediantime,
+        nonce: mempooBlock.nonce,
+        bits: mempooBlock.bits,
+        difficulty: mempooBlock.difficulty,
+        chainwork: mempooBlock.chainwork,
+        previousBlockHash: mempooBlock.previousblockhash,
+        txCount: mempooBlock.tx.length,
+        coin: coin
+      }
     }
     let args: any[] = [hash];
     let query: string = "SELECT * FROM "+coin.keyspace+".block WHERE hash=?";
@@ -196,29 +195,28 @@ export class CoinResolver {
       {prepare: true}
     );
     let res: Block[] = resultSet.rows.map(row => {
-      let b: Block = new Block();
-      b.height = row.get('height');
-      b.hash = row.get('hash');
-      b.size = row.get("size");
-      b.height = row.get('height');
-      b.version = row.get('version');
-      b.versionHex = row.get("versionhex");
-      b.merkleRoot = row.get("merkleroot");
-      b.time = row.get("time");
-      b.medianTime = row.get("mediantime");
-      b.nonce = row.get("nonce");
-      b.bits = row.get("bits");
-      b.difficulty = row.get("difficulty");
-      b.chainwork = row.get("chainwork");
-      b.previousBlockHash = row.get("previousblockhash");
-      b.txCount = row.get("tx_count");
-      b.coin = coin;
-      return b;
+      return <Block> {
+        height: row.get('height'),
+        hash: row.get('hash'),
+        size: row.get("size"),
+        version: row.get('version'),
+        versionHex: row.get("versionhex"),
+        merkleRoot: row.get("merkleroot"),
+        time: row.get("time"),
+        medianTime: row.get("mediantime"),
+        nonce: row.get("nonce"),
+        bits: row.get("bits"),
+        difficulty: row.get("difficulty"),
+        chainwork: row.get("chainwork"),
+        previousBlockHash: row.get("previousblockhash"),
+        txCount: row.get("tx_count"),
+        coin: coin
+      }
     });
     return res[0];
   }  
 
-  @FieldResolver(returns => PaginatedAddressClusterRichlistResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedAddressClusterRichlistResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async clusterRichlist(@Root() coin: Coin, 
     @Args() {limit, cursor}: ClusterRichlistArgs
   ): Promise<PaginatedAddressClusterRichlistResponse> {
@@ -238,12 +236,13 @@ export class CoinResolver {
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
     let res: AddressClusterRichlist[] = resultSet.rows.map(row => {
-      let e = new AddressClusterRichlist();
-      e.balance = row.get("balance");
-      e.cluster = new AddressCluster();
-      e.cluster.coin = coin;
-      e.cluster.clusterId = row.get("cluster_id");
-      return e;
+      return <AddressClusterRichlist> {
+        balance: row.get("balance"),
+        cluster: <AddressCluster> {
+          coin: coin,
+          clusterId: row.get("cluster_id")
+        }
+      }
     });
     return {
       hasMore: hasMore,
