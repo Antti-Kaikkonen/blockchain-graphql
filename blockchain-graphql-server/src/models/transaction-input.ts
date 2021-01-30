@@ -18,13 +18,13 @@ export class TransactionInput {
     coinbase: string;
 
     @Field({nullable: false, complexity: 1})
-    scriptsig: ScriptSig;
+    scriptSig: ScriptSig;
 
     @Field({nullable: false, complexity: 1})
-    spending_txid: string;
+    spendingTxid: string;
 
     @Field(type => Int, {nullable: false, complexity: 1})
-    spending_index: number;
+    spendingIndex: number;
 
     @Field(type => TransactionOutput, {nullable: true, complexity: 1})
     spentOutput: TransactionOutput;
@@ -40,7 +40,7 @@ export class TransactionInput {
 export class TransactionInputCursor {
 
     @Field(type => Int, {nullable: false})
-    spending_index: number;
+    spendingIndex: number;
 
 }
 

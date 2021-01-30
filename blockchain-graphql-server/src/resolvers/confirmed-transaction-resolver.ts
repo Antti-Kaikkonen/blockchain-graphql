@@ -61,7 +61,7 @@ export class ConfirmedTransactionResolver {
     let res: Transaction[] = resultSet.rows.map(row => {
       let tx: Transaction = new Transaction();
       tx.txid = row.get('txid');
-      tx.locktime = row.get('locktime');
+      tx.lockTime = row.get('locktime');
       tx.size = row.get('size');
       tx.version = row.get('version');
       tx.height = row.get('height');

@@ -19,15 +19,6 @@ export class Address {
   @Field({nullable: false, complexity: 1})
   address!: string;
 
-  @Field(type => PaginatedAddressTransactionResponse, {nullable: false})
-  addressTransactions: PaginatedAddressTransactionResponse;
-
-  @Field(type => PaginatedOHLCResponse, {nullable: false})
-  ohlc: PaginatedOHLCResponse;
-
-  @Field(type => PaginatedAddressBalanceResponse, {nullable: false})
-  addressBalances: PaginatedAddressBalanceResponse;
-
   @Field(type => AddressCluster, {nullable: true})
   guestimatedWallet: AddressCluster;
 

@@ -14,11 +14,11 @@ export class TransactionOutput {
     @Field({nullable: false, complexity: 1})
     value: number;
     @Field({nullable: false, complexity: 1})
-    scriptpubkey: ScriptPubKey;
+    scriptPubKey: ScriptPubKey;
     @Field({nullable: true, complexity: 1})
-    spending_txid: string;
+    spendingTxid: string;
     @Field(type => Int, {nullable: true, complexity: 1})
-    spending_index: number;
+    spendingIndex: number;
 
     @Field(type => TransactionInput, {nullable: true, complexity: 1})
     spendingInput: TransactionInput

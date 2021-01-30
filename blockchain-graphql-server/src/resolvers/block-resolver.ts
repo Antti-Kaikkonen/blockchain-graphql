@@ -23,8 +23,8 @@ export class BlockResolver {
     @Inject("cassandra_client") private client: LimitedCapacityClient
   ) {}
 
-  @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async confirmedTransactions(@Root() block: Block, 
+  @FieldResolver(returns => PaginatedConfirmedTransactionResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async transactions(@Root() block: Block, 
 
     @Args() {cursor, limit}: ConfirmedTransactionArgs
 
@@ -33,7 +33,7 @@ export class BlockResolver {
     let mempoolBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(block.height);
     if (mempoolBlock !== undefined) {
       let res: ConfirmedTransaction[] = [];
-      let fromIndex = cursor === undefined ? 0 : cursor.tx_n+1;
+      let fromIndex = cursor === undefined ? 0 : cursor.txN+1;
       for (let tx_n = fromIndex; tx_n < mempoolBlock.tx.length; tx_n++) {
         if (res.length == limit) {
           return {
@@ -44,7 +44,7 @@ export class BlockResolver {
         let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
         let tx: ConfirmedTransaction = new ConfirmedTransaction();
         tx.height = mempoolTx.height;
-        tx.tx_n = mempoolTx.txN;
+        tx.txN = mempoolTx.txN;
         tx.txid = mempoolTx.txid;
         tx.coin = block.coin;
         res.push(tx);
@@ -58,7 +58,7 @@ export class BlockResolver {
     let query: string = "SELECT * FROM "+block.coin.keyspace+".confirmed_transaction WHERE height=?";
     if (cursor) {
       query += " AND tx_n > ?";
-      args = args.concat([cursor.tx_n]);
+      args = args.concat([cursor.txN]);
     }
     query += " LIMIT ?"
     args.push(limit+1);
@@ -72,7 +72,7 @@ export class BlockResolver {
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
       let tx: ConfirmedTransaction = new ConfirmedTransaction();
       tx.height = row.get('height');
-      tx.tx_n = row.get('tx_n');
+      tx.txN = row.get('tx_n');
       tx.txid = row.get("txid");
       tx.coin = block.coin;
       return tx;

@@ -35,8 +35,8 @@ export class CoinsUpdater {
         coin.keyspace = row.get("key_space");
         this.nameToCoin.set(coin.name, coin);
         let rpc_urls: string[] = row.get("rpc_urls");
-        if (!arraysEqual(coin.rpc_urls, rpc_urls)) {
-            coin.rpc_urls = rpc_urls;
+        if (!arraysEqual(coin.rpcUrls, rpc_urls)) {
+            coin.rpcUrls = rpc_urls;
             if (rpc_urls && rpc_urls.length > 0) {
                 let rpcClient = new RpcClient(rpc_urls, process.env.BLOCKCHAIN_RPC_USERNAME, process.env.BLOCKCHAIN_RPC_PASSWORD);
                 let mempool = new Mempool(rpcClient, this.client, coin);

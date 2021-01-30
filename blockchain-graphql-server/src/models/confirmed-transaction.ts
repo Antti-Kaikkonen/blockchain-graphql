@@ -14,7 +14,7 @@ export class ConfirmedTransaction {
   height!: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  tx_n!: number;
+  txN!: number;
 
   @Field({nullable: false, complexity: 1})
   txid!: string;
@@ -30,7 +30,7 @@ export class ConfirmedTransaction {
 export class ConfirmedTransactionCursor {
 
   @Field(type => Int, {nullable: false})
-  tx_n: number;
+  txN: number;
 
 }
 

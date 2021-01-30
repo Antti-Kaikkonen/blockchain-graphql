@@ -10,7 +10,7 @@ export class AddressClusterDailyBalanceChange {
     date: string;
 
     @Field()
-    balance_change!: number;
+    balanceChange!: number;
     
 }
 

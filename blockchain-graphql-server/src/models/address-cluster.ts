@@ -9,11 +9,5 @@ export class AddressCluster {
     @Field({complexity: 1, nullable: false})
     clusterId: string;
 
-    @Field(type => PaginatedClusterTransactionResponse, {nullable: false})
-    clusterTransactions: PaginatedClusterTransactionResponse;
-
-    @Field(type => PaginatedAddressResponse, {nullable: false})
-    clusterAddresses: PaginatedAddressResponse;
-
     coin: Coin;
 }

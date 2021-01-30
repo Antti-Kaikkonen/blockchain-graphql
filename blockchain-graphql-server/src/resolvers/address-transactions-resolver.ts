@@ -15,7 +15,7 @@ export class AddressTransactionsResolver {
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(@Root() addressTransaction: AddressTransaction, 
   ): Promise<ConfirmedTransaction> {
-    let args: any[] = [addressTransaction.height, addressTransaction.tx_n];
+    let args: any[] = [addressTransaction.height, addressTransaction.txN];
     let query: string = "SELECT * FROM "+addressTransaction.coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
@@ -28,7 +28,7 @@ export class AddressTransactionsResolver {
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
       let tx: ConfirmedTransaction = new ConfirmedTransaction();
       tx.height = row.get('height');
-      tx.tx_n = row.get('tx_n');
+      tx.txN = row.get('tx_n');
       tx.txid = row.get("txid");
       tx.coin = addressTransaction.coin;
       return tx;

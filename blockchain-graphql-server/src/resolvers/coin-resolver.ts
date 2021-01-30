@@ -83,7 +83,7 @@ export class CoinResolver {
       let res: Transaction[] = resultSet.rows.map(row => {
         let tx: Transaction = new Transaction();
         tx.txid = row.get('txid');
-        tx.locktime = row.get('locktime');
+        tx.lockTime = row.get('locktime');
         tx.size = row.get('size');
         tx.version = row.get('version');
         tx.height = row.get('height');
@@ -107,7 +107,7 @@ export class CoinResolver {
       let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
       let tx: ConfirmedTransaction = new ConfirmedTransaction();
       tx.height = mempoolTx.height;
-      tx.tx_n = mempoolTx.txN;
+      tx.txN = mempoolTx.txN;
       tx.txid = mempoolTx.txid;
       tx.coin = coin;
       return tx;
@@ -122,7 +122,7 @@ export class CoinResolver {
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
       let tx: ConfirmedTransaction = new ConfirmedTransaction();
       tx.height = row.get('height');
-      tx.tx_n = row.get('tx_n');
+      tx.txN = row.get('tx_n');
       tx.txid = row.get("txid");
       tx.coin = coin;
       return tx;
@@ -175,16 +175,16 @@ export class CoinResolver {
       b.size = mempooBlock.size;
       b.height = mempooBlock.height;
       b.version = mempooBlock.version;
-      b.versionhex = mempooBlock.versionHex;
-      b.merkleroot = mempooBlock.merkleroot;
+      b.versionHex = mempooBlock.versionHex;
+      b.merkleRoot = mempooBlock.merkleroot;
       b.time = new Date(mempooBlock.time*1000);
-      b.mediantime = mempooBlock.mediantime;
+      b.medianTime = mempooBlock.mediantime;
       b.nonce = mempooBlock.nonce;
       b.bits = mempooBlock.bits;
       b.difficulty = mempooBlock.difficulty;
       b.chainwork = mempooBlock.chainwork;
-      b.previousblockhash = mempooBlock.previousblockhash;
-      b.tx_count = mempooBlock.tx.length;
+      b.previousBlockHash = mempooBlock.previousblockhash;
+      b.txCount = mempooBlock.tx.length;
       b.coin = coin;
       return b;
     }
@@ -202,16 +202,16 @@ export class CoinResolver {
       b.size = row.get("size");
       b.height = row.get('height');
       b.version = row.get('version');
-      b.versionhex = row.get("versionhex");
-      b.merkleroot = row.get("merkleroot");
+      b.versionHex = row.get("versionhex");
+      b.merkleRoot = row.get("merkleroot");
       b.time = row.get("time");
-      b.mediantime = row.get("mediantime");
+      b.medianTime = row.get("mediantime");
       b.nonce = row.get("nonce");
       b.bits = row.get("bits");
       b.difficulty = row.get("difficulty");
       b.chainwork = row.get("chainwork");
-      b.previousblockhash = row.get("previousblockhash");
-      b.tx_count = row.get("tx_count");
+      b.previousBlockHash = row.get("previousblockhash");
+      b.txCount = row.get("tx_count");
       b.coin = coin;
       return b;
     });

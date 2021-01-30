@@ -67,15 +67,15 @@ export class TransactionResolver {
 
 
 
-  @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async vin(@Root() transaction: Transaction, 
+  @FieldResolver(returns => PaginatedTransactionInputResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async inputs(@Root() transaction: Transaction, 
     @Args() {cursor, limit}: TransactionInputArgs
   ): Promise<PaginatedTransactionInputResponse> {
     let mempool = transaction.coin.mempool;
     let mempoolTx = mempool === undefined ? undefined : mempool.txById.get(transaction.txid);
     if (mempoolTx !== undefined) {
       let res: TransactionInput[] = [];
-      let fromIndex = cursor === undefined ? 0 : cursor.spending_index+1;
+      let fromIndex = cursor === undefined ? 0 : cursor.spendingIndex+1;
       for (let spending_index = fromIndex; spending_index < mempoolTx.vin.length; spending_index++) {
         if (res.length == limit) {
           return {
@@ -86,12 +86,12 @@ export class TransactionResolver {
         let rpcVin = mempoolTx.vin[spending_index];
         let vin: TransactionInput = new TransactionInput();
         vin.coinbase = rpcVin.coinbase;
-        vin.scriptsig = rpcVin.scriptSig;
+        vin.scriptSig = rpcVin.scriptSig;
         vin.sequence = rpcVin.sequence;
         vin.txid = rpcVin.txid;
         vin.vout = rpcVin.vout;
-        vin.spending_txid = mempoolTx.txid;
-        vin.spending_index = spending_index;
+        vin.spendingTxid = mempoolTx.txid;
+        vin.spendingIndex = spending_index;
         vin.coin = transaction.coin;
         res.push(vin);
       }
@@ -105,7 +105,7 @@ export class TransactionResolver {
     let query: string = "SELECT * FROM "+transaction.coin.keyspace+".transaction_input WHERE spending_txid=?";
     if (cursor) {
       query += " AND spending_index > ?";
-      args = args.concat([cursor.spending_index]);
+      args = args.concat([cursor.spendingIndex]);
     }
     query += " LIMIT ?"
     args.push(limit+1);
@@ -120,12 +120,12 @@ export class TransactionResolver {
     let res: TransactionInput[] = resultSet.rows.map(row => {
       let vin: TransactionInput = new TransactionInput();
       vin.coinbase = row.get('coinbase');
-      vin.scriptsig = row.get('scriptsig');
+      vin.scriptSig = row.get('scriptsig');
       vin.sequence = row.get('sequence');
       vin.txid = row.get('txid');
       vin.vout = row.get('vout');
-      vin.spending_txid = row.get('spending_txid');
-      vin.spending_index = row.get('spending_index');
+      vin.spendingTxid = row.get('spending_txid');
+      vin.spendingIndex = row.get('spending_index');
       vin.coin = transaction.coin;
       return vin;
     });
@@ -135,8 +135,8 @@ export class TransactionResolver {
     };
   }
 
-  @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async vout(@Root() transaction: Transaction, 
+  @FieldResolver(returns => PaginatedTransactionOutputResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async outputs(@Root() transaction: Transaction, 
     @Args() {cursor, limit}: TransactionOutputArgs
   ): Promise<PaginatedTransactionOutputResponse> {
     let mempool = transaction.coin.mempool;
@@ -160,17 +160,17 @@ export class TransactionResolver {
         let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
         scriptpubkey.asm = rpcVout.scriptPubKey.asm;
         scriptpubkey.hex = rpcVout.scriptPubKey.hex;
-        scriptpubkey.reqsigs = rpcVout.scriptPubKey.reqSigs;
+        scriptpubkey.reqSigs = rpcVout.scriptPubKey.reqSigs;
         scriptpubkey.type = rpcVout.scriptPubKey.type;
         if (rpcVout.scriptPubKey.addresses !== undefined && rpcVout.scriptPubKey.addresses !== null) {
           scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address(address, transaction.coin));
         }
-        vout.scriptpubkey = scriptpubkey;
+        vout.scriptPubKey = scriptpubkey;
         
         let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(vout.txid+vout.n);
         if (spending_inpoint !== undefined) {
-          vout.spending_txid = spending_inpoint.spending_txid;
-          vout.spending_index = spending_inpoint.spending_index;
+          vout.spendingTxid = spending_inpoint.spending_txid;
+          vout.spendingIndex = spending_inpoint.spending_index;
         }
 
         //vout.spending_txid = row.get('spending_txid');
@@ -208,14 +208,14 @@ export class TransactionResolver {
       if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
         scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address(address, transaction.coin));
       }
-      vout.scriptpubkey = scriptpubkey;
-      vout.spending_txid = row.get('spending_txid');
-      vout.spending_index = row.get('spending_index');
-      if (vout.spending_txid === undefined || vout.spending_txid === null) {
+      vout.scriptPubKey = scriptpubkey;
+      vout.spendingTxid = row.get('spending_txid');
+      vout.spendingIndex = row.get('spending_index');
+      if (vout.spendingTxid === undefined || vout.spendingTxid === null) {
         let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(vout.txid+vout.n);
         if (spending_inpoint !== undefined) {
-          vout.spending_txid = spending_inpoint.spending_txid;
-          vout.spending_index = spending_inpoint.spending_index;
+          vout.spendingTxid = spending_inpoint.spending_txid;
+          vout.spendingIndex = spending_inpoint.spending_index;
         }
       }
       vout.coin = transaction.coin;

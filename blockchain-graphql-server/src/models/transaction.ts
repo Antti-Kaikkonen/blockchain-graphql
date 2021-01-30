@@ -23,16 +23,10 @@ export class Transaction {
   version!: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  locktime!: number;
+  lockTime!: number;
 
   @Field({nullable: false, complexity: 1})
   fee: number;
-
-  @Field(type => PaginatedTransactionOutputResponse, {nullable: false})
-  vout: PaginatedTransactionOutputResponse;
-
-  @Field(type => PaginatedTransactionInputResponse, {nullable: false})
-  vin: PaginatedTransactionInputResponse;
 
   @Field(type => BlockHash, {nullable: true})
   blockHash: BlockHash;

@@ -68,7 +68,7 @@ export class AddressResolver {
   }
 
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  @FieldResolver(returns => PaginatedOHLCResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
   async ohlc(@Root() address: Address, 
     @Args() {limit, cursor, interval}: OHLC_Args
   ): Promise<PaginatedOHLCResponse> {
@@ -102,8 +102,8 @@ export class AddressResolver {
     }
   }
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async addressTransactions(@Root() address: Address, 
+  @FieldResolver(returns => PaginatedAddressTransactionResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async transactions(@Root() address: Address, 
     @Args() {limit, cursor}: AddressTransactionsArgs 
   ): Promise<PaginatedAddressTransactionResponse> {
     const originalLimit: number = limit;
@@ -117,7 +117,7 @@ export class AddressResolver {
         let lastIndex = res.findIndex((e) => {
           if (e.timestamp.getTime() === cursor.timestamp.getTime()) {
             if (e.height === cursor.height) {
-              return e.tx_n >= cursor.tx_n;
+              return e.txN >= cursor.txN;
             }
             return e.height > cursor.height;
           }
@@ -133,7 +133,7 @@ export class AddressResolver {
         cursor = { 
           timestamp: res[res.length-1].timestamp,
           height: res[res.length-1].height,
-          tx_n: res[res.length-1].tx_n
+          txN: res[res.length-1].txN
         }
         limit = limit - res.length;
       }
@@ -146,7 +146,7 @@ export class AddressResolver {
       let query: string = "SELECT timestamp, height, tx_n, balance_change FROM "+address.coin.keyspace+".address_transaction WHERE address=?";
       if (cursor) {
         query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
-        args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
+        args = args.concat([cursor.timestamp, cursor.height, cursor.txN]);
       }
       query += " LIMIT ?"
       args.push(limit+1);
@@ -159,8 +159,8 @@ export class AddressResolver {
         let addressTransaction = new AddressTransaction();
         addressTransaction.timestamp = row.get("timestamp");
         addressTransaction.height = row.get("height");
-        addressTransaction.tx_n = row.get("tx_n");
-        addressTransaction.balance_change = row.get("balance_change");
+        addressTransaction.txN = row.get("tx_n");
+        addressTransaction.balanceChange = row.get("balance_change");
         addressTransaction.coin = address.coin;
         return addressTransaction;
       });
@@ -177,7 +177,7 @@ export class AddressResolver {
         );
         let time2Balance: Map<number, number> = new Map();
         resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")));
-        res2.forEach(r => r.balance_after_block = time2Balance.get(r.timestamp.getTime()));
+        res2.forEach(r => r.balanceAfterBlock = time2Balance.get(r.timestamp.getTime()));
         res = res.concat(res2);
       }
 
@@ -195,8 +195,8 @@ export class AddressResolver {
     }
   }
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async addressBalances(@Root() address: Address, 
+  @FieldResolver(returns => PaginatedAddressBalanceResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async balances(@Root() address: Address, 
     @Args() {limit, cursor}: AddressBalancesArgs
   ): Promise<PaginatedAddressBalanceResponse> {
     const originalLimit: number = limit;

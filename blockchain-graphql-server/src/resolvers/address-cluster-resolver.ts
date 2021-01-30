@@ -56,15 +56,15 @@ export class AddressClusterResolver {
 
   static CLUSTER_DAILY_BALANCES_BIN_COUNT: number = 20;
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async clusterTransactions(@Root() cluster: AddressCluster, 
+  @FieldResolver(returns => PaginatedClusterTransactionResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async transactions(@Root() cluster: AddressCluster, 
     @Args() {limit, cursor}: ClusterTransactionsArgs
   ): Promise<PaginatedClusterTransactionResponse> {
     let args: any[] = [cluster.clusterId];
     let query: string = "SELECT timestamp, height, tx_n, balance_change FROM "+cluster.coin.keyspace+".cluster_transaction WHERE cluster_id=?";
     if (cursor) {
       query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
-      args = args.concat([cursor.timestamp, cursor.height, cursor.tx_n]);
+      args = args.concat([cursor.timestamp, cursor.height, cursor.txN]);
     }
     query += " LIMIT ?";
     args.push(limit+1);
@@ -79,8 +79,8 @@ export class AddressClusterResolver {
       let clusterTransaction = new ClusterTransaction();
       clusterTransaction.timestamp = row.get("timestamp");
       clusterTransaction.height = row.get("height");
-      clusterTransaction.tx_n = row.get("tx_n");
-      clusterTransaction.balance_change = row.get("balance_change");
+      clusterTransaction.txN = row.get("tx_n");
+      clusterTransaction.balanceChange = row.get("balance_change");
       clusterTransaction.coin = cluster.coin;
       return clusterTransaction;
     });
@@ -90,8 +90,8 @@ export class AddressClusterResolver {
     };
   }
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async clusterAddresses(@Root() cluster: AddressCluster, 
+  @FieldResolver(returns => PaginatedAddressResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async addresses(@Root() cluster: AddressCluster, 
     @Args() {limit, cursor}: ClusterAddressesArgs
   ): Promise<PaginatedAddressResponse> {
     let args: any[] = [cluster.clusterId];
@@ -139,7 +139,7 @@ export class AddressClusterResolver {
     let res: AddressClusterDailyBalanceChange[] = resultSet.rows.map(row => {
       let e = new AddressClusterDailyBalanceChange();
       e.date = row.get("date");
-      e.balance_change = row.get("balance_change");
+      e.balanceChange = row.get("balance_change");
       return e;
     });
     return {

@@ -1,7 +1,7 @@
 import { Resolver, Args, ArgsType, Field, FieldResolver, Root } from "type-graphql";
 import { Date } from "../models/date";
 import { types } from "cassandra-driver";
-import { RichListCursor, Richlist, PaginatedRichlistResponse } from "../models/richlist";
+import { RichListCursor, RichList, PaginatedRichlistResponse } from "../models/richlist";
 import { Address } from "../models/address";
 import { Inject } from "typedi";
 import { AddressBalanceChange, AddressBalanceChangeCursor, PaginatedAddressBalanceChangeResponse } from "../models/address-balance-change";
@@ -43,8 +43,8 @@ export class DateResolver {
   constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
   }
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async richlist(
+  @FieldResolver(returns => PaginatedRichlistResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async richList(
     @Root() date: Date, 
     @Args() {cursor, limit}: RichlistArgs
   ): Promise<PaginatedRichlistResponse> {
@@ -52,7 +52,7 @@ export class DateResolver {
     let query: string = "SELECT balance, balance_change, address FROM "+date.coin.keyspace+".daily_richlist WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance, balance_change, address) < (?, ?, ?)"
-      args = args.concat([Math.round(cursor.balance), Math.round(cursor.balance_change), cursor.address]);
+      args = args.concat([Math.round(cursor.balance), Math.round(cursor.balanceChange), cursor.address]);
     }
     args.push(limit+1);
     query += " ORDER BY balance DESC, balance_change DESC, address DESC LIMIT ?";
@@ -63,13 +63,13 @@ export class DateResolver {
     );
     let hasMore: boolean = resultSet.rows.length > limit;
     if (hasMore) resultSet.rows.pop();
-    let res: Richlist[] = resultSet.rows.map(row => {
-        let richlist: Richlist = new Richlist();
+    let res: RichList[] = resultSet.rows.map(row => {
+        let richlist: RichList = new RichList();
         let address = new Address(row.get("address"), date.coin);
         address.coin = date.coin;
         richlist.address = address;
         richlist.balance = row.get("balance");
-        richlist.balance_change = row.get("balance_change");
+        richlist.balanceChange = row.get("balance_change");
         return richlist;
     });
     return {
@@ -78,8 +78,8 @@ export class DateResolver {
     };
   }
 
-  @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async top_gainers(@Root() date: Date, 
+  @FieldResolver(returns => PaginatedAddressBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
+  async topGainers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressBalanceChangeArgs
   ): Promise<PaginatedAddressBalanceChangeResponse> {
     let reverse: boolean = false;
@@ -87,7 +87,7 @@ export class DateResolver {
     let query: string = "SELECT address, balance_change FROM "+date.coin.keyspace+".daily_top_gainers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? ">" : "<") + " (?, ?)";
-      args = args.concat([cursor.balance_change, cursor.address]);
+      args = args.concat([cursor.balanceChange, cursor.address]);
     }
     args.push(limit+1);
     if (reverse) {
@@ -106,7 +106,7 @@ export class DateResolver {
         let adressBalanceChange = new AddressBalanceChange();
         let address = new Address(row.get("address"), date.coin);
         adressBalanceChange.address = address;
-        adressBalanceChange.balance_change = row.get("balance_change");
+        adressBalanceChange.balanceChange = row.get("balance_change");
         return adressBalanceChange;
     });
     return {
@@ -115,8 +115,8 @@ export class DateResolver {
     };
   }
 
-  @FieldResolver({complexity: ({ childComplexity, args }) => args.limit * childComplexity})
-  async top_losers(@Root() date: Date, 
+  @FieldResolver(returns => PaginatedAddressBalanceChangeResponse, {complexity: ({ childComplexity, args }) => args.limit * childComplexity})
+  async topLosers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressBalanceChangeArgs
   ): Promise<PaginatedAddressBalanceChangeResponse> {
     let reverse: boolean = false;
@@ -124,7 +124,7 @@ export class DateResolver {
     let query: string = "SELECT address, balance_change FROM "+date.coin.keyspace+".daily_top_losers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, address) " + (reverse ? "<" : ">") + " (?, ?)";
-      args = args.concat([Math.round(cursor.balance_change), cursor.address]);
+      args = args.concat([Math.round(cursor.balanceChange), cursor.address]);
     }
     args.push(limit+1);
     if (reverse) {
@@ -143,7 +143,7 @@ export class DateResolver {
         let adressBalanceChange = new AddressBalanceChange();
         let address = new Address(row.get("address"), date.coin);
         adressBalanceChange.address = address;
-        adressBalanceChange.balance_change = row.get("balance_change");
+        adressBalanceChange.balanceChange = row.get("balance_change");
         return adressBalanceChange;
     });
     return {
@@ -153,14 +153,14 @@ export class DateResolver {
   }
 
   @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async top_cluster_gainers(@Root() date: Date, 
+  async topClusterGainers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressClusterBalanceChangeArgs
   ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
     let args: any[] = [date.date, DateResolver.BINS];
     let query: string = "SELECT balance_change, cluster_id FROM "+date.coin.keyspace+".daily_top_cluster_gainers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, cluster_id) < " + " (?, ?)";
-      args = args.concat([cursor.balance_change, cursor.clusterId]);
+      args = args.concat([cursor.balanceChange, cursor.clusterId]);
     }
     args.push(limit+1); 
     query += " ORDER BY balance_change DESC, cluster_id DESC LIMIT ?";
@@ -176,7 +176,7 @@ export class DateResolver {
         clusterBalanceChange.guestimatedWallet = new AddressCluster();
         clusterBalanceChange.guestimatedWallet.clusterId = row.get("cluster_id");
         clusterBalanceChange.guestimatedWallet.coin = date.coin;
-        clusterBalanceChange.balance_change = row.get("balance_change");
+        clusterBalanceChange.balanceChange = row.get("balance_change");
         return clusterBalanceChange;
     });
     return {
@@ -186,14 +186,14 @@ export class DateResolver {
   }
 
   @FieldResolver(returns => PaginatedAddressClusterBalanceChangeResponse, {complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async top_cluster_losers(@Root() date: Date, 
+  async topClusterLosers(@Root() date: Date, 
     @Args() {cursor, limit}: AddressClusterBalanceChangeArgs
   ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
     let args: any[] = [date.date, DateResolver.BINS];
     let query: string = "SELECT balance_change, cluster_id FROM "+date.coin.keyspace+".daily_top_cluster_losers WHERE date=? AND bin IN ?";
     if (cursor) {
       query += " AND (balance_change, cluster_id) > " + " (?, ?)";
-      args = args.concat([cursor.balance_change, cursor.clusterId]);
+      args = args.concat([cursor.balanceChange, cursor.clusterId]);
     }
     args.push(limit+1); 
     query += " ORDER BY balance_change ASC, cluster_id ASC LIMIT ?";
@@ -209,7 +209,7 @@ export class DateResolver {
         clusterBalanceChange.guestimatedWallet = new AddressCluster();
         clusterBalanceChange.guestimatedWallet.clusterId = row.get("cluster_id");
         clusterBalanceChange.guestimatedWallet.coin = date.coin;
-        clusterBalanceChange.balance_change = row.get("balance_change");
+        clusterBalanceChange.balanceChange = row.get("balance_change");
         return clusterBalanceChange;
     });
     return {

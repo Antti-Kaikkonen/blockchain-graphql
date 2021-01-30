@@ -3,7 +3,7 @@ import { Address } from "./address";
 import { PaginatedResponse } from "./paginated-response";
 
 @ObjectType()
-export class Richlist {
+export class RichList {
 
   @Field({complexity: 1})
   address: Address;
@@ -12,7 +12,7 @@ export class Richlist {
   balance: number;
 
   @Field({complexity: 1})
-  balance_change: number;
+  balanceChange: number;
 
 }
 
@@ -26,12 +26,12 @@ export class RichListCursor {
   balance: number;
 
   @Field({nullable: true, defaultValue: 0})
-  balance_change: number;
+  balanceChange: number;
 
   public static max(): RichListCursor {
     let res = new RichListCursor();
     res.balance = Number.MAX_VALUE;
-    res.balance_change = Number.MAX_VALUE;
+    res.balanceChange = Number.MAX_VALUE;
     res.address = "";
     return res;
   }
@@ -39,7 +39,7 @@ export class RichListCursor {
 }
 
 @ObjectType()
-export class PaginatedRichlistResponse extends PaginatedResponse(Richlist) {
+export class PaginatedRichlistResponse extends PaginatedResponse(RichList) {
   @Field({complexity: 0})
   hasMore: boolean;
 }

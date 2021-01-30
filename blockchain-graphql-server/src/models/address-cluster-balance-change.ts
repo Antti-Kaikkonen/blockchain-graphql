@@ -10,7 +10,7 @@ export class AddressClusterBalanceChange {
     guestimatedWallet: AddressCluster;
 
     @Field({complexity: 1})
-    balance_change!: number;
+    balanceChange!: number;
     
 }
 
@@ -21,7 +21,7 @@ export class AddressClusterBalanceChangeCursor {
     clusterId: string;
 
     @Field({nullable: false})
-    balance_change: number;
+    balanceChange: number;
 
 }
 

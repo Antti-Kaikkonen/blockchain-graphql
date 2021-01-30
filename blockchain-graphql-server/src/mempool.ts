@@ -21,7 +21,7 @@ export class MempoolTx extends RpcTx {
     public toGraphQL(coin: Coin): Transaction {
         let tx: Transaction = new Transaction();
         tx.txid = this.txid;
-        tx.locktime = this.locktime;
+        tx.lockTime = this.locktime;
         tx.size = this.size;
         tx.version = this.version;
         tx.height = this.height;
@@ -304,12 +304,12 @@ export class Mempool {
                 }
                 let aTx = new AddressTransaction();
                 aTx.coin = this.coin;
-                aTx.balance_change = delta/1e8;
+                aTx.balanceChange = delta/1e8;
                 aTx.height = block.height;
-                aTx.tx_n = tx_n;
+                aTx.txN = tx_n;
                 aTx.timestamp = new Date(block.time*1000);
                 let addressBalances = this.addressBalances.get(address);
-                aTx.balance_after_block = addressBalances[addressBalances.length-1].balance;
+                aTx.balanceAfterBlock = addressBalances[addressBalances.length-1].balance;
                 addressTxs.push(aTx);
             });
         }

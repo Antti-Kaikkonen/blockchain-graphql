@@ -33,17 +33,17 @@ export class TransactionInputResolver {
       let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
       scriptpubkey.asm = rpcVout.scriptPubKey.asm;
       scriptpubkey.hex = rpcVout.scriptPubKey.hex;
-      scriptpubkey.reqsigs = rpcVout.scriptPubKey.reqSigs;
+      scriptpubkey.reqSigs = rpcVout.scriptPubKey.reqSigs;
       scriptpubkey.type = rpcVout.scriptPubKey.type;
       if (rpcVout.scriptPubKey.addresses !== undefined && rpcVout.scriptPubKey.addresses !== null) {
         scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address(address, transactionInput.coin));
       }
-      vout.scriptpubkey = scriptpubkey;
+      vout.scriptPubKey = scriptpubkey;
 
       let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(vout.txid+vout.n);
       if (spending_inpoint !== null) {
-        vout.spending_txid = spending_inpoint.spending_txid;
-        vout.spending_index = spending_inpoint.spending_index;
+        vout.spendingTxid = spending_inpoint.spending_txid;
+        vout.spendingIndex = spending_inpoint.spending_index;
       }
       vout.coin = vout.coin;
       return vout;
@@ -64,14 +64,14 @@ export class TransactionInputResolver {
       if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
         scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address(address, transactionInput.coin));
       }
-      vout.scriptpubkey = scriptpubkey;
-      vout.spending_txid = row.get('spending_txid');
-      vout.spending_index = row.get('spending_index');
-      if (vout.spending_txid === undefined || vout.spending_txid === null) {
+      vout.scriptPubKey = scriptpubkey;
+      vout.spendingTxid = row.get('spending_txid');
+      vout.spendingIndex = row.get('spending_index');
+      if (vout.spendingTxid === undefined || vout.spendingTxid === null) {
         let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(vout.txid+vout.n);
         if (spending_inpoint !== null) {
-          vout.spending_txid = spending_inpoint.spending_txid;
-          vout.spending_index = spending_inpoint.spending_index;
+          vout.spendingTxid = spending_inpoint.spending_txid;
+          vout.spendingIndex = spending_inpoint.spending_index;
         }
       }
 
@@ -84,13 +84,13 @@ export class TransactionInputResolver {
   @FieldResolver( {complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async transaction(@Root() transactionInput: TransactionInput, 
   ): Promise<Transaction> {
-    if (transactionInput.spending_txid === null || transactionInput.spending_txid === undefined) return null;
+    if (transactionInput.spendingTxid === null || transactionInput.spendingTxid === undefined) return null;
     let mempool = transactionInput.coin.mempool;
-    let mempoolTx = mempool === undefined ? undefined : mempool.txById.get(transactionInput.spending_txid);
+    let mempoolTx = mempool === undefined ? undefined : mempool.txById.get(transactionInput.spendingTxid);
     if (mempoolTx !== undefined) {
       let tx: Transaction = new Transaction();
       tx.txid = mempoolTx.txid;
-      tx.locktime = mempoolTx.locktime;
+      tx.lockTime = mempoolTx.locktime;
       tx.size = mempoolTx.size;
       tx.version = mempoolTx.version;
       tx.height = mempoolTx.height;
@@ -99,7 +99,7 @@ export class TransactionInputResolver {
       tx.coin = transactionInput.coin;
       return tx;
     }
-    let args: any[] = [transactionInput.spending_txid];
+    let args: any[] = [transactionInput.spendingTxid];
     let query: string = "SELECT * FROM "+transactionInput.coin.keyspace+".transaction WHERE txid=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
@@ -109,7 +109,7 @@ export class TransactionInputResolver {
     let res: Transaction[] = resultSet.rows.map(row => {
       let tx: Transaction = new Transaction();
       tx.txid = row.get('txid');
-      tx.locktime = row.get('locktime');
+      tx.lockTime = row.get('locktime');
       tx.size = row.get('size');
       tx.version = row.get('version');
       tx.height = row.get('height');

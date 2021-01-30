@@ -20,16 +20,16 @@ export class Block {
   version: number;
 
   @Field({nullable: false, complexity: 1})
-  versionhex!: string;
+  versionHex!: string;
 
   @Field({nullable: false, complexity: 1})
-  merkleroot!: string;
+  merkleRoot!: string;
 
   @Field({nullable: false, complexity: 1})
   time!: Date;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  mediantime!: number;
+  medianTime!: number;
 
   @Field(type => Int, {nullable: false, complexity: 1})
   nonce!: number;
@@ -44,13 +44,10 @@ export class Block {
   chainwork!: string;
 
   @Field({nullable: false, complexity: 1})
-  previousblockhash!: string;
+  previousBlockHash!: string;
 
   @Field(type => Int, {nullable: false, complexity: 1})
-  tx_count: number;
-
-  @Field(type => PaginatedConfirmedTransactionResponse, {nullable: false})
-  confirmedTransactions: PaginatedConfirmedTransactionResponse;
+  txCount: number;
 
   coin: Coin;
 

@@ -9,7 +9,7 @@ export class AddressBalanceChange {
     address: Address;
 
     @Field({complexity: 1})
-    balance_change!: number;
+    balanceChange!: number;
     
 }
 
@@ -20,7 +20,7 @@ export class AddressBalanceChangeCursor {
     address: string;
 
     @Field({nullable: false})
-    balance_change: number;
+    balanceChange: number;
 
 }
 

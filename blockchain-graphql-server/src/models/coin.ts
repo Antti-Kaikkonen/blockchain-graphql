@@ -12,6 +12,6 @@ export class Coin {
 
     mempool: Mempool;
 
-    rpc_urls: string[];
+    rpcUrls: string[];
     
 }    

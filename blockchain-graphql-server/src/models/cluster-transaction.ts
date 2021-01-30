@@ -13,10 +13,10 @@ export class ClusterTransaction {
   height!: number;
 
   @Field(type => Int, {complexity: 1})
-  tx_n!: number;
+  txN!: number;
 
   @Field({complexity: 1})
-  balance_change!: number;
+  balanceChange!: number;
 
   @Field({nullable: false})
   confirmedTransaction: ConfirmedTransaction;
@@ -35,7 +35,7 @@ export class ClusterTransactionCursor {
   height: number;
 
   @Field(type=>Int)
-  tx_n: number;
+  txN: number;
 
 }
 

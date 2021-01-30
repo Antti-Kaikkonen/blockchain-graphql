@@ -15,7 +15,7 @@ export class ClusterTransactionResolver {
   @FieldResolver({complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(@Root() clusterTransaction: ClusterTransaction, 
   ): Promise<ConfirmedTransaction> {
-    let args: any[] = [clusterTransaction.height, clusterTransaction.tx_n];
+    let args: any[] = [clusterTransaction.height, clusterTransaction.txN];
     let query: string = "SELECT * FROM "+clusterTransaction.coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
       query, 
@@ -28,7 +28,7 @@ export class ClusterTransactionResolver {
     let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
       let tx: ConfirmedTransaction = new ConfirmedTransaction();
       tx.height = row.get('height');
-      tx.tx_n = row.get('tx_n');
+      tx.txN = row.get('tx_n');
       tx.txid = row.get("txid");
       tx.coin = clusterTransaction.coin;
       return tx;

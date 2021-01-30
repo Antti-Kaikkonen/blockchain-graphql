@@ -17,13 +17,13 @@ export class AddressTransaction {
   height!: number;
 
   @Field(type => Int, {complexity: 1})
-  tx_n!: number;
+  txN!: number;
 
   @Field({complexity: 1})
-  balance_change!: number;
+  balanceChange!: number;
 
   @Field({nullable: false, complexity: 1})
-  balance_after_block: number;
+  balanceAfterBlock: number;
 
   coin: Coin;
 
@@ -39,7 +39,7 @@ export class AddressTransactionCursor {
   height: number;
 
   @Field(type=>Int)
-  tx_n: number;
+  txN: number;
 
 }
 
