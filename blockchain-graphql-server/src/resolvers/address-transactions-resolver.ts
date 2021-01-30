@@ -4,6 +4,7 @@ import { Inject } from 'typedi';
 import { AddressTransaction } from "../models/address-transaction";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { LimitedCapacityClient } from "../limited-capacity-client";
+import { MempoolBlock } from "../mempool";
 
 @Resolver(of => AddressTransaction)
 export class AddressTransactionsResolver {
@@ -15,7 +16,16 @@ export class AddressTransactionsResolver {
   @FieldResolver(returns => ConfirmedTransaction, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(@Root() addressTransaction: AddressTransaction, 
   ): Promise<ConfirmedTransaction> {
-    //TODO: check mempool first
+    let mempoolBlock: MempoolBlock = addressTransaction.coin.mempool?.blockByHeight.get(addressTransaction.height);
+    if (mempoolBlock !== undefined) {
+      let tx = mempoolBlock.tx[addressTransaction.txN];
+      return <ConfirmedTransaction>{
+        height: tx.height, 
+        txN: tx.txN, 
+        txid: tx.txid, 
+        coin: addressTransaction.coin
+      };
+    }
     let args: any[] = [addressTransaction.height, addressTransaction.txN];
     let query: string = "SELECT * FROM "+addressTransaction.coin.keyspace+".confirmed_transaction WHERE height=? AND tx_n=?";
     let resultSet: types.ResultSet = await this.client.execute(
