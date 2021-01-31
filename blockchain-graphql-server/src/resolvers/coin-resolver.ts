@@ -68,8 +68,7 @@ export class CoinResolver {
 
     @FieldResolver(returns => Transaction, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
     async transaction(@Root() coin: Coin, @Arg("txid") txid: string): Promise<Transaction> {
-      let mempool = coin.mempool;
-      let mempoolTransaction = mempool === undefined ? undefined : mempool.txById.get(txid);
+      let mempoolTransaction = coin.mempool?.txById.get(txid);
       if (mempoolTransaction !== undefined) {
         return mempoolTransaction.toGraphQL(coin);
       }
@@ -101,8 +100,7 @@ export class CoinResolver {
     @Arg("height", type => Int) height: number, 
     @Arg("tx_n", type => Int) tx_n: number
   ): Promise<ConfirmedTransaction> {
-    let mempool = coin.mempool;
-    let mempoolBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
+    let mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height);
     if (mempoolBlock !== undefined) {
       let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
       return <ConfirmedTransaction> {
@@ -135,8 +133,7 @@ export class CoinResolver {
     @Root() coin: Coin,
     @Arg("height", type => Int) height: number
   ): Promise<BlockHash> {
-    let mempool = coin.mempool;
-    let mempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(height);
+    let mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height);
     if (mempoolBlock !== undefined) {
       return <BlockHash> {
         hash: mempoolBlock.hash,
@@ -166,8 +163,7 @@ export class CoinResolver {
     @Root() coin: Coin,
     @Arg("hash") hash: string
   ): Promise<Block> {
-    let mempool = coin.mempool;
-    let mempooBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHash.get(hash);
+    let mempooBlock: MempoolBlock = coin.mempool?.blockByHash.get(hash);
     if (mempooBlock !== undefined) {
       return <Block> {
         height: mempooBlock.height,

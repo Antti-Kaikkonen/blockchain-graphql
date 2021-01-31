@@ -107,11 +107,7 @@ export class AddressResolver {
     @Args() {limit, cursor}: AddressTransactionsArgs 
   ): Promise<PaginatedAddressTransactionResponse> {
     const originalLimit: number = limit;
-    let mempool = address.coin.mempool;
-    let res: AddressTransaction[];
-    if (mempool !== undefined) {
-      res = mempool.addressTransactions.get(address.address);
-    }
+    let res: AddressTransaction[] = address.coin.mempool?.addressTransactions.get(address.address)
     if (res !== undefined) {
       if (cursor !== undefined) {
         let lastIndex = res.findIndex((e) => {
@@ -200,11 +196,7 @@ export class AddressResolver {
     @Args() {limit, cursor}: AddressBalancesArgs
   ): Promise<PaginatedAddressBalanceResponse> {
     const originalLimit: number = limit;
-    let mempool = address.coin.mempool;
-    let res: AddressBalance[];
-    if (mempool !== undefined) {
-      res = mempool.addressBalances.get(address.address);
-    }
+    let res: AddressBalance[] = address.coin.mempool?.addressBalances.get(address.address);
     if (res !== undefined) {
       if (cursor !== undefined) {
         let lastIndex = res.findIndex((e) => e.timestamp >= cursor.timestamp);//TODO: use binary search instead

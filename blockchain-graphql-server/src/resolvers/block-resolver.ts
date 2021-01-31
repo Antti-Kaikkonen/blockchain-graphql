@@ -29,8 +29,7 @@ export class BlockResolver {
     @Args() {cursor, limit}: ConfirmedTransactionArgs
 
   ): Promise<PaginatedConfirmedTransactionResponse> {
-    let mempool = block.coin.mempool;
-    let mempoolBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(block.height);
+    let mempoolBlock: MempoolBlock = block.coin.mempool?.blockByHeight.get(block.height);
     if (mempoolBlock !== undefined) {
       let res: ConfirmedTransaction[] = [];
       let fromIndex = cursor === undefined ? 0 : cursor.txN+1;

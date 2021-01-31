@@ -19,8 +19,7 @@ export class TransactionOutputResolver {
   async spendingInput(@Root() transactionOutput: TransactionOutput, 
   ): Promise<TransactionInput> {
     if (transactionOutput.spendingTxid === null || transactionOutput.spendingTxid === undefined) return null;
-    let mempool = transactionOutput.coin.mempool;
-    let mempoolTx: MempoolTx = mempool === undefined ? undefined : mempool.txById.get(transactionOutput.spendingTxid);
+    let mempoolTx: MempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.spendingTxid);
     if (mempoolTx !== undefined) {
       let spending_input: RpcVin = mempoolTx.vin[transactionOutput.spendingIndex];
       let vin: TransactionInput = new TransactionInput({
@@ -63,8 +62,7 @@ export class TransactionOutputResolver {
   async transaction(@Root() transactionOutput: TransactionOutput, 
   ): Promise<Transaction> {
     if (transactionOutput.txid === null || transactionOutput.txid === undefined) return null;
-    let mempool = transactionOutput.coin.mempool;
-    let mempoolTx = mempool === undefined ? undefined : mempool.txById.get(transactionOutput.txid);
+    let mempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.txid);
     if (mempoolTx !== undefined) {
       return <Transaction> {
         txid: mempoolTx.txid,

@@ -1,4 +1,4 @@
-import { Resolver, FieldResolver, Root, Field, ArgsType, Args, Arg, Query } from "type-graphql";
+import { Resolver, FieldResolver, Root, Field, ArgsType, Args } from "type-graphql";
 import { types } from "cassandra-driver";
 import { Inject } from "typedi";
 import { Transaction } from "../models/transaction";
@@ -39,8 +39,7 @@ export class TransactionResolver {
   async blockHash(@Root() transaction: Transaction, 
   ): Promise<BlockHash> {
     if (transaction.height === undefined || transaction.height === null) return null;
-    let mempool = transaction.coin.mempool;
-    let mempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(transaction.height);
+    let mempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
     if (mempoolBlock !== undefined) {
       return <BlockHash> {
         hash: mempoolBlock.hash,
@@ -71,8 +70,7 @@ export class TransactionResolver {
   async inputs(@Root() transaction: Transaction, 
     @Args() {cursor, limit}: TransactionInputArgs
   ): Promise<PaginatedTransactionInputResponse> {
-    let mempool = transaction.coin.mempool;
-    let mempoolTx = mempool === undefined ? undefined : mempool.txById.get(transaction.txid);
+    let mempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
     if (mempoolTx !== undefined) {
       let res: TransactionInput[] = [];
       let fromIndex = cursor === undefined ? 0 : cursor.spendingIndex+1;
@@ -138,8 +136,7 @@ export class TransactionResolver {
   async outputs(@Root() transaction: Transaction, 
     @Args() {cursor, limit}: TransactionOutputArgs
   ): Promise<PaginatedTransactionOutputResponse> {
-    let mempool = transaction.coin.mempool;
-    let mempoolTx: MempoolTx = mempool === undefined ? undefined : mempool.txById.get(transaction.txid);
+    let mempoolTx: MempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
     if (mempoolTx !== undefined) {
       let res: TransactionOutput[] = [];
       let fromIndex = cursor === undefined ? 0 : cursor.n+1;
@@ -162,7 +159,7 @@ export class TransactionResolver {
         
         let spendingTxid: string;
         let spendingIndex: number;
-        let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(mempoolTx.txid+n);
+        let spending_inpoint = transaction.coin.mempool.outpointToInpoint.get(mempoolTx.txid+n);
         if (spending_inpoint !== undefined) {
           spendingTxid= spending_inpoint.spending_txid;
           spendingIndex = spending_inpoint.spending_index;
@@ -209,7 +206,7 @@ export class TransactionResolver {
       let spendingTxid: string = row.get('spending_txid');
       let spendingIndex: number = row.get('spending_index');
       if (spendingTxid === undefined || spendingTxid === null) {
-        let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(transaction.txid+n);
+        let spending_inpoint = transaction.coin.mempool?.outpointToInpoint.get(transaction.txid+n);
         if (spending_inpoint !== undefined) {
           spendingTxid = spending_inpoint.spending_txid;
           spendingIndex = spending_inpoint.spending_index;

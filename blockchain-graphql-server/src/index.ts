@@ -1,9 +1,9 @@
 import "reflect-metadata";
-import { Client, types } from "cassandra-driver";
-import { buildSchema, PubSubEngine } from "type-graphql";
+import { Client } from "cassandra-driver";
+import { buildSchema } from "type-graphql";
 import { RichlistResolver } from './resolvers/richlist-resolver';
 import { AddressTransactionsResolver } from './resolvers/address-transactions-resolver';
-import { ApolloServer, PubSub } from "apollo-server";
+import { ApolloServer } from "apollo-server";
 import { Container } from "typedi";
 import { AddressResolver } from "./resolvers/address-resolver";
 import { DateResolver } from "./resolvers/date-resolver";
@@ -22,8 +22,6 @@ import { AddressClusterResolver } from "./resolvers/address-cluster-resolver";
 import { ClusterTransactionResolver } from "./resolvers/cluster-transaction-resolver";
 import { config } from "dotenv";
 import { CoinResolver } from "./resolvers/coin-resolver";
-import { RpcClient } from "./rpc-client";
-import { Mempool } from "./mempool";
 import { Coin } from "./models/coin";
 import { CoinsUpdater } from "./coins-updater";
 import { LimitedCapacityClient } from "./limited-capacity-client";
@@ -124,7 +122,7 @@ async function run() {
                   if (complexity > 0) {
                     //Your HTTP server (e.g NGINX or Apache) must send client IP-address with this header for rate limiting to take effect. 
                     let x_forwarded_for: string = requestContext.request.http.headers.get('X-Forwarded-For');
-                    if (x_forwarded_for !== undefined) {
+                    if (x_forwarded_for !== undefined && x_forwarded_for !== null) {
                       let ips: string[] = x_forwarded_for.split(", ");
                       if (ips.length > 0) {
                         const ip: string = ips[ips.length-1];

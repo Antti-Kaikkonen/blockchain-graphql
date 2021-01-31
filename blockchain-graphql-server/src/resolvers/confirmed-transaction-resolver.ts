@@ -1,7 +1,7 @@
-import { Resolver, FieldResolver, Root, Query, Arg } from "type-graphql";
-import { types, Client } from "cassandra-driver";
+import { Resolver, FieldResolver, Root } from "type-graphql";
+import { types } from "cassandra-driver";
 import { Inject } from "typedi";
-import { ConfirmedTransaction, ConfirmedTransactionCursor } from "../models/confirmed-transaction";
+import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { Transaction } from "../models/transaction";
 import { BlockHash } from "../models/block_hash";
 import { MempoolBlock, MempoolTx } from "../mempool";
@@ -17,8 +17,7 @@ export class ConfirmedTransactionResolver {
   @FieldResolver(returns => BlockHash, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async blockHash(@Root() transaction: ConfirmedTransaction, 
   ): Promise<BlockHash> {
-    let mempool = transaction.coin.mempool;
-    let mempoolBlock: MempoolBlock = mempool === undefined ? undefined : mempool.blockByHeight.get(transaction.height);
+    let mempoolBlock: MempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
     if (mempoolBlock !== undefined) {
       return <BlockHash> {
         hash: mempoolBlock.hash,
@@ -46,8 +45,7 @@ export class ConfirmedTransactionResolver {
   @FieldResolver(returns => Transaction, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async transaction(@Root() transaction: ConfirmedTransaction, 
   ): Promise<Transaction> {
-    let mempool = transaction.coin.mempool;
-    let mempoolTransaction: MempoolTx = mempool === undefined ? undefined : mempool.txById.get(transaction.txid);
+    let mempoolTransaction: MempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
     if (mempoolTransaction !== undefined) {
       return mempoolTransaction.toGraphQL(transaction.coin);
     }

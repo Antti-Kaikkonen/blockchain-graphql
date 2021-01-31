@@ -29,16 +29,6 @@ export class MempoolTx extends RpcTx {
             fee: this.fee,
             coin: coin
         };
-        /*let tx: Transaction = new Transaction();
-        tx.txid = this.txid;
-        tx.lockTime = this.locktime;
-        tx.size = this.size;
-        tx.version = this.version;
-        tx.height = this.height;
-        tx.txN = this.txN;
-        tx.fee = this.fee;
-        tx.coin = coin;
-        return tx;*/
     }
 }
 
@@ -299,7 +289,6 @@ export class Mempool {
             }
         }));
     }
-
 
     private async updateAddressTransactions(block: MempoolBlock, blockTxDetails: TxDetails[], blockAddressDeltas: Map<string, number>): Promise<void> {
         for (let tx_n = 0; tx_n < block.tx.length; tx_n++) {//update address transactions

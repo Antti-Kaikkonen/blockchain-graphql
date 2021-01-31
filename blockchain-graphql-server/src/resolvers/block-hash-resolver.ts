@@ -15,8 +15,7 @@ export class BlockHashResolver {
   @FieldResolver(returns => Block, {nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async block(@Root() blockHash: BlockHash, 
   ): Promise<Block> {
-    let mempool = blockHash.coin.mempool;
-    let mempooBlock = mempool === undefined ? undefined : mempool.blockByHash.get(blockHash.hash);
+    let mempooBlock = blockHash.coin.mempool?.blockByHash.get(blockHash.hash);
     if (mempooBlock !== undefined) {
       return <Block> {
         height: mempooBlock.height,

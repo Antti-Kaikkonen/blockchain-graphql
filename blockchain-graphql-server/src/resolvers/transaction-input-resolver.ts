@@ -20,9 +20,7 @@ export class TransactionInputResolver {
   async spentOutput(@Root() transactionInput: TransactionInput, 
   ): Promise<TransactionOutput> {
     if (transactionInput.txid === null || transactionInput.txid === undefined) return null;
-    transactionInput.coin.mempool
-    let mempool = transactionInput.coin.mempool;
-    let mempoolTx = mempool === undefined ? undefined : mempool.txById.get(transactionInput.txid);
+    let mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.txid);
     if (mempoolTx !== undefined) {
       let rpcVout: RpcVout = mempoolTx.vout[transactionInput.vout];
       
@@ -40,7 +38,7 @@ export class TransactionInputResolver {
         scriptPubKey: scriptpubkey, 
         coin: transactionInput.coin
       });
-      let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(vout.txid+vout.n);
+      let spending_inpoint = transactionInput.coin.mempool.outpointToInpoint.get(vout.txid+vout.n);
       if (spending_inpoint !== null) {
         vout.spendingTxid = spending_inpoint.spending_txid;
         vout.spendingIndex = spending_inpoint.spending_index;
@@ -62,7 +60,7 @@ export class TransactionInputResolver {
       let spendingTxid: string = row.get('spending_txid');
       let spendingIndex: number = row.get('spending_index');
       if (spendingTxid === undefined || spendingTxid === null) {
-        let spending_inpoint = mempool === undefined ? undefined : mempool.outpointToInpoint.get(transactionInput.txid+transactionInput.vout);
+        let spending_inpoint = transactionInput.coin.mempool?.outpointToInpoint.get(transactionInput.txid+transactionInput.vout);
         if (spending_inpoint !== null) {
           spendingTxid = spending_inpoint.spending_txid;
           spendingIndex = spending_inpoint.spending_index;
@@ -85,8 +83,7 @@ export class TransactionInputResolver {
   async transaction(@Root() transactionInput: TransactionInput, 
   ): Promise<Transaction> {
     if (transactionInput.spendingTxid === null || transactionInput.spendingTxid === undefined) return null;
-    let mempool = transactionInput.coin.mempool;
-    let mempoolTx = mempool === undefined ? undefined : mempool.txById.get(transactionInput.spendingTxid);
+    let mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.spendingTxid);
     if (mempoolTx !== undefined) {
       return <Transaction> {
         txid: mempoolTx.txid,
