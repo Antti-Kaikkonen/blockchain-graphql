@@ -68,6 +68,14 @@ async function run() {
         container: Container,
         dateScalarMode: "timestamp"
     });
+
+    const ipToQueries: Map<string, number> = new Map();
+    let clearTime = new Date().getTime() + 60000;
+    setInterval(() => {
+      ipToQueries.clear();
+      clearTime = new Date().getTime() + 60000;
+    }, 60000);
+
     const server = new ApolloServer({
         schema,
         playground: true,
@@ -75,7 +83,7 @@ async function run() {
         plugins: [
             {
               requestDidStart: () => ({
-                didResolveOperation({ request, document }) {
+                didResolveOperation(requestContext) {
                   /**
                    * This provides GraphQL query analysis to be able to react on complex queries to your GraphQL server.
                    * This can be used to protect your GraphQL servers against resource exhaustion and DoS attacks.
@@ -87,11 +95,11 @@ async function run() {
                     // To calculate query complexity properly,
                     // we have to check only the requested operation
                     // not the whole document that may contains multiple operations
-                    operationName: request.operationName,
+                    operationName: requestContext.request.operationName,
                     // The GraphQL query document
-                    query: document,
+                    query: requestContext.document,
                     // The variables for our GraphQL query
-                    variables: request.variables,
+                    variables: requestContext.request.variables,
                     // Add any number of estimators. The estimators are invoked in order, the first
                     // numeric value that is being returned by an estimator is used as the field complexity.
                     // If no estimator returns a value, an exception is raised.
@@ -108,11 +116,30 @@ async function run() {
                   // like compare it with max and throw error when the threshold is reached.
                   if (complexity >= 100000) {
                     throw new Error(
-                      `Sorry, too complicated query! ${complexity} is over 100000 that is the max allowed complexity.`,
+                      `Sorry, too complicated query! ${complexity} is over 100000 that is the max allowed complexity.`
                     );
                   }
                   // And here we can e.g. subtract the complexity point from hourly API calls limit.
                   console.log("Used query complexity points:", complexity);
+                  if (complexity > 0) {
+                    //Your HTTP server (e.g NGINX or Apache) must send client IP-address with this header for rate limiting to take effect. 
+                    let x_forwarded_for: string = requestContext.request.http.headers.get('X-Forwarded-For');
+                    if (x_forwarded_for !== undefined) {
+                      let ips: string[] = x_forwarded_for.split(", ");
+                      if (ips.length > 0) {
+                        const ip: string = ips[ips.length-1];
+                        const oldValue = ipToQueries.get(ip);
+                        const newValue = oldValue === undefined ? 1 : oldValue + 1;
+                        ipToQueries.set(ip, newValue);
+                        if (newValue > 600) {
+                          const secondsLeft = Math.ceil( (clearTime-new Date().getTime()) / 1000);
+                          throw new Error(
+                            `Sorry, too many queries from your IP address. Try again in ${secondsLeft} seconds`,
+                          );
+                        }
+                      }
+                    }
+                  }
                 },
               }),
             },
