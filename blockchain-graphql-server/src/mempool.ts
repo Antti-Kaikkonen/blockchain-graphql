@@ -264,6 +264,7 @@ export class Mempool {
         this.blockByHash.delete(block.hash);
         block.tx.forEach(tx => {
             this.txById.delete(tx.txid); 
+            tx.vin.forEach(vin => this.outpointToInpoint.delete(vin.txid+vin.vout));
         });
     }
 
