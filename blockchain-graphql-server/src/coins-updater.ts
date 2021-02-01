@@ -35,18 +35,19 @@ export class CoinsUpdater {
         coin.keyspace = row.get("key_space");
         this.nameToCoin.set(coin.name, coin);
         let rpc_urls: string[] = row.get("rpc_urls");
-        if (!arraysEqual(coin.rpcUrls, rpc_urls)) {
+        let zmq_addresses: string[] = row.get("zmq_addresses");
+        if (!arraysEqual(coin.rpcUrls, rpc_urls) || !arraysEqual(coin.zmq_addresses, zmq_addresses)) {
             coin.rpcUrls = rpc_urls;
+            coin.zmq_addresses = zmq_addresses;
+            if (coin.mempool) {
+                coin.mempool.stop();
+                delete coin.mempool;
+            }
             if (rpc_urls && rpc_urls.length > 0) {
                 let rpcClient = new RpcClient(rpc_urls, process.env.BLOCKCHAIN_RPC_USERNAME, process.env.BLOCKCHAIN_RPC_PASSWORD);
                 let mempool = new Mempool(rpcClient, this.client, coin);
                 await mempool.start();
                 coin.mempool = mempool;
-            } else {
-                if (coin.mempool) {
-                    coin.mempool.stop();
-                    delete coin.mempool;
-                }
             }
         }
     }

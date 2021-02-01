@@ -13,5 +13,7 @@ export class Coin {
     mempool: Mempool;
 
     rpcUrls: string[];
+
+    zmq_addresses: string[];
     
 }    

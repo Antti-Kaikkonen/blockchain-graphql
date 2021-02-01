@@ -1,5 +1,6 @@
 
 import { types } from "cassandra-driver";
+import { Subscriber } from "zeromq";
 import { LimitedCapacityClient } from "./limited-capacity-client";
 import { AddressBalance } from "./models/address-balance";
 import { AddressTransaction } from "./models/address-transaction";
@@ -11,7 +12,7 @@ const BLOCKS_COUNT: number = 10;
 
 export class MempoolTx extends RpcTx {
 
-    constructor(rpcTx: RpcTx, public height: number, public txN: number) {
+    constructor(rpcTx: RpcTx, public height?: number, public txN?: number) {
         super();
         Object.assign(this, rpcTx);
     }
@@ -63,14 +64,39 @@ export class Mempool {
     
     public time: number;
     public height: number;
-    public txById : Map<String, MempoolTx> = new Map();
-    public blockByHash : Map<String, MempoolBlock> = new Map();
-    public blockByHeight : Map<Number, MempoolBlock> = new Map();
+    public txById : Map<string, MempoolTx> = new Map();
+    public blockByHash : Map<string, MempoolBlock> = new Map();
+    public blockByHeight : Map<number, MempoolBlock> = new Map();
     public outpointToInpoint: Map<string, {spending_txid: string, spending_index: number}> = new Map();
     public addressBalances : Map<String, AddressBalance[]> = new Map();
-    public addressTransactions : Map<String, AddressTransaction[]> = new Map();
+    public addressTransactions : Map<string, AddressTransaction[]> = new Map();
+    public unconfirmedTransactions: Map<string, RpcTx> = new Map();
 
     private timeout: NodeJS.Timeout;
+    private sock: Subscriber;
+
+    private async runZmq() {
+        let mempoolTxids: string[] = await this.rpcClient.getRawMempool();
+        for (let txid of mempoolTxids) {
+            let tx: RpcTx = await this.rpcClient.getRawTransaction(txid);
+            let mempoolTx: MempoolTx = new MempoolTx(tx);
+        }
+        this.sock = new Subscriber();
+        this.sock.connect(this.coin.zmq_addresses[0]);
+        this.sock.subscribe("hashtx");
+        for await (const [topic, msg] of this.sock) {
+            let topicStr: string = topic.toString("ascii");
+            let txid: string = msg.toString("hex");
+            console.log(`Received txid ${txid}`);
+            if (!this.unconfirmedTransactions.has(txid)) {
+                setTimeout(async () => {
+                    let rpcTx: RpcTx = await this.rpcClient.getRawTransaction(txid);
+                    this.unconfirmedTransactions.set(txid, rpcTx);
+                    console.log("RPCTX", rpcTx);
+                }, 1000);
+            }
+        }
+    }
 
     private async updater() {
         try {
@@ -85,11 +111,16 @@ export class Mempool {
 
     public async start(): Promise<void> {
         await this.updater();
+        if (this.coin.zmq_addresses && this.coin.zmq_addresses.length > 0) {
+            console.log("Starting "+this.coin.name+" zmq @ "+this.coin.zmq_addresses[0])
+            //this.runZmq();
+        }
     }
 
 
     public stop(): void {
         clearTimeout(this.timeout);
+        this.sock.close();
     }
 
     private blocksTxDetails(blocks: MempoolBlock[]): Promise<TxDetails[][]> {

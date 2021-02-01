@@ -184,6 +184,68 @@ export class RpcClient {
         });
     }
 
+    public getRawTransaction(txid: string): Promise<RpcTx> {
+        return new Promise<RpcTx>((resolve, reject) => {
+            let req = http.request({
+                hostname: this.rpc_url.hostname,
+                port: this.rpc_url.port,
+                protocol: this.rpc_url.protocol,
+                auth: this.rpc_username + ":" + this.rpc_password,
+                method: "POST"
+            }, (res: http.IncomingMessage) => {
+                let result = "";
+                res.on('data', (d) => {
+                    result+=d;
+                })
+                res.on('end', () => {
+                    let obj: RpcResponse<RpcTx> = JSON.parse(result);
+                    if (obj.error) {
+                        reject(obj.error.message);
+                    } else {
+                        resolve(obj.result);
+                    }
+                });
+            });
+    
+            req.on('error', (error: Error) => {
+                reject(error);
+            });
+            req.write(JSON.stringify({method:"getrawtransaction", params:[txid, 2]}));
+            req.end();
+        });
+    }
+
+    public getRawMempool(): Promise<string[]> {
+        return new Promise<string[]>((resolve, reject) => {
+            let req = http.request({
+                hostname: this.rpc_url.hostname,
+                port: this.rpc_url.port,
+                protocol: this.rpc_url.protocol,
+                auth: this.rpc_username + ":" + this.rpc_password,
+                method: "POST"
+            }, (res: http.IncomingMessage) => {
+                let result = "";
+                res.on('data', (d) => {
+                    result+=d;
+                })
+                res.on('end', () => {
+                    let obj: RpcResponse<string[]> = JSON.parse(result);
+                    if (obj.error) {
+                        reject(obj.error.message);
+                    } else {
+                        resolve(obj.result);
+                    }
+                });
+            });
+    
+            req.on('error', (error: Error) => {
+                reject(error);
+            });
+            req.write(JSON.stringify({method:"getrawmempool", params:[]}));
+            req.end();
+        });
+    }
+
     public getMempool(): Promise<RpcMempool> {
         return new Promise<RpcMempool>((resolve, reject) => {
             let req = http.request({
