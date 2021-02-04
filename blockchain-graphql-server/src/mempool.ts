@@ -1,5 +1,6 @@
 
 import { types } from "cassandra-driver";
+import { Transform, TransformCallback, Writable } from "stream";
 import { Subscriber } from "zeromq";
 import { LimitedCapacityClient } from "./limited-capacity-client";
 import { AddressBalance } from "./models/address-balance";
@@ -70,30 +71,71 @@ export class Mempool {
     public outpointToInpoint: Map<string, {spending_txid: string, spending_index: number}> = new Map();
     public addressBalances : Map<String, AddressBalance[]> = new Map();
     public addressTransactions : Map<string, AddressTransaction[]> = new Map();
-    public unconfirmedTransactions: Map<string, RpcTx> = new Map();
+    public unconfirmedTxids: Set<string> = new Set();
 
     private timeout: NodeJS.Timeout;
     private sock: Subscriber;
 
     private async runZmq() {
+        console.log("runZmq()");
         let mempoolTxids: string[] = await this.rpcClient.getRawMempool();
+        let txidFetcher = new Transform({objectMode: true, transform: async (txid: string, encoding: BufferEncoding, callback: TransformCallback) => {
+            const p = new Promise(async (resolve, reject) => {
+                while(true) {
+                    try {
+                        resolve(await this.rpcClient.getRawTransaction(txid));
+                        break;
+                    } catch(err) {
+                        //console.log("retry");
+                        await new Promise((resolve, reject) => {
+                            setTimeout(() => {
+                                resolve(null);
+                            }, 100);
+                        });
+                    }
+                }
+            });
+            callback(null, p);
+        }});
+        let promiseWaiter = new Transform({objectMode: true, transform: async (p: Promise<RpcTx>, encoding: BufferEncoding, callback: TransformCallback) => {
+            callback(null, await p);
+        }});
+        txidFetcher.pipe(promiseWaiter);
         for (let txid of mempoolTxids) {
-            let tx: RpcTx = await this.rpcClient.getRawTransaction(txid);
-            let mempoolTx: MempoolTx = new MempoolTx(tx);
+            this.unconfirmedTxids.add(txid);
+            console.log("\t"+txid);
+            txidFetcher.write(txid);
         }
         this.sock = new Subscriber();
         this.sock.connect(this.coin.zmq_addresses[0]);
         this.sock.subscribe("hashtx");
+        console.log("Starting "+this.coin.name+" zmq @ "+this.coin.zmq_addresses[0]);
+        promiseWaiter.on('data', async (tx: RpcTx) => {
+            let mempoolTx: MempoolTx = new MempoolTx(tx);
+            if (this.txById.has(mempoolTx.txid)) {
+                console.log(mempoolTx.txid+" already included in a block?");
+                return;
+            }
+            this.txById.set(mempoolTx.txid, mempoolTx);
+            mempoolTx.vin.forEach((vin, spending_index) => {
+                const already_spent_in = this.outpointToInpoint.get(vin.txid+vin.vout);
+                if (already_spent_in !== undefined && (already_spent_in.spending_txid !== mempoolTx.txid || already_spent_in.spending_index !== spending_index)) {
+                    console.log(vin.txid+"-"+vin.vout+" PREVOUSLY SPENT IN "+already_spent_in.spending_txid+"-"+already_spent_in.spending_index+" BUT DOUBLE SPENT IN "+mempoolTx.txid+"-"+spending_index);
+                    this.txById.delete(already_spent_in.spending_txid);//Delete orphaned transaction
+                    this.unconfirmedTxids.delete(already_spent_in.spending_txid);
+                }
+                this.outpointToInpoint.set(vin.txid+vin.vout, {spending_txid: mempoolTx.txid, spending_index: spending_index});
+            });
+            let txDetails = await this.txDetails(mempoolTx);
+            mempoolTx.fee = txDetails.fee;
+        });
         for await (const [topic, msg] of this.sock) {
             let topicStr: string = topic.toString("ascii");
             let txid: string = msg.toString("hex");
-            console.log(`Received txid ${txid}`);
-            if (!this.unconfirmedTransactions.has(txid)) {
-                setTimeout(async () => {
-                    let rpcTx: RpcTx = await this.rpcClient.getRawTransaction(txid);
-                    this.unconfirmedTransactions.set(txid, rpcTx);
-                    console.log("RPCTX", rpcTx);
-                }, 1000);
+            if (!this.txById.has(txid) && !this.unconfirmedTxids.has(txid)) {
+                //console.log(`Received txid ${txid}`);
+                this.unconfirmedTxids.add(txid);
+                txidFetcher.write(txid);
             }
         }
     }
@@ -112,8 +154,7 @@ export class Mempool {
     public async start(): Promise<void> {
         await this.updater();
         if (this.coin.zmq_addresses && this.coin.zmq_addresses.length > 0) {
-            console.log("Starting "+this.coin.name+" zmq @ "+this.coin.zmq_addresses[0])
-            //this.runZmq();
+            this.runZmq();
         }
     }
 
@@ -145,7 +186,8 @@ export class Mempool {
         return new Promise(async (resolve, reject) => {
             let feeSats: number = 0;
             let addressDeltas: Map<string, number> = new Map();
-
+            let coinbase: boolean = tx.vin.length === 1 && tx.vin[0].coinbase !== undefined;
+            //if (coinbase) console.log(tx.txid+" IS A COINBASE");
             tx.vout.forEach(vout => {
                 let valueSats = Math.round(vout.value*1e8);
                 if (vout.scriptPubKey.addresses !== undefined && vout.scriptPubKey.addresses !== null && vout.scriptPubKey.addresses.length === 1) {
@@ -153,9 +195,9 @@ export class Mempool {
                     let oldValue = addressDeltas.get(address);
                     addressDeltas.set(address, oldValue === undefined ? valueSats : oldValue + valueSats);
                 }
-                if (tx.txN !== 0) feeSats -= valueSats;
+                if (!coinbase) feeSats -= valueSats;
             });
-            if (tx.txN !== 0 && tx.vin.length > 0) {
+            if (!coinbase && tx.vin.length > 0) {
                 let pending_promises = tx.vin.length;
                 tx.vin.forEach(async (vin, spending_index) => {
                     let inputDetails: {address: string, value: number};
@@ -192,6 +234,11 @@ export class Mempool {
         return new Promise<{address: string, value: number}>(async (resolve, reject) => {
             try {
                 let address: string;
+                const already_spent_in = this.outpointToInpoint.get(vin.txid+vin.vout);
+                if (already_spent_in !== undefined && (already_spent_in.spending_txid !== spending_txid || already_spent_in.spending_index !== spending_index)) {
+                    this.txById.delete(already_spent_in.spending_txid);//Delete double spent transaction
+                    this.unconfirmedTxids.delete(already_spent_in.spending_txid);
+                }
                 this.outpointToInpoint.set(vin.txid+vin.vout, {spending_txid: spending_txid, spending_index: spending_index});
                 let mempool_tx = this.txById.get(vin.txid);
                 if (mempool_tx !== undefined) {
@@ -398,6 +445,12 @@ export class Mempool {
                     for (let tx_n = 0; tx_n < block.tx.length; tx_n++) {
                         let tx = block.tx[tx_n];
                         let txDetails = blockTxDetails[tx_n];
+                        if (this.unconfirmedTxids.has(tx.txid)) {
+                            this.unconfirmedTxids.delete(tx.txid);
+                            txDetails.addressDeltas.forEach((delta: number, address: string) => {
+                                //let oldBalanceChange = this.unconfirmedAddressBalanceChange.get(address);
+                            });
+                        }
                         tx.fee = txDetails.fee;
                         txDetails.addressDeltas.forEach((delta: number, address: string) => {
                             let oldDelta = blockAddressDeltas.get(address);
