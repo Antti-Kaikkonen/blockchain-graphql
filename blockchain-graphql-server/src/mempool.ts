@@ -86,6 +86,11 @@ export class Mempool {
                         resolve(await this.rpcClient.getRawTransaction(txid));
                         break;
                     } catch(err) {
+                        const confirmedTransaction = this.txById.get(txid);
+                        if (confirmedTransaction !== undefined) {
+                            resolve(confirmedTransaction);
+                            break;
+                        }
                         //console.log("retry");
                         await new Promise((resolve, reject) => {
                             setTimeout(() => {
