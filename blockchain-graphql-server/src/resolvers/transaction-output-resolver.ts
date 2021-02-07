@@ -4,7 +4,7 @@ import { Inject } from "typedi";
 import { TransactionInput } from "../models/transaction-input";
 import { TransactionOutput } from "../models/transaction-output";
 import { Transaction } from "../models/transaction";
-import { MempoolTx } from "../mempool";
+import { MempoolTx } from "../mempool/mempool";
 import { RpcVin } from "../rpc-client";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 
@@ -21,7 +21,7 @@ export class TransactionOutputResolver {
     if (transactionOutput.spendingTxid === null || transactionOutput.spendingTxid === undefined) return null;
     let mempoolTx: MempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.spendingTxid);
     if (mempoolTx !== undefined) {
-      let spending_input: RpcVin = mempoolTx.vin[transactionOutput.spendingIndex];
+      let spending_input: RpcVin = mempoolTx.rpcTx.vin[transactionOutput.spendingIndex];
       let vin: TransactionInput = new TransactionInput({
         coinbase: spending_input.coinbase, 
         scriptSig: spending_input.scriptSig, 
@@ -65,10 +65,10 @@ export class TransactionOutputResolver {
     let mempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.txid);
     if (mempoolTx !== undefined) {
       return <Transaction> {
-        txid: mempoolTx.txid,
-        lockTime: mempoolTx.locktime,
-        size: mempoolTx.size,
-        version: mempoolTx.version,
+        txid: mempoolTx.rpcTx.txid,
+        lockTime: mempoolTx.rpcTx.locktime,
+        size: mempoolTx.rpcTx.size,
+        version: mempoolTx.rpcTx.version,
         height: mempoolTx.height,
         txN: mempoolTx.txN,
         fee: mempoolTx.fee,

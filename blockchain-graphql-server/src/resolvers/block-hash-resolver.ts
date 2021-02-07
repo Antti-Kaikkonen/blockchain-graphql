@@ -18,19 +18,19 @@ export class BlockHashResolver {
     let mempooBlock = blockHash.coin.mempool?.blockByHash.get(blockHash.hash);
     if (mempooBlock !== undefined) {
       return <Block> {
-        height: mempooBlock.height,
-        hash: mempooBlock.hash,
-        size: mempooBlock.size,
-        version: mempooBlock.version,
-        versionHex: mempooBlock.versionHex,
-        merkleRoot: mempooBlock.merkleroot,
-        time: new Date(mempooBlock.time*1000),
-        medianTime: mempooBlock.mediantime,
-        nonce: mempooBlock.nonce,
-        bits: mempooBlock.bits,
-        difficulty: mempooBlock.difficulty,
-        chainwork: mempooBlock.chainwork,
-        previousBlockHash: mempooBlock.previousblockhash,
+        height: mempooBlock.rpcBlock.height,
+        hash: mempooBlock.rpcBlock.hash,
+        size: mempooBlock.rpcBlock.size,
+        version: mempooBlock.rpcBlock.version,
+        versionHex: mempooBlock.rpcBlock.versionHex,
+        merkleRoot: mempooBlock.rpcBlock.merkleroot,
+        time: new Date(mempooBlock.rpcBlock.time*1000),
+        medianTime: mempooBlock.rpcBlock.mediantime,
+        nonce: mempooBlock.rpcBlock.nonce,
+        bits: mempooBlock.rpcBlock.bits,
+        difficulty: mempooBlock.rpcBlock.difficulty,
+        chainwork: mempooBlock.rpcBlock.chainwork,
+        previousBlockHash: mempooBlock.rpcBlock.previousblockhash,
         txCount: mempooBlock.tx.length,
         coin: blockHash.coin
       }

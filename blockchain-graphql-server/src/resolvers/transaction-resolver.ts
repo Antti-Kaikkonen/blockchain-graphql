@@ -7,7 +7,7 @@ import { TransactionOutput, TransactionOutputCursor, PaginatedTransactionOutputR
 import { Address } from "../models/address";
 import { PaginationArgs } from "./pagination-args";
 import { BlockHash } from "../models/block_hash";
-import { MempoolTx } from "../mempool";
+import { MempoolTx } from "../mempool/mempool";
 import { RpcVout } from "../rpc-client";
 import { ScriptPubKey } from "../models/scriptpubkey";
 import { LimitedCapacityClient } from "../limited-capacity-client";
@@ -42,8 +42,8 @@ export class TransactionResolver {
     let mempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
     if (mempoolBlock !== undefined) {
       return <BlockHash> {
-        hash: mempoolBlock.hash,
-        height: mempoolBlock.height,
+        hash: mempoolBlock.rpcBlock.hash,
+        height: mempoolBlock.rpcBlock.height,
         coin: transaction.coin
       };
     }
@@ -74,21 +74,21 @@ export class TransactionResolver {
     if (mempoolTx !== undefined) {
       let res: TransactionInput[] = [];
       let fromIndex = cursor === undefined ? 0 : cursor.spendingIndex+1;
-      for (let spending_index = fromIndex; spending_index < mempoolTx.vin.length; spending_index++) {
+      for (let spending_index = fromIndex; spending_index < mempoolTx.rpcTx.vin.length; spending_index++) {
         if (res.length == limit) {
           return {
             hasMore: true,
             items: res
           };
         }
-        let rpcVin = mempoolTx.vin[spending_index];
+        let rpcVin = mempoolTx.rpcTx.vin[spending_index];
         res.push(new TransactionInput({
           coinbase: rpcVin.coinbase,
           scriptSig: rpcVin.scriptSig,
           sequence: rpcVin.sequence,
           txid: rpcVin.txid,
           vout: rpcVin.vout,
-          spendingTxid: mempoolTx.txid,
+          spendingTxid: mempoolTx.rpcTx.txid,
           spendingIndex: spending_index, 
           coin: transaction.coin
         }));
@@ -140,14 +140,14 @@ export class TransactionResolver {
     if (mempoolTx !== undefined) {
       let res: TransactionOutput[] = [];
       let fromIndex = cursor === undefined ? 0 : cursor.n+1;
-      for (let n = fromIndex; n < mempoolTx.vout.length; n++) {
+      for (let n = fromIndex; n < mempoolTx.rpcTx.vout.length; n++) {
         if (res.length == limit) {
           return {
             hasMore: true,
             items: res
           };
         }
-        let rpcVout: RpcVout = mempoolTx.vout[n];
+        let rpcVout: RpcVout = mempoolTx.rpcTx.vout[n];
         let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
         scriptpubkey.asm = rpcVout.scriptPubKey.asm;
         scriptpubkey.hex = rpcVout.scriptPubKey.hex;
@@ -159,14 +159,14 @@ export class TransactionResolver {
         
         let spendingTxid: string;
         let spendingIndex: number;
-        let spending_inpoint = transaction.coin.mempool.outpointToInpoint.get(mempoolTx.txid+n);
+        let spending_inpoint = transaction.coin.mempool.outpointToInpoint.get(mempoolTx.rpcTx.txid+n);
         if (spending_inpoint !== undefined) {
           spendingTxid= spending_inpoint.spending_txid;
           spendingIndex = spending_inpoint.spending_index;
         }
 
         res.push(new TransactionOutput({
-          txid: mempoolTx.txid,
+          txid: mempoolTx.rpcTx.txid,
           n: n,
           value: rpcVout.value,
           scriptPubKey: scriptpubkey,

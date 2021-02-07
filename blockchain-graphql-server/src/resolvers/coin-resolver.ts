@@ -2,7 +2,7 @@ import { types } from "cassandra-driver";
 import { Arg, Args, ArgsType, Field, FieldResolver, Int, Query, Resolver, Root } from "type-graphql";
 import { Inject } from "typedi";
 import { LimitedCapacityClient } from "../limited-capacity-client";
-import { MempoolBlock, MempoolTx } from "../mempool";
+import { MempoolBlock, MempoolTx } from "../mempool/mempool";
 import { Address } from "../models/address";
 import { AddressCluster } from "../models/address-cluster";
 import { AddressClusterRichlist, AddressClusterRichlistCursor, PaginatedAddressClusterRichlistResponse } from "../models/address-cluster-richlist";
@@ -106,7 +106,7 @@ export class CoinResolver {
       return <ConfirmedTransaction> {
         height: mempoolTx.height,
         txN: mempoolTx.txN,
-        txid: mempoolTx.txid,
+        txid: mempoolTx.rpcTx.txid,
         coin: coin
       };
     }
@@ -136,8 +136,8 @@ export class CoinResolver {
     let mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height);
     if (mempoolBlock !== undefined) {
       return <BlockHash> {
-        hash: mempoolBlock.hash,
-        height: mempoolBlock.height,
+        hash: mempoolBlock.rpcBlock.hash,
+        height: mempoolBlock.rpcBlock.height,
         coin: coin
       }
     }
@@ -166,19 +166,19 @@ export class CoinResolver {
     let mempooBlock: MempoolBlock = coin.mempool?.blockByHash.get(hash);
     if (mempooBlock !== undefined) {
       return <Block> {
-        height: mempooBlock.height,
-        hash: mempooBlock.hash,
-        size: mempooBlock.size,
-        version: mempooBlock.version,
-        versionHex: mempooBlock.versionHex,
-        merkleRoot: mempooBlock.merkleroot,
-        time: new Date(mempooBlock.time*1000),
-        medianTime: mempooBlock.mediantime,
-        nonce: mempooBlock.nonce,
-        bits: mempooBlock.bits,
-        difficulty: mempooBlock.difficulty,
-        chainwork: mempooBlock.chainwork,
-        previousBlockHash: mempooBlock.previousblockhash,
+        height: mempooBlock.rpcBlock.height,
+        hash: mempooBlock.rpcBlock.hash,
+        size: mempooBlock.rpcBlock.size,
+        version: mempooBlock.rpcBlock.version,
+        versionHex: mempooBlock.rpcBlock.versionHex,
+        merkleRoot: mempooBlock.rpcBlock.merkleroot,
+        time: new Date(mempooBlock.rpcBlock.time*1000),
+        medianTime: mempooBlock.rpcBlock.mediantime,
+        nonce: mempooBlock.rpcBlock.nonce,
+        bits: mempooBlock.rpcBlock.bits,
+        difficulty: mempooBlock.rpcBlock.difficulty,
+        chainwork: mempooBlock.rpcBlock.chainwork,
+        previousBlockHash: mempooBlock.rpcBlock.previousblockhash,
         txCount: mempooBlock.tx.length,
         coin: coin
       }

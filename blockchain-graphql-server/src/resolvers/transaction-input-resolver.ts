@@ -22,7 +22,7 @@ export class TransactionInputResolver {
     if (transactionInput.txid === null || transactionInput.txid === undefined) return null;
     let mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.txid);
     if (mempoolTx !== undefined) {
-      let rpcVout: RpcVout = mempoolTx.vout[transactionInput.vout];
+      let rpcVout: RpcVout = mempoolTx.rpcTx.vout[transactionInput.vout];
       
       let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
       scriptpubkey.asm = rpcVout.scriptPubKey.asm;
@@ -32,7 +32,7 @@ export class TransactionInputResolver {
       if (rpcVout.scriptPubKey.addresses !== undefined && rpcVout.scriptPubKey.addresses !== null) {
         scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address({address: address, coin: transactionInput.coin}));
       }
-      let vout: TransactionOutput = new TransactionOutput({txid: mempoolTx.txid, 
+      let vout: TransactionOutput = new TransactionOutput({txid: mempoolTx.rpcTx.txid, 
         n: rpcVout.n, 
         value: rpcVout.value, 
         scriptPubKey: scriptpubkey, 
@@ -86,10 +86,10 @@ export class TransactionInputResolver {
     let mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.spendingTxid);
     if (mempoolTx !== undefined) {
       return <Transaction> {
-        txid: mempoolTx.txid,
-        lockTime: mempoolTx.locktime,
-        size: mempoolTx.size,
-        version: mempoolTx.version,
+        txid: mempoolTx.rpcTx.txid,
+        lockTime: mempoolTx.rpcTx.locktime,
+        size: mempoolTx.rpcTx.size,
+        version: mempoolTx.rpcTx.version,
         height: mempoolTx.height,
         txN: mempoolTx.txN,
         fee: mempoolTx.fee,

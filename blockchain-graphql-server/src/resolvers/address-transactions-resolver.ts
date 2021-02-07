@@ -4,7 +4,7 @@ import { Inject } from 'typedi';
 import { AddressTransaction } from "../models/address-transaction";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { LimitedCapacityClient } from "../limited-capacity-client";
-import { MempoolBlock } from "../mempool";
+import { MempoolBlock } from "../mempool/mempool";
 
 @Resolver(of => AddressTransaction)
 export class AddressTransactionsResolver {
@@ -22,7 +22,7 @@ export class AddressTransactionsResolver {
       return <ConfirmedTransaction>{
         height: tx.height, 
         txN: tx.txN, 
-        txid: tx.txid, 
+        txid: tx.rpcTx.txid, 
         coin: addressTransaction.coin
       };
     }

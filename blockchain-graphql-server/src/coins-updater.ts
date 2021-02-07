@@ -1,6 +1,6 @@
 import { Client, types } from "cassandra-driver";
 import { LimitedCapacityClient } from "./limited-capacity-client";
-import { Mempool } from "./mempool";
+import { Mempool } from "./mempool/mempool";
 import { Coin } from "./models/coin";
 import { RpcClient } from "./rpc-client";
 

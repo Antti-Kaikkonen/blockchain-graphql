@@ -4,7 +4,7 @@ import { Inject } from "typedi";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { Transaction } from "../models/transaction";
 import { BlockHash } from "../models/block_hash";
-import { MempoolBlock, MempoolTx } from "../mempool";
+import { MempoolBlock, MempoolTx } from "../mempool/mempool";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 
 @Resolver(of => ConfirmedTransaction)
@@ -20,8 +20,8 @@ export class ConfirmedTransactionResolver {
     let mempoolBlock: MempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
     if (mempoolBlock !== undefined) {
       return <BlockHash> {
-        hash: mempoolBlock.hash,
-        height: mempoolBlock.height,
+        hash: mempoolBlock.rpcBlock.hash,
+        height: mempoolBlock.rpcBlock.height,
         coin: transaction.coin
       }
     }

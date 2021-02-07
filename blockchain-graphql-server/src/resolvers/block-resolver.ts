@@ -4,7 +4,7 @@ import { types } from "cassandra-driver";
 import { Inject } from "typedi";
 import { ConfirmedTransaction, ConfirmedTransactionCursor, PaginatedConfirmedTransactionResponse } from "../models/confirmed-transaction";
 import { PaginationArgs } from "./pagination-args";
-import { MempoolBlock, MempoolTx } from "../mempool";
+import { MempoolBlock, MempoolTx } from "../mempool/mempool";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 
 
@@ -44,7 +44,7 @@ export class BlockResolver {
         res.push(<ConfirmedTransaction> {
           height: mempoolTx.height,
           txN: mempoolTx.txN,
-          txid: mempoolTx.txid,
+          txid: mempoolTx.rpcTx.txid,
           coin: block.coin
         });
       }
