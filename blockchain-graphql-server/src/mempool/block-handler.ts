@@ -7,6 +7,7 @@ import { AddressBalance } from "../models/address-balance";
 import { AddressTransaction } from "../models/address-transaction";
 import { Coin } from "../models/coin";
 import { Mempool } from "./mempool";
+import { AddressUnconfirmedMempool } from './unconfirmed_mempool';
 
 export interface TxDetails {
     fee: number;
@@ -23,6 +24,7 @@ export class BlockHandler extends Writable {
                 const already_spent_in = this.mempool.outpointToInpoint.get(vin.txid+vin.vout);
                 if (already_spent_in !== undefined && already_spent_in.spending_txid !== tx.rpcTx.txid) {
                     this.mempool.txById.delete(already_spent_in.spending_txid);//Delete double spent transaction
+                    this.mempool.unconfirmedMempool.remove(already_spent_in.spending_txid);
                 }
                 this.mempool.outpointToInpoint.set(vin.txid+vin.vout, {spending_txid: tx.rpcTx.txid, spending_index: spending_index});
             });
@@ -39,8 +41,9 @@ export class BlockHandler extends Writable {
                     if (!this.mempool.txById.has(rpcTx.txid)) {
                         let tx = new MempoolTx(rpcTx);
                         this.processTx(tx);
-                        let txDetails = this.txDetails(tx, event.inputDetails);
-                        tx.fee = (await txDetails).fee;
+                        let txDetails = await this.txDetails(tx, event.inputDetails);
+                        tx.fee = txDetails.fee;
+                        this.mempool.unconfirmedMempool.add(tx, txDetails);
                         this.mempool.txById.set(tx.rpcTx.txid, tx);
                     }
                 } else if (event.type === "add") {
@@ -56,7 +59,10 @@ export class BlockHandler extends Writable {
                     }
                     this.mempool.blockByHash.set(mempoolBlock.rpcBlock.hash, mempoolBlock);
                     this.mempool.blockByHeight.set(mempoolBlock.rpcBlock.height, mempoolBlock);
-                    mempoolBlock.tx.forEach(tx => this.processTx(tx));
+                    mempoolBlock.tx.forEach(tx => {
+                        this.mempool.unconfirmedMempool.remove(tx.rpcTx.txid);
+                        this.processTx(tx);
+                    });
                     let inputDetails: Map<string, Promise<{address: string, value: number}>> = event.inputDetails;
                     let blockAddressDeltas: Map<string, number> = new Map();
                     let blockTxDetails = await Promise.all(mempoolBlock.tx.map(tx => this.txDetails(tx, inputDetails)));

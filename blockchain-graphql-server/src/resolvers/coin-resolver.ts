@@ -11,6 +11,7 @@ import { BlockHash, BlockHashCursor, PaginatedAddressBlockHashtResponse } from "
 import { Coin } from "../models/coin";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { Date as DateModel } from "../models/date";
+import { MempoolModel } from "../models/mempool-model";
 import { Transaction } from "../models/transaction";
 import { PaginationArgs } from "./pagination-args";
 
@@ -66,6 +67,13 @@ export class CoinResolver {
         date: date,
         coin: coin
       }
+    }
+
+    @FieldResolver(returns => MempoolModel, {nullable: false, complexity: 1})
+    async mempool(
+        @Root() coin: Coin
+    ): Promise<MempoolModel> {
+      return <MempoolModel> {coin: coin};
     }
 
     @FieldResolver(returns => Address, {nullable: false, complexity: 1})

@@ -25,6 +25,9 @@ import { CoinResolver } from "./resolvers/coin-resolver";
 import { Coin } from "./models/coin";
 import { CoinsUpdater } from "./coins-updater";
 import { LimitedCapacityClient } from "./limited-capacity-client";
+import { MempoolResolver } from "./resolvers/mempool-resolver";
+import { MempoolTransactionsResolver } from "./resolvers/mempool-transaction-resolver";
+import { UnconfirmedAddressTransactionResolver } from "./resolvers/unconfirmed-address-transaction-resolver";
 
 
 async function run() {
@@ -61,7 +64,7 @@ async function run() {
       resolvers: [RichlistResolver, AddressTransactionsResolver, AddressResolver, 
         DateResolver, BlockResolver, ConfirmedTransactionResolver, 
         BlockHashResolver, TransactionResolver, TransactionInputResolver, 
-        TransactionOutputResolver, AddressClusterResolver, ClusterTransactionResolver, CoinResolver],
+        TransactionOutputResolver, AddressClusterResolver, ClusterTransactionResolver, CoinResolver, MempoolResolver, MempoolTransactionsResolver, UnconfirmedAddressTransactionResolver],
       validate: true,
       container: Container,
       dateScalarMode: "timestamp"

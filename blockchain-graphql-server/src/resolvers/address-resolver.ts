@@ -1,4 +1,4 @@
-import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType } from "type-graphql";
+import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType, Float } from "type-graphql";
 import { types } from "cassandra-driver";
 import { Inject } from 'typedi';
 import { Address } from "../models/address";
@@ -8,6 +8,7 @@ import { AddressBalanceCursor, PaginatedAddressBalanceResponse, AddressBalance }
 import { AddressCluster } from "../models/address-cluster";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 import { PaginationArgs } from "./pagination-args";
+import { PaginatedUnconfirmedAddressTransactionResponse, UnconfirmedAddressTransaction, UnconfirmedAddressTransactionCursor } from "../models/unconfirmed-address-transaction";
 
 @ArgsType()
 class OHLC_Args extends PaginationArgs {
@@ -33,6 +34,14 @@ class AddressBalancesArgs extends PaginationArgs {
 
   @Field({nullable: true})
   cursor: AddressBalanceCursor;
+
+}
+
+@ArgsType()
+class UnconfirmedTransactionsArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: UnconfirmedAddressTransactionCursor;
 
 }
 
@@ -102,8 +111,59 @@ export class AddressResolver {
     }
   }
 
+  @FieldResolver(returns => PaginatedUnconfirmedAddressTransactionResponse, {nullable: false, complexity: ({ childComplexity, args }) => args.limit * childComplexity})
+  async unconfirmedTransactions(@Root() address: Address, @Args() {cursor, limit}: UnconfirmedTransactionsArgs): Promise<PaginatedUnconfirmedAddressTransactionResponse> {
+      let it;
+      let addressMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+      if (addressMempool === undefined) {
+        return {items:[], hasMore:false};
+      }
+      if (cursor) {
+          it = addressMempool.transactions.upperBound({timestamp: cursor.timestamp.getTime(), txid: cursor.txid, balanceChange: null});
+      } else {
+          it = addressMempool.transactions.iterator();
+          it.next();
+      }
+      if (it === undefined) {
+        return {items:[], hasMore:false};
+      }
+      let item: {txid: string, timestamp: number, balanceChange: number} = it.data();
+      let res: UnconfirmedAddressTransaction[] = [];
+      let hasMore: boolean = false;
+      while (item !== null) {
+          if (res.length === limit) {
+              hasMore = true;
+              break;
+          }
+          res.push(<UnconfirmedAddressTransaction> {coin: address.coin, timestamp: new Date(item.timestamp), txid: item.txid, balanceChange: item.balanceChange});
+          item = it.next();
+      }
+      return {items: res, hasMore: hasMore};
+  } 
+
+  @FieldResolver(returns => Int, {nullable: false, complexity: ({ childComplexity, args }) => 1})
+  async unconfirmedTxCount(@Root() address: Address): Promise<number> {
+      let addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+      if (addressUnconfirmedMempool === undefined) {
+        return 0;
+      } else {
+        return addressUnconfirmedMempool.transactions.size;
+      }
+  } 
+
+  @FieldResolver(returns => Float, {nullable: false, complexity: ({ childComplexity, args }) => 1})
+  async unconfirmedBalanceChange(@Root() address: Address): Promise<number> {
+      let addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+      if (addressUnconfirmedMempool === undefined) {
+        return 0;
+      } else {
+        return addressUnconfirmedMempool.balanceChangeSat/1e8;
+      }
+  } 
+
+
   @FieldResolver(returns => PaginatedAddressTransactionResponse, {nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity})
-  async transactions(@Root() address: Address, 
+  async confirmedTransactions(@Root() address: Address, 
     @Args() {limit, cursor}: AddressTransactionsArgs 
   ): Promise<PaginatedAddressTransactionResponse> {
     const originalLimit: number = limit;

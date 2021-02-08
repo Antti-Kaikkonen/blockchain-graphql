@@ -1,17 +1,18 @@
-import { Readable, Transform, TransformCallback } from "stream";
+import { Readable } from "stream";
 import { Subscriber } from "zeromq";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 import { AddressBalance } from "../models/address-balance";
 import { AddressTransaction } from "../models/address-transaction";
 import { Coin } from "../models/coin";
 import { Transaction } from "../models/transaction";
-import { RpcBlock, RpcBlockNoTx, RpcClient, RpcTx } from "../rpc-client";
+import { RpcBlock, RpcClient, RpcTx } from "../rpc-client";
 import { BlockFetcher } from "./block-fetcher";
 import { BlockHandler } from "./block-handler";
 import { BlockInputDetailsFetcher, MempoolEvent3 } from "./block-input-details-fetcher";
-import { BlockReader, MempoolEvent } from "./block-reader";
+import { BlockReader } from "./block-reader";
 import { UnconfirmedTransactionFetcher } from "./unconfirmed-transaction-fetcher";
 import { UnconfirmedTransactionWaiter } from "./unconfirmed-transaction-waiter";
+import { UnconfirmedMempool } from "./unconfirmed_mempool";
 import { ZmqParser } from "./zmq-parser";
 
 export class Mempool {
@@ -23,6 +24,7 @@ export class Mempool {
     public outpointToInpoint: Map<string, {spending_txid: string, spending_index: number}> = new Map();
     public addressBalances : Map<String, AddressBalance[]> = new Map();
     public addressTransactions : Map<string, AddressTransaction[]> = new Map();
+    public unconfirmedMempool: UnconfirmedMempool = new UnconfirmedMempool();
 
     private blockReader: BlockReader;
     private blockFetcher: BlockFetcher;
