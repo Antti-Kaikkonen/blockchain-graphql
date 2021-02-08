@@ -32,22 +32,23 @@ export class BlockHandler extends Writable {
     constructor(private client: LimitedCapacityClient, private coin: Coin, private mempool: Mempool) {
         super({
             objectMode: true, 
-            write: async (chunk: DeleteEvent | AddEvent3 | MempoolEvent3, encoding: BufferEncoding, callback: (error?: any) => void) => {
+            write: async (event: DeleteEvent | AddEvent3 | MempoolEvent3, encoding: BufferEncoding, callback: (error?: any) => void) => {
                 let blockToDelete: MempoolBlock;
-                if (chunk.type === "hashtx") {
-                    let rpcTx = await chunk.rpcTx;
+                if (event.type === "hashtx") {
+                    let rpcTx = await event.rpcTx;
                     if (!this.mempool.txById.has(rpcTx.txid)) {
                         let tx = new MempoolTx(rpcTx);
                         this.processTx(tx);
-                        let txDetails = this.txDetails(tx, chunk.inputDetails);
+                        let txDetails = this.txDetails(tx, event.inputDetails);
                         tx.fee = (await txDetails).fee;
                         this.mempool.txById.set(tx.rpcTx.txid, tx);
                     }
-                } else if (chunk.type === "add") {
+                } else if (event.type === "add") {
                     if (this.mempool.time === undefined) {
-                        this.mempool.time = await this.getDbBlockTimestamp(chunk.height-1);
+                        this.mempool.time = await this.getDbBlockTimestamp(event.height-1);
                     }
-                    let mempoolBlock = new MempoolBlock(await chunk.block);
+                    this.mempool.height = event.height;
+                    let mempoolBlock = new MempoolBlock(await event.block);
                     if (mempoolBlock.rpcBlock.time <= this.mempool.time) {
                         mempoolBlock.rpcBlock.time = ++this.mempool.time;//Make block timestamps stricly increasing
                     } else {
@@ -56,7 +57,7 @@ export class BlockHandler extends Writable {
                     this.mempool.blockByHash.set(mempoolBlock.rpcBlock.hash, mempoolBlock);
                     this.mempool.blockByHeight.set(mempoolBlock.rpcBlock.height, mempoolBlock);
                     mempoolBlock.tx.forEach(tx => this.processTx(tx));
-                    let inputDetails: Map<string, Promise<{address: string, value: number}>> = chunk.inputDetails;
+                    let inputDetails: Map<string, Promise<{address: string, value: number}>> = event.inputDetails;
                     let blockAddressDeltas: Map<string, number> = new Map();
                     let blockTxDetails = await Promise.all(mempoolBlock.tx.map(tx => this.txDetails(tx, inputDetails)));
                     for (let i = 0; i < mempoolBlock.tx.length; i++) {
@@ -77,10 +78,11 @@ export class BlockHandler extends Writable {
                         this.mempool.addressBalances.get(e.address).push(addressBalance);
                     });
                     this.updateAddressTransactions(mempoolBlock, blockTxDetails, blockAddressDeltas);
-                    blockToDelete = this.mempool.blockByHeight.get(chunk.height-10);
+                    blockToDelete = this.mempool.blockByHeight.get(event.height-10);
                     if (blockToDelete !== undefined) this.deleteExpiredAddressTransactions(blockToDelete);
-                } else if (chunk.type === "delete") {
-                    blockToDelete = this.mempool.blockByHash.get(chunk.hash);
+                } else if (event.type === "delete") {
+                    this.mempool.height = event.height-1;
+                    blockToDelete = this.mempool.blockByHash.get(event.hash);
                     this.deleteOrphanedAddressTransactions(blockToDelete);
                 }
                 if (blockToDelete !== undefined) {

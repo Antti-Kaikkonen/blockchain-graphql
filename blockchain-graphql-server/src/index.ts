@@ -146,3 +146,8 @@ async function run() {
 }
   
 run();
+
+process.on('SIGINT', () => {
+  console.log("Terminating");
+  process.exit(0);
+});

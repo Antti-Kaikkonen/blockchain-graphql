@@ -7,7 +7,7 @@ import { Address } from "../models/address";
 import { AddressCluster } from "../models/address-cluster";
 import { AddressClusterRichlist, AddressClusterRichlistCursor, PaginatedAddressClusterRichlistResponse } from "../models/address-cluster-richlist";
 import { Block } from "../models/block";
-import { BlockHash } from "../models/block_hash";
+import { BlockHash, BlockHashCursor, PaginatedAddressBlockHashtResponse } from "../models/block_hash";
 import { Coin } from "../models/coin";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { Date as DateModel } from "../models/date";
@@ -19,6 +19,14 @@ class ClusterRichlistArgs extends PaginationArgs {
 
   @Field({nullable: true})
   cursor: AddressClusterRichlistCursor;
+
+}
+
+@ArgsType()
+class BlockHashArgs extends PaginationArgs {
+
+  @Field({nullable: true})
+  cursor: BlockHashCursor;
 
 }
 
@@ -127,6 +135,28 @@ export class CoinResolver {
     });
     return res[0];
   }
+
+  @FieldResolver(returns => PaginatedAddressBlockHashtResponse, {nullable: false, complexity: ({ childComplexity, args }) => args.limit * childComplexity})
+  async blocks(
+    @Root() coin: Coin,
+    @Args() {limit, cursor}: BlockHashArgs
+  ): Promise<PaginatedAddressBlockHashtResponse> {
+    let lastBlockHeight: number = coin.mempool?.height;
+    if (lastBlockHeight === undefined) {
+      return {hasMore: false, items: []};
+    }
+    let fromHeight = (cursor?.height === undefined || cursor?.height === null) ? lastBlockHeight : Math.min(cursor.height-1, lastBlockHeight);
+    let res: Promise<BlockHash>[] = [];
+    for (let currentHeight: number = fromHeight; currentHeight >= Math.max(fromHeight-limit+1, 0); currentHeight--) {
+      res.push(this.blockByHeight(coin, currentHeight));
+    }
+    return new Promise<PaginatedAddressBlockHashtResponse>(async (resolve, reject) => {
+      resolve({
+        hasMore: fromHeight-limit+1 > 0,
+        items: await Promise.all(res)
+      })
+    });
+  } 
 
   @FieldResolver(returns => BlockHash, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async blockByHeight(
