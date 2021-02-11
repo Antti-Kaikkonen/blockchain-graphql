@@ -36,7 +36,7 @@ export class Mempool {
 
     private socket: Subscriber;
 
-    constructor(private rpcClient: RpcClient, private client: LimitedCapacityClient, private coin: Coin) {
+    constructor(public rpcClient: RpcClient, private client: LimitedCapacityClient, private coin: Coin) {
         this.blockReader = new BlockReader(this.rpcClient, this.coin, 10, this);
         this.blockFetcher = new BlockFetcher(this.rpcClient, this);
         this.inputFetcher = new BlockInputDetailsFetcher(this.client, this.rpcClient, this.coin, this);

@@ -29,7 +29,7 @@ export class BlockHashResolver {
         nonce: mempooBlock.rpcBlock.nonce,
         bits: mempooBlock.rpcBlock.bits,
         difficulty: mempooBlock.rpcBlock.difficulty,
-        chainwork: mempooBlock.rpcBlock.chainwork,
+        chainWork: mempooBlock.rpcBlock.chainwork,
         previousBlockHash: mempooBlock.rpcBlock.previousblockhash,
         txCount: mempooBlock.tx.length,
         coin: blockHash.coin
@@ -55,7 +55,7 @@ export class BlockHashResolver {
         nonce: row.get("nonce"),
         bits: row.get("bits"),
         difficulty: row.get("difficulty"),
-        chainwork: row.get("chainwork"),
+        chainWork: row.get("chainwork"),
         previousBlockHash: row.get("previousblockhash"),
         txCount: row.get("tx_count"),
         coin: blockHash.coin

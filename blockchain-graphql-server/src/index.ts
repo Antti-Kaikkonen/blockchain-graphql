@@ -114,7 +114,7 @@ async function run() {
           });
           // Here we can react to the calculated complexity,
           // like compare it with max and throw error when the threshold is reached.
-          if (complexity >= 100000) {
+          if (complexity > 100000) {
             throw new Error(
               `Sorry, too complicated query! ${complexity} is over 100000 that is the max allowed complexity.`
             );

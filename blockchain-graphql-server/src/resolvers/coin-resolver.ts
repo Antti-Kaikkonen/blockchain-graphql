@@ -1,5 +1,5 @@
 import { types } from "cassandra-driver";
-import { Arg, Args, ArgsType, Field, FieldResolver, Int, Query, Resolver, Root } from "type-graphql";
+import { Arg, Args, ArgsType, Field, FieldResolver, Int, Mutation, Query, Resolver, Root } from "type-graphql";
 import { Inject } from "typedi";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 import { MempoolBlock, MempoolTx } from "../mempool/mempool";
@@ -12,7 +12,9 @@ import { Coin } from "../models/coin";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { Date as DateModel } from "../models/date";
 import { MempoolModel } from "../models/mempool-model";
+import { SendRawTransactionResult } from "../models/sendrawtransactionresult";
 import { Transaction } from "../models/transaction";
+import { RpcClient } from "../rpc-client";
 import { PaginationArgs } from "./pagination-args";
 
 @ArgsType()
@@ -215,7 +217,7 @@ export class CoinResolver {
         nonce: mempooBlock.rpcBlock.nonce,
         bits: mempooBlock.rpcBlock.bits,
         difficulty: mempooBlock.rpcBlock.difficulty,
-        chainwork: mempooBlock.rpcBlock.chainwork,
+        chainWork: mempooBlock.rpcBlock.chainwork,
         previousBlockHash: mempooBlock.rpcBlock.previousblockhash,
         txCount: mempooBlock.tx.length,
         coin: coin
@@ -241,7 +243,7 @@ export class CoinResolver {
         nonce: row.get("nonce"),
         bits: row.get("bits"),
         difficulty: row.get("difficulty"),
-        chainwork: row.get("chainwork"),
+        chainWork: row.get("chainwork"),
         previousBlockHash: row.get("previousblockhash"),
         txCount: row.get("tx_count"),
         coin: coin
@@ -282,5 +284,12 @@ export class CoinResolver {
       hasMore: hasMore,
       items: res
     };
+  }
+
+  @Mutation(returns => SendRawTransactionResult, {nullable: false, complexity: ({ childComplexity, args }) => 20000 + childComplexity})
+  async sendRawTransaction(@Arg("coinName") coinName: string, @Arg("hexString") hexString: string): Promise<SendRawTransactionResult> {
+    let coin = this.available_coins.get(coinName);
+    if (coin === undefined) throw new Error("Coin "+coinName+" not available.");
+    return {txid: await coin.mempool.rpcClient.sendRawTransaction(hexString)};
   }
 }

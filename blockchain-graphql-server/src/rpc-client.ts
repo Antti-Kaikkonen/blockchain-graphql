@@ -277,5 +277,36 @@ export class RpcClient {
         });
     }
 
+    public sendRawTransaction(hexstring: string): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            let req = http.request({
+                hostname: this.rpc_url.hostname,
+                port: this.rpc_url.port,
+                protocol: this.rpc_url.protocol,
+                auth: this.rpc_username + ":" + this.rpc_password,
+                method: "POST"
+            }, (res: http.IncomingMessage) => {
+                let result = "";
+                res.on('data', (d) => {
+                    result+=d;
+                })
+                res.on('end', () => {
+                    let obj: RpcResponse<string> = JSON.parse(result);
+                    if (obj.error) {
+                        reject(obj.error.message);
+                    } else {
+                        resolve(obj.result);
+                    }
+                });
+            });
+    
+            req.on('error', (error: Error) => {
+                reject(error);
+            });
+            req.write(JSON.stringify({method:"sendrawtransaction", params:[hexstring]}));
+            req.end();
+        });
+    }
+
    
 }

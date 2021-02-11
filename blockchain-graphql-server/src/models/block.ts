@@ -41,7 +41,7 @@ export class Block {
   difficulty: number;
 
   @Field({nullable: false, complexity: 1})
-  chainwork: string;
+  chainWork: string;
 
   @Field({nullable: false, complexity: 1})
   previousBlockHash: string;
