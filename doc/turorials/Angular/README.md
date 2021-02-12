@@ -2,27 +2,27 @@
 
 We create a simple Angular app and demonstrate how to generate strongly typed functions from BlockchainGraphQL queries.
 
-1) `sudo yarn global add @angular/cli` ([more info](https://cli.angular.io/))
-2) `ng config -g cli.packageManager yarn`
-3) `ng new angular-blockchain-app`
-    1) **Q:** Do you want to enforce stricter type checking and stricter bundle budgets in the workspace? **A:** `y`
-    2) **Q:** Would you like to add Angular routing? **A:** `n`
-    3) **Q:** Which stylesheet format would you like to use? **A:** Choose what you prefer. I prefer `SCSS`.
-4) `cd angular-blockchain-app`
-5) `ng add apollo-angular`
-    1) **Q:** Url to your GraphQL endpoint **A:** `https://blockchaingraphql.com`
-6) `yarn add -D @graphql-codegen/cli` ([more info](https://graphql-code-generator.com/docs/getting-started/index))
-7) `yarn graphql-codegen init`
-    1) **Q:** What type of application are you building? **A:** `Application built with Angular`
-    2) **Q:** Where is your schema? **A:** `https://blockchaingraphql.com`
-    3) **Q:** Where are your operations and fragments? **A:** `src/**/*.graphql` (default)
-    4) **Q:** Pick plugins **A:** `TypeScript`, `TypeScript Operations` and `TypeScript Apollo Angular`
-    5) **Q:** Where to write the output **A:** `src/generated/graphql.tsx` (default)
-    6) **Q:** Do you want to generate an introspection file? **A:** `n`
-    7) **Q:** How to name the config file? **A:** `codegen.yml` (default)
-    8) **Q:** What script in package.json should run the codegen? **A:** `generate`
-8) `yarn install` to install the plugins
-9) create `src/example.graphql` with the following content:
+1. `sudo yarn global add @angular/cli` ([more info](https://cli.angular.io/))
+2. `ng config -g cli.packageManager yarn`
+3. `ng new angular-blockchain-app`
+    1. **Q:** Do you want to enforce stricter type checking and stricter bundle budgets in the workspace? **A:** `y`
+    2. **Q:** Would you like to add Angular routing? **A:** `n`
+    3. **Q:** Which stylesheet format would you like to use? **A:** Choose what you prefer. I prefer `SCSS`.
+4. `cd angular-blockchain-app`
+5. `ng add apollo-angular`
+    1. **Q:** Url to your GraphQL endpoint **A:** `https://blockchaingraphql.com`
+6. `yarn add -D @graphql-codegen/cli` ([more info](https://graphql-code-generator.com/docs/getting-started/index))
+7. `yarn graphql-codegen init`
+    1. **Q:** What type of application are you building? **A:** `Application built with Angular`
+    2. **Q:** Where is your schema? **A:** `https://blockchaingraphql.com`
+    3. **Q:** Where are your operations and fragments? **A:** `src/**/*.graphql` (default)
+    4. **Q:** Pick plugins **A:** `TypeScript`, `TypeScript Operations` and `TypeScript Apollo Angular`
+    5. **Q:** Where to write the output **A:** `src/generated/graphql.tsx` (default)
+    6. **Q:** Do you want to generate an introspection file? **A:** `n`
+    7. **Q:** How to name the config file? **A:** `codegen.yml` (default)
+    8. **Q:** What script in package.json should run the codegen? **A:** `generate`
+8. `yarn install` to install the plugins
+9. create `src/example.graphql` with the following content:
 ```GraphQL
 query blockByHeight($coin: String!, $height: Int!) {
   coin(name: $coin) {
@@ -30,14 +30,14 @@ query blockByHeight($coin: String!, $height: Int!) {
       block {
         height
         hash
-        tx_count
+        txCount
       }
     }
   }
 }
 ```
-10) `yarn generate` to generate TypeScript code from the graphql schema and queries
-11) edit `src/app/app.component.ts` to query information about a block:
+10. `yarn generate` to generate TypeScript code from the graphql schema and queries
+11. edit `src/app/app.component.ts` to query information about a block:
 ```TypeScript
 import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -63,7 +63,7 @@ export class AppComponent {
 }
 
 ```
-12) edit `src/app/app.component.html` to display the queried information
+12. edit `src/app/app.component.html` to display the queried information
 ```html
 <span>{{ title }} app is running!</span>
 <div *ngIf="blockDetailsObs | async as blockDetails; else loading">
@@ -71,7 +71,7 @@ export class AppComponent {
     <div *ngIf="coin.blockByHeight as blockByHeight; else block_not_found">
       <p>Height: {{blockByHeight.block.height}}</p>
       <p>Hash: {{blockByHeight.block.hash}}</p>
-      <p>Tx count: {{blockByHeight.block.tx_count}}</p>
+      <p>Tx count: {{blockByHeight.block.txCount}}</p>
     </div>
     <ng-template #block_not_found>
       <div>Block not found</div>
@@ -85,7 +85,7 @@ export class AppComponent {
   <div>Loading ...</div>
 </ng-template>
 ```
-13) `ng serve` to run the app. Open http://localhost:4200/ in your browser and you should see the following
+13. `ng serve` to run the app. Open http://localhost:4200/ in your browser and you should see the following
 ```
 Block 100k app is running!
 
