@@ -17,7 +17,7 @@ We create a simple Angular app and demonstrate how to generate strongly typed fu
     2. **Q:** Where is your schema? **A:** `https://blockchaingraphql.com`
     3. **Q:** Where are your operations and fragments? **A:** `src/**/*.graphql` (default)
     4. **Q:** Pick plugins **A:** `TypeScript`, `TypeScript Operations` and `TypeScript Apollo Angular`
-    5. **Q:** Where to write the output **A:** `src/generated/graphql.tsx` (default)
+    5. **Q:** Where to write the output **A:** `src/generated/graphql.ts` (default)
     6. **Q:** Do you want to generate an introspection file? **A:** `n`
     7. **Q:** How to name the config file? **A:** `codegen.yml` (default)
     8. **Q:** What script in package.json should run the codegen? **A:** `generate`
