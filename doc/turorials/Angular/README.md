@@ -56,8 +56,11 @@ export class AppComponent {
   blockDetailsObs: Observable<BlockByHeightQuery>;
 
   constructor(blockByHeight: BlockByHeightGQL) {
-    this.blockDetailsObs = blockByHeight.watch({height: 100000, coin:"bitcoin"}).valueChanges.pipe(map(result => result.data));
-    //this.blockDetails.subscribe(e => e?.blockByHeight)
+    this.blockDetailsObs = blockByHeight.watch({height: 100000, coin:"bitcoin"})
+        .valueChanges
+        .pipe(
+            map(result => result.data)
+        );
   }
 
 }
