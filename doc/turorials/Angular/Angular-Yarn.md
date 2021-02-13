@@ -38,7 +38,7 @@ query blockByHeight($coin: String!, $height: Int!) {
 ```
 10. `yarn generate` to generate TypeScript code from the graphql schema and queries
 11. edit `src/app/app.component.ts` to query information about a block:
-```TypeScript
+```typescript
 import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BlockByHeightGQL, BlockByHeightQuery } from 'src/generated/graphql';
