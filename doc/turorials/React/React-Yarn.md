@@ -2,7 +2,7 @@
 
 We create a simple Reat app with TypeScript and demonstrate how to generate strongly typed functions from BlockchainGraphQL queries.
 
-1. `yarn create-react-app react-blockchain-app --template typescript` ([more info](https://create-react-app.dev/docs/adding-typescript/))
+1. `yarn create react-app react-blockchain-app --template typescript` ([more info](https://create-react-app.dev/docs/adding-typescript/))
 2. `cd react-blockchain-app`
 3. `yarn add graphql @apollo/client`
 4. `yarn add -D @graphql-codegen/cli` ([more info](https://graphql-code-generator.com/docs/getting-started/index))
