@@ -12,9 +12,12 @@ import { Coin } from "../models/coin";
 import { ConfirmedTransaction } from "../models/confirmed-transaction";
 import { Date as DateModel } from "../models/date";
 import { MempoolModel } from "../models/mempool-model";
+import { ScriptPubKey } from "../models/scriptpubkey";
 import { SendRawTransactionResult } from "../models/sendrawtransactionresult";
 import { Transaction } from "../models/transaction";
-import { RpcClient } from "../rpc-client";
+import { TransactionInput } from "../models/transaction-input";
+import { TransactionOutput } from "../models/transaction-output";
+import { RpcVin, RpcVout } from "../rpc-client";
 import { PaginationArgs } from "./pagination-args";
 
 @ArgsType()
@@ -112,6 +115,117 @@ export class CoinResolver {
       return res[0];
   }
 
+
+  @FieldResolver(returns => TransactionInput, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
+  async transactionInput(@Root() coin: Coin, 
+    @Arg("spendingTxid", type => String) spendingTxid: string, 
+    @Arg("spendingIndex", type => Int) spendingIndex: number
+  ): Promise<TransactionInput> {
+    let mempoolTx: MempoolTx = coin.mempool?.txById.get(spendingTxid);
+    if (mempoolTx !== undefined) {
+      let spending_input: RpcVin = mempoolTx.rpcTx.vin[spendingIndex];
+      if (spending_input === undefined) return null;
+      let vin: TransactionInput = new TransactionInput({
+        coinbase: spending_input.coinbase, 
+        scriptSig: spending_input.scriptSig, 
+        sequence: spending_input.sequence, 
+        txid: spending_input.txid,
+        vout: spending_input.vout, 
+        spendingTxid: spendingTxid,
+        spendingIndex: spendingIndex,
+        coin: coin
+      });
+      return vin;
+    }
+
+    let args: any[] = [spendingTxid, spendingIndex];
+    let query: string = "SELECT * FROM "+coin.keyspace+".transaction_input WHERE spending_txid=? AND spending_index=?";
+    let resultSet: types.ResultSet = await this.client.execute(
+      query, 
+      args, 
+      {prepare: true}
+    );
+    let res: TransactionInput[] = resultSet.rows.map(row => {
+      let vin: TransactionInput = new TransactionInput({
+        coinbase: row.get("coinbase"), 
+        scriptSig: row.get("scriptsig"), 
+        sequence: row.get('sequence'), 
+        txid: row.get('txid'),
+        vout: row.get('vout'), 
+        spendingTxid: row.get('spending_txid'),
+        spendingIndex: row.get('spending_index'),
+        coin: coin
+      });
+      return vin;
+    });
+    return res[0];
+  }
+
+
+  @FieldResolver(returns => TransactionOutput, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
+  async transactionOutput(@Root() coin: Coin, 
+    @Arg("txid", type => String) txid: string, 
+    @Arg("n", type => Int) n: number
+  ): Promise<TransactionOutput> {
+    let mempoolTx = coin.mempool?.txById.get(txid);
+    if (mempoolTx !== undefined) {
+      let rpcVout: RpcVout = mempoolTx.rpcTx.vout[n];
+      if (rpcVout === undefined) return null;
+      let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
+      scriptpubkey.asm = rpcVout.scriptPubKey.asm;
+      scriptpubkey.hex = rpcVout.scriptPubKey.hex;
+      scriptpubkey.reqSigs = rpcVout.scriptPubKey.reqSigs;
+      scriptpubkey.type = rpcVout.scriptPubKey.type;
+      if (rpcVout.scriptPubKey.addresses !== undefined && rpcVout.scriptPubKey.addresses !== null) {
+        scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address({address: address, coin: coin}));
+      }
+      let vout: TransactionOutput = new TransactionOutput({txid: mempoolTx.rpcTx.txid, 
+        n: rpcVout.n, 
+        value: rpcVout.value, 
+        scriptPubKey: scriptpubkey, 
+        coin: coin
+      });
+      let spending_inpoint = coin.mempool.outpointToInpoint.get(vout.txid+vout.n);
+      if (spending_inpoint !== null) {
+        vout.spendingTxid = spending_inpoint.spending_txid;
+        vout.spendingIndex = spending_inpoint.spending_index;
+      }
+      return vout;
+    }
+    let args: any[] = [txid, n];
+    let query: string = "SELECT * FROM "+coin.keyspace+".transaction_output WHERE txid=? AND n=?";
+    let resultSet: types.ResultSet = await this.client.execute(
+      query, 
+      args, 
+      {prepare: true}
+    );
+    let res: TransactionOutput[] = resultSet.rows.map(row => {
+      let scriptpubkey = row.get('scriptpubkey');
+      if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
+        scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address({address: address, coin: coin}));
+      }
+      let spendingTxid: string = row.get('spending_txid');
+      let spendingIndex: number = row.get('spending_index');
+      if (spendingTxid === undefined || spendingTxid === null) {
+        let spending_inpoint = coin.mempool?.outpointToInpoint.get(txid+n);
+        if (spending_inpoint !== null) {
+          spendingTxid = spending_inpoint.spending_txid;
+          spendingIndex = spending_inpoint.spending_index;
+        }
+      }
+      return new TransactionOutput({
+        txid: txid,
+        n: n,
+        value: row.get('value'),
+        scriptPubKey: scriptpubkey,
+        spendingTxid: spendingTxid,
+        spendingIndex: spendingIndex,
+        coin: coin
+      });
+    });
+    return res[0];
+  }
+  
   @FieldResolver(returns => ConfirmedTransaction, {nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity})
   async confirmedTransaction(
     @Root() coin: Coin,
