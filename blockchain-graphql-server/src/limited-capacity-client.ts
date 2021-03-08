@@ -11,7 +11,7 @@ export class LimitedCapacityClient {
 
     public async execute(query: string, params?: ArrayOrObject, options?: QueryOptions): Promise<types.ResultSet> {
         await this.sem.acquire();
-        let p = this.client.execute(query, params, options);
+        const p = this.client.execute(query, params, options);
         p.finally(() => {
             this.sem.release();
         })

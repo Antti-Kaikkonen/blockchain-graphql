@@ -1,6 +1,4 @@
 import { ObjectType, Field } from "type-graphql";
-import { PaginatedClusterTransactionResponse } from "./cluster-transaction";
-import { PaginatedAddressResponse } from "./address";
 import { Coin } from "./coin";
 
 @ObjectType()

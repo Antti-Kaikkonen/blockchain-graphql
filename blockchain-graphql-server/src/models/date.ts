@@ -1,7 +1,5 @@
 import { ObjectType, Field } from "type-graphql";
 import { Coin } from "./coin";
-import { PaginatedRichlistResponse } from "./richlist";
-import { PaginatedAddressBalanceChangeResponse } from "./address-balance-change";
 
 @ObjectType()
 export class Date {

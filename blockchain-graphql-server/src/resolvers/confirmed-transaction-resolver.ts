@@ -17,7 +17,7 @@ export class ConfirmedTransactionResolver {
     @FieldResolver(returns => BlockHash, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async blockHash(@Root() transaction: ConfirmedTransaction,
     ): Promise<BlockHash> {
-        let mempoolBlock: MempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
+        const mempoolBlock: MempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
         if (mempoolBlock !== undefined) {
             return <BlockHash>{
                 hash: mempoolBlock.rpcBlock.hash,
@@ -25,14 +25,14 @@ export class ConfirmedTransactionResolver {
                 coin: transaction.coin
             }
         }
-        let args: any[] = [transaction.height];
-        let query: string = "SELECT * FROM " + transaction.coin.keyspace + ".longest_chain WHERE height=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [transaction.height];
+        const query: string = "SELECT * FROM " + transaction.coin.keyspace + ".longest_chain WHERE height=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: BlockHash[] = resultSet.rows.map(row => {
+        const res: BlockHash[] = resultSet.rows.map(row => {
             return <BlockHash>{
                 hash: row.get('hash'),
                 height: row.get('height'),
@@ -45,18 +45,18 @@ export class ConfirmedTransactionResolver {
     @FieldResolver(returns => Transaction, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async transaction(@Root() transaction: ConfirmedTransaction,
     ): Promise<Transaction> {
-        let mempoolTransaction: MempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
+        const mempoolTransaction: MempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
         if (mempoolTransaction !== undefined) {
             return mempoolTransaction.toGraphQL(transaction.coin);
         }
-        let args: any[] = [transaction.txid];
-        let query: string = "SELECT * FROM " + transaction.coin.keyspace + ".transaction WHERE txid=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [transaction.txid];
+        const query: string = "SELECT * FROM " + transaction.coin.keyspace + ".transaction WHERE txid=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: Transaction[] = resultSet.rows.map(row => {
+        const res: Transaction[] = resultSet.rows.map(row => {
             return <Transaction>{
                 txid: row.get('txid'),
                 lockTime: row.get('locktime'),

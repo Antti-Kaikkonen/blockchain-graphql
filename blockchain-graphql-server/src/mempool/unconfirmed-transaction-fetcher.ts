@@ -7,30 +7,25 @@ import { Mempool } from "./mempool";
 export class UnconfirmedTransactionFetcher extends Transform {
 
     private async getTransaction(txid: string): Promise<RpcTx> {
-        return new Promise(async (resolve, reject) => {
-            let fails = 0;
-            while (true) {
-                try {
-                    resolve(await this.rpcClient.getRawTransaction(txid));
-                    break;
-                } catch (err) {
-                    if (++fails > 100) {
-                        console.log("Can't find " + txid);
-                        resolve(null);
-                        break;
-                    }
-                    if (this.mempool.txById.has(txid)) {
-                        resolve(null);
-                        break;
-                    }
-                    await new Promise((resolve, reject) => {
-                        setTimeout(() => {
-                            resolve(null);
-                        }, 100);
-                    });
+        let fails = 0;
+        while (true) {
+            try {
+                return await this.rpcClient.getRawTransaction(txid);
+            } catch (err) {
+                if (++fails > 100) {
+                    console.log("Can't find " + txid);
+                    return null;
                 }
+                if (this.mempool.txById.has(txid)) {
+                    return null;
+                }
+                await new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        resolve(null);
+                    }, 100);
+                });
             }
-        });
+        }
     }
 
     constructor(private rpcClient: RpcClient, private mempool: Mempool) {

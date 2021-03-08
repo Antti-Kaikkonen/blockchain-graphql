@@ -20,11 +20,11 @@ export class TransactionInputResolver {
     async spentOutput(@Root() transactionInput: TransactionInput,
     ): Promise<TransactionOutput> {
         if (transactionInput.txid === null || transactionInput.txid === undefined) return null;
-        let mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.txid);
+        const mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.txid);
         if (mempoolTx !== undefined) {
-            let rpcVout: RpcVout = mempoolTx.rpcTx.vout[transactionInput.vout];
+            const rpcVout: RpcVout = mempoolTx.rpcTx.vout[transactionInput.vout];
 
-            let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
+            const scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
             scriptpubkey.asm = rpcVout.scriptPubKey.asm;
             scriptpubkey.hex = rpcVout.scriptPubKey.hex;
             scriptpubkey.reqSigs = rpcVout.scriptPubKey.reqSigs;
@@ -32,36 +32,36 @@ export class TransactionInputResolver {
             if (rpcVout.scriptPubKey.addresses !== undefined && rpcVout.scriptPubKey.addresses !== null) {
                 scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address({ address: address, coin: transactionInput.coin }));
             }
-            let vout: TransactionOutput = new TransactionOutput({
+            const vout: TransactionOutput = new TransactionOutput({
                 txid: mempoolTx.rpcTx.txid,
                 n: rpcVout.n,
                 value: rpcVout.value,
                 scriptPubKey: scriptpubkey,
                 coin: transactionInput.coin
             });
-            let spending_inpoint = transactionInput.coin.mempool.outpointToInpoint.get(vout.txid + vout.n);
+            const spending_inpoint = transactionInput.coin.mempool.outpointToInpoint.get(vout.txid + vout.n);
             if (spending_inpoint !== null) {
                 vout.spendingTxid = spending_inpoint.spending_txid;
                 vout.spendingIndex = spending_inpoint.spending_index;
             }
             return vout;
         }
-        let args: any[] = [transactionInput.txid, transactionInput.vout];
-        let query: string = "SELECT * FROM " + transactionInput.coin.keyspace + ".transaction_output WHERE txid=? AND n=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [transactionInput.txid, transactionInput.vout];
+        const query: string = "SELECT * FROM " + transactionInput.coin.keyspace + ".transaction_output WHERE txid=? AND n=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: TransactionOutput[] = resultSet.rows.map(row => {
-            let scriptpubkey = row.get('scriptpubkey');
+        const res: TransactionOutput[] = resultSet.rows.map(row => {
+            const scriptpubkey = row.get('scriptpubkey');
             if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
                 scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address({ address: address, coin: transactionInput.coin }));
             }
             let spendingTxid: string = row.get('spending_txid');
             let spendingIndex: number = row.get('spending_index');
             if (spendingTxid === undefined || spendingTxid === null) {
-                let spending_inpoint = transactionInput.coin.mempool?.outpointToInpoint.get(transactionInput.txid + transactionInput.vout);
+                const spending_inpoint = transactionInput.coin.mempool?.outpointToInpoint.get(transactionInput.txid + transactionInput.vout);
                 if (spending_inpoint !== null) {
                     spendingTxid = spending_inpoint.spending_txid;
                     spendingIndex = spending_inpoint.spending_index;
@@ -84,7 +84,7 @@ export class TransactionInputResolver {
     async transaction(@Root() transactionInput: TransactionInput,
     ): Promise<Transaction> {
         if (transactionInput.spendingTxid === null || transactionInput.spendingTxid === undefined) return null;
-        let mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.spendingTxid);
+        const mempoolTx = transactionInput.coin.mempool?.txById.get(transactionInput.spendingTxid);
         if (mempoolTx !== undefined) {
             return <Transaction>{
                 txid: mempoolTx.rpcTx.txid,
@@ -97,14 +97,14 @@ export class TransactionInputResolver {
                 coin: transactionInput.coin
             };
         }
-        let args: any[] = [transactionInput.spendingTxid];
-        let query: string = "SELECT * FROM " + transactionInput.coin.keyspace + ".transaction WHERE txid=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [transactionInput.spendingTxid];
+        const query: string = "SELECT * FROM " + transactionInput.coin.keyspace + ".transaction WHERE txid=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: Transaction[] = resultSet.rows.map(row => {
+        const res: Transaction[] = resultSet.rows.map(row => {
             return <Transaction>{
                 txid: row.get('txid'),
                 lockTime: row.get('locktime'),

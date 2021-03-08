@@ -1,7 +1,4 @@
 import { ObjectType, Field, Int } from "type-graphql";
-import { AddressTransaction, PaginatedAddressTransactionResponse } from "./address-transaction";
-import { OHLC, PaginatedOHLCResponse } from "./ohlc";
-import { ConfirmedTransaction, PaginatedConfirmedTransactionResponse } from "./confirmed-transaction";
 import { Coin } from "./coin";
 
 @ObjectType()

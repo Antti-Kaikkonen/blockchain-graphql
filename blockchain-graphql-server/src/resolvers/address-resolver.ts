@@ -57,10 +57,10 @@ export class AddressResolver {
 
     @FieldResolver(returns => AddressCluster, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async guestimatedWallet(@Root() address: Address): Promise<AddressCluster> {
-        let query: string = "SELECT parent FROM " + address.coin.keyspace + ".union_find WHERE address=?";
+        const query: string = "SELECT parent FROM " + address.coin.keyspace + ".union_find WHERE address=?";
         let currentAddress = address.address;
         do {
-            let resultSet: types.ResultSet = await this.client.execute(
+            const resultSet: types.ResultSet = await this.client.execute(
                 query,
                 [currentAddress],
                 { prepare: true }
@@ -68,7 +68,7 @@ export class AddressResolver {
             if (resultSet.rows.length === 1) {
                 currentAddress = resultSet.rows[0].get("parent");
             } else {
-                let res: AddressCluster = new AddressCluster();
+                const res: AddressCluster = new AddressCluster();
                 res.clusterId = currentAddress;
                 res.coin = address.coin;
                 return res;
@@ -89,14 +89,14 @@ export class AddressResolver {
         }
         query += " LIMIT ?"
         args.push(limit + 1);
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: OHLC[] = resultSet.rows.map(row => {
+        const res: OHLC[] = resultSet.rows.map(row => {
             return <OHLC>{
                 timestamp: row.get("timestamp"),
                 open: row.get("open"),
@@ -114,7 +114,7 @@ export class AddressResolver {
     @FieldResolver(returns => PaginatedUnconfirmedAddressTransactionResponse, { nullable: false, complexity: ({ childComplexity, args }) => args.limit * childComplexity })
     async unconfirmedTransactions(@Root() address: Address, @Args() { cursor, limit }: UnconfirmedTransactionsArgs): Promise<PaginatedUnconfirmedAddressTransactionResponse> {
         let it;
-        let addressMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+        const addressMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
         if (addressMempool === undefined) {
             return { items: [], hasMore: false };
         }
@@ -128,8 +128,8 @@ export class AddressResolver {
             return { items: [], hasMore: false };
         }
         let item: { txid: string, timestamp: number, balanceChange: number } = it.data();
-        let res: UnconfirmedAddressTransaction[] = [];
-        let hasMore: boolean = false;
+        const res: UnconfirmedAddressTransaction[] = [];
+        let hasMore = false;
         while (item !== null) {
             if (res.length === limit) {
                 hasMore = true;
@@ -143,7 +143,7 @@ export class AddressResolver {
 
     @FieldResolver(returns => Int, { nullable: false, complexity: ({ childComplexity, args }) => 1 })
     async unconfirmedTxCount(@Root() address: Address): Promise<number> {
-        let addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+        const addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
         if (addressUnconfirmedMempool === undefined) {
             return 0;
         } else {
@@ -153,7 +153,7 @@ export class AddressResolver {
 
     @FieldResolver(returns => Float, { nullable: false, complexity: ({ childComplexity, args }) => 1 })
     async unconfirmedBalanceChange(@Root() address: Address): Promise<number> {
-        let addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+        const addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
         if (addressUnconfirmedMempool === undefined) {
             return 0;
         } else {
@@ -170,7 +170,7 @@ export class AddressResolver {
         let res: AddressTransaction[] = address.coin.mempool?.addressTransactions.get(address.address)
         if (res !== undefined) {
             if (cursor !== undefined) {
-                let lastIndex = res.findIndex((e) => {
+                const lastIndex = res.findIndex((e) => {
                     if (e.timestamp.getTime() === cursor.timestamp.getTime()) {
                         if (e.height === cursor.height) {
                             return e.txN >= cursor.txN;
@@ -206,12 +206,12 @@ export class AddressResolver {
             }
             query += " LIMIT ?"
             args.push(limit + 1);
-            let resultSet: types.ResultSet = await this.client.execute(
+            const resultSet: types.ResultSet = await this.client.execute(
                 query,
                 args,
                 { prepare: true, fetchSize: null }
             );
-            let res2: AddressTransaction[] = resultSet.rows.map(row => {
+            const res2: AddressTransaction[] = resultSet.rows.map(row => {
                 return <AddressTransaction>{
                     timestamp: row.get("timestamp"),
                     height: row.get("height"),
@@ -222,16 +222,16 @@ export class AddressResolver {
             });
 
             if (res2.length > 0) {
-                let start = res2[res2.length - 1].timestamp;
-                let end = res2[0].timestamp;
-                let query2: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?";
-                let args2: any[] = [address.address, start, end];
-                let resultSet2: types.ResultSet = await this.client.execute(
+                const start = res2[res2.length - 1].timestamp;
+                const end = res2[0].timestamp;
+                const query2: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?";
+                const args2: any[] = [address.address, start, end];
+                const resultSet2: types.ResultSet = await this.client.execute(
                     query2,
                     args2,
                     { prepare: true }
                 );
-                let time2Balance: Map<number, number> = new Map();
+                const time2Balance: Map<number, number> = new Map();
                 resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")));
                 res2.forEach(r => r.balanceAfterBlock = time2Balance.get(r.timestamp.getTime()));
                 res = res.concat(res2);
@@ -259,7 +259,7 @@ export class AddressResolver {
         let res: AddressBalance[] = address.coin.mempool?.addressBalances.get(address.address);
         if (res !== undefined) {
             if (cursor !== undefined) {
-                let lastIndex = res.findIndex((e) => e.timestamp >= cursor.timestamp);//TODO: use binary search instead
+                const lastIndex = res.findIndex((e) => e.timestamp >= cursor.timestamp);//TODO: use binary search instead
                 if (lastIndex !== -1) {
                     res = res.slice(0, lastIndex);
                 }
@@ -282,7 +282,7 @@ export class AddressResolver {
             }
             query += " LIMIT ?"
             args.push(limit + 1);
-            let resultSet: types.ResultSet = await this.client.execute(
+            const resultSet: types.ResultSet = await this.client.execute(
                 query,
                 args,
                 { prepare: true, fetchSize: null }
@@ -305,7 +305,7 @@ export class AddressResolver {
                 items: res,
             }
         }
-    };
+    }
 
 
 }

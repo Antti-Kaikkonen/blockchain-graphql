@@ -1,4 +1,4 @@
-import { Client, types } from "cassandra-driver";
+import { types } from "cassandra-driver";
 import { LimitedCapacityClient } from "./limited-capacity-client";
 import { Mempool } from "./mempool/mempool";
 import { Coin } from "./models/coin";
@@ -14,7 +14,7 @@ function arraysEqual(a, b) {
     // Please note that calling sort on an array will modify that array.
     // you might want to clone your array first.
 
-    for (var i = 0; i < a.length; ++i) {
+    for (let i = 0; i < a.length; ++i) {
         if (a[i] !== b[i]) return false;
     }
     return true;
@@ -27,15 +27,15 @@ export class CoinsUpdater {
     private timeout: NodeJS.Timeout;
 
     private async updateRow(row: types.Row): Promise<void> {
-        let name = row.get("name");
+        const name = row.get("name");
         let coin: Coin = this.nameToCoin.get(name);
         if (coin === undefined) coin = new Coin();
         //let coin: Coin = new Coin();
         coin.name = row.get("name");
         coin.keyspace = row.get("key_space");
         this.nameToCoin.set(coin.name, coin);
-        let rpc_urls: string[] = row.get("rpc_urls");
-        let zmq_addresses: string[] = row.get("zmq_addresses");
+        const rpc_urls: string[] = row.get("rpc_urls");
+        const zmq_addresses: string[] = row.get("zmq_addresses");
         if (!arraysEqual(coin.rpcUrls, rpc_urls) || !arraysEqual(coin.zmq_addresses, zmq_addresses)) {
             coin.rpcUrls = rpc_urls;
             coin.zmq_addresses = zmq_addresses;
@@ -44,8 +44,8 @@ export class CoinsUpdater {
                 delete coin.mempool;
             }
             if (rpc_urls && rpc_urls.length > 0) {
-                let rpcClient = new RpcClient(rpc_urls, process.env.BLOCKCHAIN_RPC_USERNAME, process.env.BLOCKCHAIN_RPC_PASSWORD);
-                let mempool = new Mempool(rpcClient, this.client, coin);
+                const rpcClient = new RpcClient(rpc_urls, process.env.BLOCKCHAIN_RPC_USERNAME, process.env.BLOCKCHAIN_RPC_PASSWORD);
+                const mempool = new Mempool(rpcClient, this.client, coin);
                 await mempool.start();
                 coin.mempool = mempool;
             }
@@ -53,8 +53,8 @@ export class CoinsUpdater {
     }
 
     private async update(): Promise<void> {
-        let coins: types.ResultSet = await this.client.execute("SELECT * FROM " + this.coins_keyspace + ".available_coins");
-        let promises: Promise<void>[] = [];
+        const coins: types.ResultSet = await this.client.execute("SELECT * FROM " + this.coins_keyspace + ".available_coins");
+        const promises: Promise<void>[] = [];
         coins.rows.forEach(row => {
             promises.push(this.updateRow(row));
         });

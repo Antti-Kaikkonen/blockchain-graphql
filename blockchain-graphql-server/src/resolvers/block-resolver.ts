@@ -29,10 +29,10 @@ export class BlockResolver {
         @Args() { cursor, limit }: ConfirmedTransactionArgs
 
     ): Promise<PaginatedConfirmedTransactionResponse> {
-        let mempoolBlock: MempoolBlock = block.coin.mempool?.blockByHeight.get(block.height);
+        const mempoolBlock: MempoolBlock = block.coin.mempool?.blockByHeight.get(block.height);
         if (mempoolBlock !== undefined) {
-            let res: ConfirmedTransaction[] = [];
-            let fromIndex = cursor === undefined ? 0 : cursor.txN + 1;
+            const res: ConfirmedTransaction[] = [];
+            const fromIndex = cursor === undefined ? 0 : cursor.txN + 1;
             for (let tx_n = fromIndex; tx_n < mempoolBlock.tx.length; tx_n++) {
                 if (res.length == limit) {
                     return {
@@ -40,7 +40,7 @@ export class BlockResolver {
                         items: res
                     };
                 }
-                let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
+                const mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
                 res.push(<ConfirmedTransaction>{
                     height: mempoolTx.height,
                     txN: mempoolTx.txN,
@@ -61,14 +61,14 @@ export class BlockResolver {
         }
         query += " LIMIT ?"
         args.push(limit + 1);
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
+        const res: ConfirmedTransaction[] = resultSet.rows.map(row => {
             return <ConfirmedTransaction>{
                 height: row.get('height'),
                 txN: row.get('tx_n'),

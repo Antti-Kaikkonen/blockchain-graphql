@@ -1,6 +1,4 @@
 import { ObjectType, Field, InputType } from "type-graphql";
-import { Address } from "./address";
-import { AddressCluster } from "./address-cluster";
 import { PaginatedResponse } from "./paginated-response";
 
 @ObjectType()

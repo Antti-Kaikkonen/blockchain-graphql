@@ -24,7 +24,7 @@ export class BlockInputDetailsFetcher extends Transform {
     public outpointToInpoint: Map<string, { spending_txid: string, spending_index: number }> = new Map();
 
     private processTx(tx: RpcTx, inputDetails: Map<string, Promise<{ address: string, value: number }>>) {
-        let coinbase: boolean = tx.vin.length === 1 && tx.vin[0].coinbase !== undefined;
+        const coinbase: boolean = tx.vin.length === 1 && tx.vin[0].coinbase !== undefined;
         if (!coinbase) {
             tx.vin.forEach((vin, spending_index) => {
                 const already_spent_in = this.outpointToInpoint.get(vin.txid + vin.vout);
@@ -46,17 +46,17 @@ export class BlockInputDetailsFetcher extends Transform {
                 if (event.type === "hashtx") {
                     if (!this.txById.has(event.txid)) {
                         this.txById.set(event.txid, event.rpcTx);
-                        let inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
+                        const inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
                         this.processTx(event.rpcTx, inputDetails);
                         this.push({ ...event, inputDetails: inputDetails });
                     }
                 } else if (event.type === "add") {
-                    let rpcBlock = await event.block;
+                    const rpcBlock = await event.block;
                     this.blockByHeight.set(rpcBlock.height, rpcBlock);
                     rpcBlock.tx.forEach(tx => {
                         this.txById.set(tx.txid, tx);
                     });
-                    let inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
+                    const inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
                     rpcBlock.tx.forEach(tx => {
                         this.processTx(tx, inputDetails);
                     });
@@ -81,35 +81,33 @@ export class BlockInputDetailsFetcher extends Transform {
         })
     }
 
-    private getInputDetailsFromDB(vin: RpcVin): Promise<{ address: string, value: number }> {
-        return new Promise(async (resolve, reject) => {
-            let res: types.ResultSet = await this.client.execute("SELECT value, scriptpubkey.addresses FROM " + this.coin.keyspace + ".transaction_output WHERE txid = ? AND n=?;", [vin.txid, vin.vout], { prepare: true });
-            if (res.rows.length === 0) {
-                reject(this.coin.name + " output " + vin.txid + "-" + vin.vout + " was not found in db. Make sure your db is synchronized with the blockchain.");
-            } else {
+    private async getInputDetailsFromDB(vin: RpcVin): Promise<{ address: string, value: number }> {
+        const res: types.ResultSet = await this.client.execute("SELECT value, scriptpubkey.addresses FROM " + this.coin.keyspace + ".transaction_output WHERE txid = ? AND n=?;", [vin.txid, vin.vout], { prepare: true });
+        if (res.rows.length === 0) {
+            throw new Error(this.coin.name + " output " + vin.txid + "-" + vin.vout + " was not found in db. Make sure your db is synchronized with the blockchain.");
+        } else {
+            for (const row of res.rows) {
+                const value: number = row.get("value");
+                const addresses: string[] = row.get("scriptpubkey.addresses");
                 let address: string;
-                res.rows.forEach(row => {
-                    let value: number = row.get("value");
-                    let addresses: string[] = row.get("scriptpubkey.addresses");
-                    if (addresses !== undefined && addresses !== null && addresses.length === 1) {
-                        address = addresses[0];
-                    }
-                    resolve({
-                        address: address,
-                        value: value
-                    });
-                });
+                if (addresses !== undefined && addresses !== null && addresses.length === 1) {
+                    address = addresses[0];
+                }
+                return {
+                    address: address,
+                    value: value
+                };
             }
-        });
+        }
     }
 
     private getMempoolInputDetails(vin: RpcVin): { address: string, value: number } {
-        let mempool_tx = this.txById.get(vin.txid);
+        const mempool_tx = this.txById.get(vin.txid);
         if (mempool_tx === undefined) {
             return undefined;
         } else {
             let address: string;
-            let spent_output = mempool_tx.vout[vin.vout];
+            const spent_output = mempool_tx.vout[vin.vout];
             if (spent_output.scriptPubKey.addresses !== undefined && spent_output.scriptPubKey.addresses !== null && spent_output.scriptPubKey.addresses.length === 1) {
                 address = spent_output.scriptPubKey.addresses[0];
             }
@@ -121,7 +119,7 @@ export class BlockInputDetailsFetcher extends Transform {
     }
 
     private getInputDetails(vin: RpcVin): Promise<{ address: string, value: number }> {
-        let mempoolDetails = this.getMempoolInputDetails(vin);
+        const mempoolDetails = this.getMempoolInputDetails(vin);
         if (mempoolDetails !== undefined) {
             return Promise.resolve(mempoolDetails);
         } else {

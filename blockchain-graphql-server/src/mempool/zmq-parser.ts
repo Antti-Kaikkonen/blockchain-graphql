@@ -6,7 +6,7 @@ export class ZmqParser extends Transform {
         super({
             objectMode: true,
             transform: ([topic, msg]: [Buffer, Buffer], encoding: BufferEncoding, callback: TransformCallback) => {
-                let txid = msg.toString("hex");
+                const txid = msg.toString("hex");
                 callback(null, <MempoolEvent>{
                     type: "hashtx",
                     txid: txid

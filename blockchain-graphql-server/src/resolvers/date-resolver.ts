@@ -37,7 +37,7 @@ class AddressClusterBalanceChangeArgs extends PaginationArgs {
 @Resolver(of => Date)
 export class DateResolver {
 
-    static BIN_COUNT: number = 20;
+    static BIN_COUNT = 20;
     static BINS: number[] = Array.from(new Array(DateResolver.BIN_COUNT).keys());
 
     constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
@@ -56,14 +56,14 @@ export class DateResolver {
         }
         args.push(limit + 1);
         query += " ORDER BY balance DESC, balance_change DESC, address DESC LIMIT ?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: RichList[] = resultSet.rows.map(row => {
+        const res: RichList[] = resultSet.rows.map(row => {
             return <RichList>{
                 address: new Address({ address: row.get("address"), coin: date.coin }),
                 balance: row.get("balance"),
@@ -80,7 +80,7 @@ export class DateResolver {
     async topGainers(@Root() date: Date,
         @Args() { cursor, limit }: AddressBalanceChangeArgs
     ): Promise<PaginatedAddressBalanceChangeResponse> {
-        let reverse: boolean = false;
+        const reverse = false;
         let args: any[] = [date.date, DateResolver.BINS];
         let query: string = "SELECT address, balance_change FROM " + date.coin.keyspace + ".daily_top_gainers WHERE date=? AND bin IN ?";
         if (cursor) {
@@ -93,14 +93,14 @@ export class DateResolver {
         } else {
             query += " ORDER BY balance_change DESC, address DESC LIMIT ?";
         }
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: AddressBalanceChange[] = resultSet.rows.map(row => {
+        const res: AddressBalanceChange[] = resultSet.rows.map(row => {
             return <AddressBalanceChange>{
                 address: new Address({ address: row.get("address"), coin: date.coin }),
                 balanceChange: row.get("balance_change")
@@ -116,7 +116,7 @@ export class DateResolver {
     async topLosers(@Root() date: Date,
         @Args() { cursor, limit }: AddressBalanceChangeArgs
     ): Promise<PaginatedAddressBalanceChangeResponse> {
-        let reverse: boolean = false;
+        const reverse = false;
         let args: any[] = [date.date, DateResolver.BINS];
         let query: string = "SELECT address, balance_change FROM " + date.coin.keyspace + ".daily_top_losers WHERE date=? AND bin IN ?";
         if (cursor) {
@@ -129,14 +129,14 @@ export class DateResolver {
         } else {
             query += " ORDER BY balance_change ASC, address ASC LIMIT ?";
         }
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: AddressBalanceChange[] = resultSet.rows.map(row => {
+        const res: AddressBalanceChange[] = resultSet.rows.map(row => {
             return <AddressBalanceChange>{
                 address: new Address({ address: row.get("address"), coin: date.coin }),
                 balanceChange: row.get("balance_change")
@@ -160,14 +160,14 @@ export class DateResolver {
         }
         args.push(limit + 1);
         query += " ORDER BY balance_change DESC, cluster_id DESC LIMIT ?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
+        const res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
             return <AddressClusterBalanceChange>{
                 guestimatedWallet: <AddressCluster>{
                     clusterId: row.get("cluster_id"),
@@ -194,14 +194,14 @@ export class DateResolver {
         }
         args.push(limit + 1);
         query += " ORDER BY balance_change ASC, cluster_id ASC LIMIT ?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
+        const res: AddressClusterBalanceChange[] = resultSet.rows.map(row => {
             return <AddressClusterBalanceChange>{
                 guestimatedWallet: <AddressCluster>{
                     clusterId: row.get("cluster_id"),

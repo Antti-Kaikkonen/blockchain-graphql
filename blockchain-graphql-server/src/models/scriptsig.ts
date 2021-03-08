@@ -1,5 +1,4 @@
 import { ObjectType, Field } from "type-graphql";
-import { TransactionOutput } from "./transaction-output";
 
 @ObjectType()
 export class ScriptSig {

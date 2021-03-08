@@ -7,7 +7,6 @@ import { AddressBalance } from "../models/address-balance";
 import { AddressTransaction } from "../models/address-transaction";
 import { Coin } from "../models/coin";
 import { Mempool } from "./mempool";
-import { AddressUnconfirmedMempool } from './unconfirmed_mempool';
 
 export interface TxDetails {
     fee: number;
@@ -18,7 +17,7 @@ export class BlockHandler extends Writable {
 
     private processTx(tx: MempoolTx) {
         this.mempool.txById.set(tx.rpcTx.txid, tx);
-        let coinbase: boolean = tx.rpcTx.vin.length === 1 && tx.rpcTx.vin[0].coinbase !== undefined;
+        const coinbase: boolean = tx.rpcTx.vin.length === 1 && tx.rpcTx.vin[0].coinbase !== undefined;
         if (!coinbase) {
             tx.rpcTx.vin.forEach((vin, spending_index) => {
                 const already_spent_in = this.mempool.outpointToInpoint.get(vin.txid + vin.vout);
@@ -37,11 +36,11 @@ export class BlockHandler extends Writable {
             write: async (event: DeleteEvent | AddEvent3 | MempoolEvent3, encoding: BufferEncoding, callback: (error?: any) => void) => {
                 let blockToDelete: MempoolBlock;
                 if (event.type === "hashtx") {
-                    let rpcTx = await event.rpcTx;
+                    const rpcTx = await event.rpcTx;
                     if (!this.mempool.txById.has(rpcTx.txid)) {
-                        let tx = new MempoolTx(rpcTx);
+                        const tx = new MempoolTx(rpcTx);
                         this.processTx(tx);
-                        let txDetails = await this.txDetails(tx, event.inputDetails);
+                        const txDetails = await this.txDetails(tx, event.inputDetails);
                         tx.fee = txDetails.fee;
                         this.mempool.unconfirmedMempool.add(tx, txDetails);
                         this.mempool.txById.set(tx.rpcTx.txid, tx);
@@ -51,7 +50,7 @@ export class BlockHandler extends Writable {
                         this.mempool.time = await this.getDbBlockTimestamp(event.height - 1);
                     }
                     this.mempool.height = event.height;
-                    let mempoolBlock = new MempoolBlock(await event.block);
+                    const mempoolBlock = new MempoolBlock(await event.block);
                     if (mempoolBlock.rpcBlock.time <= this.mempool.time) {
                         mempoolBlock.rpcBlock.time = ++this.mempool.time;//Make block timestamps stricly increasing
                     } else {
@@ -63,21 +62,21 @@ export class BlockHandler extends Writable {
                         this.mempool.unconfirmedMempool.remove(tx.rpcTx.txid);
                         this.processTx(tx);
                     });
-                    let inputDetails: Map<string, Promise<{ address: string, value: number }>> = event.inputDetails;
-                    let blockAddressDeltas: Map<string, number> = new Map();
-                    let blockTxDetails = await Promise.all(mempoolBlock.tx.map(tx => this.txDetails(tx, inputDetails)));
+                    const inputDetails: Map<string, Promise<{ address: string, value: number }>> = event.inputDetails;
+                    const blockAddressDeltas: Map<string, number> = new Map();
+                    const blockTxDetails = await Promise.all(mempoolBlock.tx.map(tx => this.txDetails(tx, inputDetails)));
                     for (let i = 0; i < mempoolBlock.tx.length; i++) {
-                        let txDetails = blockTxDetails[i];
-                        let tx = mempoolBlock.tx[i];
+                        const txDetails = blockTxDetails[i];
+                        const tx = mempoolBlock.tx[i];
                         tx.fee = txDetails.fee;
                         txDetails.addressDeltas.forEach((delta: number, address: string) => {
-                            let oldDelta = blockAddressDeltas.get(address);
+                            const oldDelta = blockAddressDeltas.get(address);
                             blockAddressDeltas.set(address, oldDelta === undefined ? delta : oldDelta + delta);
                         });
                     }
-                    let blockAddressBalances = await this.blockAddressBalances(mempoolBlock, blockAddressDeltas);
+                    const blockAddressBalances = await this.blockAddressBalances(mempoolBlock, blockAddressDeltas);
                     blockAddressBalances.forEach(e => {
-                        let addressBalance: AddressBalance = new AddressBalance();
+                        const addressBalance: AddressBalance = new AddressBalance();
                         addressBalance.balance = e.balance;
                         addressBalance.timestamp = new Date(mempoolBlock.rpcBlock.time * 1000);
                         if (!this.mempool.addressBalances.has(e.address)) this.mempool.addressBalances.set(e.address, []);
@@ -108,121 +107,103 @@ export class BlockHandler extends Writable {
 
 
     private async txDetails(tx: MempoolTx, inputToDetails: Map<string, Promise<{ address: string, value: number }>>): Promise<TxDetails> {
-        return new Promise(async (resolve, reject) => {
-            let feeSats: number = 0;
-            let addressDeltas: Map<string, number> = new Map();
-            let coinbase: boolean = tx.rpcTx.vin.length === 1 && tx.rpcTx.vin[0].coinbase !== undefined;
-            tx.rpcTx.vout.forEach(vout => {
-                let valueSats = Math.round(vout.value * 1e8);
-                if (vout.scriptPubKey.addresses !== undefined && vout.scriptPubKey.addresses !== null && vout.scriptPubKey.addresses.length === 1) {
-                    let address: string = vout.scriptPubKey.addresses[0];
-                    let oldValue = addressDeltas.get(address);
-                    addressDeltas.set(address, oldValue === undefined ? valueSats : oldValue + valueSats);
-                }
-                if (!coinbase) feeSats -= valueSats;
-            });
-            if (!coinbase && tx.rpcTx.vin.length > 0) {
-                let pending_promises = tx.rpcTx.vin.length;
-                tx.rpcTx.vin.forEach(async (vin, spending_index) => {
-                    let inputDetails = await inputToDetails.get(vin.txid + vin.vout);
-                    let valueSats = Math.round(inputDetails.value * 1e8);
-                    feeSats += valueSats;
-                    if (inputDetails.address !== undefined) {
-                        let oldValue = addressDeltas.get(inputDetails.address);
-                        addressDeltas.set(inputDetails.address, oldValue === undefined ? -valueSats : oldValue - valueSats);
-                    }
-                    pending_promises--;
-                    if (pending_promises === 0) {
-                        resolve({
-                            fee: feeSats / 1e8,
-                            addressDeltas: addressDeltas
-                        });
-                    }
-                });
-            } else {
-                resolve({
-                    fee: feeSats / 1e8,
-                    addressDeltas: addressDeltas
-                });
+        let feeSats = 0;
+        const addressDeltas: Map<string, number> = new Map();
+        const coinbase: boolean = tx.rpcTx.vin.length === 1 && tx.rpcTx.vin[0].coinbase !== undefined;
+        tx.rpcTx.vout.forEach(vout => {
+            const valueSats = Math.round(vout.value * 1e8);
+            if (vout.scriptPubKey.addresses !== undefined && vout.scriptPubKey.addresses !== null && vout.scriptPubKey.addresses.length === 1) {
+                const address: string = vout.scriptPubKey.addresses[0];
+                const oldValue = addressDeltas.get(address);
+                addressDeltas.set(address, oldValue === undefined ? valueSats : oldValue + valueSats);
             }
+            if (!coinbase) feeSats -= valueSats;
         });
+        if (!coinbase && tx.rpcTx.vin.length > 0) {
+            const txInputDetails = await Promise.all(tx.rpcTx.vin.map(vin => inputToDetails.get(vin.txid + vin.vout)));
+            txInputDetails.forEach(inputDetails => {
+                const valueSats = Math.round(inputDetails.value * 1e8);
+                feeSats += valueSats;
+                if (inputDetails.address !== undefined) {
+                    const oldValue = addressDeltas.get(inputDetails.address);
+                    addressDeltas.set(inputDetails.address, oldValue === undefined ? -valueSats : oldValue - valueSats);
+                }
+            });
+            return {
+                fee: feeSats / 1e8,
+                addressDeltas: addressDeltas
+            };
+        } else {
+            return {
+                fee: feeSats / 1e8,
+                addressDeltas: addressDeltas
+            };
+        }
     }
 
 
     private async getDbBlockTimestamp(height: number): Promise<number> {
-        try {
-            let res = await this.client.execute("SELECT hash FROM " + this.coin.keyspace + ".longest_chain WHERE height = ?;", [height], { prepare: true });
-            let hash: string;
-            res.rows.forEach(row => {
-                hash = row.get("hash");
-            });
-            if (hash === undefined) throw new Error("Failed to get block hash for height " + height);
-            let res2 = await this.client.execute("SELECT time FROM " + this.coin.keyspace + ".block WHERE hash = ?;", [hash], { prepare: true });
-            let time: number;
-            res2.rows.forEach(row => {
-                time = row.get("time");
-            });
-            if (time === undefined) throw new Error("Failed to get time for block " + hash + " at height " + height);
-            return time;
-        } catch (error) {
-            throw error;
-        }
+        const res = await this.client.execute("SELECT hash FROM " + this.coin.keyspace + ".longest_chain WHERE height = ?;", [height], { prepare: true });
+        let hash: string;
+        res.rows.forEach(row => {
+            hash = row.get("hash");
+        });
+        if (hash === undefined) throw new Error("Failed to get block hash for height " + height);
+        const res2 = await this.client.execute("SELECT time FROM " + this.coin.keyspace + ".block WHERE hash = ?;", [hash], { prepare: true });
+        let time: number;
+        res2.rows.forEach(row => {
+            time = row.get("time");
+        });
+        if (time === undefined) throw new Error("Failed to get time for block " + hash + " at height " + height);
+        return time;
     }
 
     private async getDbAddressBalance(address: string, beforeTimestamnp: number): Promise<number> {
-        try {
-            let res = await this.client.execute("SELECT balance FROM " + this.coin.keyspace + ".address_balance WHERE address = ? AND timestamp < ? LIMIT 1;", [address, beforeTimestamnp], { prepare: true });
-            let balance: number;
-            res.rows.forEach(row => {
-                balance = row.get("balance");
-            });
-            return balance;
-        } catch (error) {
-            throw error;
-        }
+        const res = await this.client.execute("SELECT balance FROM " + this.coin.keyspace + ".address_balance WHERE address = ? AND timestamp < ? LIMIT 1;", [address, beforeTimestamnp], { prepare: true });
+        let balance: number;
+        res.rows.forEach(row => {
+            balance = row.get("balance");
+        });
+        return balance;
     }
 
     private async blockAddressBalances(block: MempoolBlock, blockAddressDeltas: Map<string, number>): Promise<{ address: string, balance: number }[]> {
         return Promise.all(Array.from(blockAddressDeltas.entries()).map(async ([address, delta]) => {
-            try {
-                let oldBalances = this.mempool.addressBalances.get(address);
-                let oldBalance: number;
-                if (oldBalances === undefined) {
-                    //this.addressBalances.set(address, []);
-                    oldBalance = await this.getDbAddressBalance(address, block.rpcBlock.time * 1000);
-                    if (oldBalance === undefined) {
-                        oldBalance = 0;
-                    } else {
-                        oldBalance = Math.round(oldBalance * 1e8);
-                    }
+            const oldBalances = this.mempool.addressBalances.get(address);
+            let oldBalance: number;
+            if (oldBalances === undefined) {
+                //this.addressBalances.set(address, []);
+                oldBalance = await this.getDbAddressBalance(address, block.rpcBlock.time * 1000);
+                if (oldBalance === undefined) {
+                    oldBalance = 0;
                 } else {
-                    oldBalance = Math.round(oldBalances[oldBalances.length - 1].balance * 1e8);
+                    oldBalance = Math.round(oldBalance * 1e8);
                 }
-                return { address: address, balance: (oldBalance + delta) / 1e8 };
-            } catch (error) {
-                throw error;
+            } else {
+                oldBalance = Math.round(oldBalances[oldBalances.length - 1].balance * 1e8);
             }
+            return { address: address, balance: (oldBalance + delta) / 1e8 };
         }));
     }
 
     private async updateAddressTransactions(block: MempoolBlock, blockTxDetails: TxDetails[], blockAddressDeltas: Map<string, number>): Promise<void> {
         for (let tx_n = 0; tx_n < block.tx.length; tx_n++) {//update address transactions
-            let txDetails = blockTxDetails[tx_n];
+            const txDetails = blockTxDetails[tx_n];
             txDetails.addressDeltas.forEach((delta: number, address: string) => {
-                let oldDelta = blockAddressDeltas.get(address);
+                const oldDelta = blockAddressDeltas.get(address);
                 blockAddressDeltas.set(address, oldDelta === undefined ? delta : oldDelta + delta);
                 let addressTxs = this.mempool.addressTransactions.get(address);
                 if (addressTxs === undefined) {
                     addressTxs = [];
                     this.mempool.addressTransactions.set(address, addressTxs);
                 }
-                let aTx = new AddressTransaction();
+                const aTx = new AddressTransaction();
                 aTx.coin = this.coin;
                 aTx.balanceChange = delta / 1e8;
                 aTx.height = block.rpcBlock.height;
                 aTx.txN = tx_n;
                 aTx.timestamp = new Date(block.rpcBlock.time * 1000);
-                let addressBalances = this.mempool.addressBalances.get(address);
+                const addressBalances = this.mempool.addressBalances.get(address);
                 aTx.balanceAfterBlock = addressBalances[addressBalances.length - 1].balance;
                 addressTxs.push(aTx);
             });

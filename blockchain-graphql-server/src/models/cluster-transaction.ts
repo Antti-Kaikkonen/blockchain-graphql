@@ -1,6 +1,5 @@
 import { ObjectType, Field, InputType, Int } from "type-graphql";
 import { Coin } from "./coin";
-import { ConfirmedTransaction } from "./confirmed-transaction";
 import { PaginatedResponse } from "./paginated-response";
 
 @ObjectType()

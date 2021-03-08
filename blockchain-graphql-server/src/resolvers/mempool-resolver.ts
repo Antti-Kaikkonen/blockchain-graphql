@@ -33,8 +33,8 @@ export class MempoolResolver {
             it.next();
         }
         let item: { txid: string, timestamp: number } = it.data();
-        let res: UnconfirmedTransaction[] = [];
-        let hasMore: boolean = false;
+        const res: UnconfirmedTransaction[] = [];
+        let hasMore = false;
         while (item !== null) {
             if (res.length === limit) {
                 hasMore = true;

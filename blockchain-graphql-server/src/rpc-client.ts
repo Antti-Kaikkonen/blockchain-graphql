@@ -1,5 +1,5 @@
 import http from "http";
-import url, { URL } from "url";
+import url from "url";
 
 class RpcResponse<T> {
     result: T;
@@ -93,7 +93,7 @@ export class RpcClient {
 
     public getBlockCount(): Promise<number> {
         return new Promise<number>((resolve, reject) => {
-            let req = http.request({
+            const req = http.request({
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
@@ -105,7 +105,7 @@ export class RpcClient {
                     result += d;
                 })
                 res.on('end', () => {
-                    let obj: RpcResponse<number> = JSON.parse(result);
+                    const obj: RpcResponse<number> = JSON.parse(result);
                     if (obj.error) {
                         reject(obj.error.message);
                     } else {
@@ -124,7 +124,7 @@ export class RpcClient {
 
     public getBlockHash(height: number): Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            let req = http.request({
+            const req = http.request({
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
@@ -136,7 +136,7 @@ export class RpcClient {
                     result += d;
                 })
                 res.on('end', () => {
-                    let obj: RpcResponse<string> = JSON.parse(result);
+                    const obj: RpcResponse<string> = JSON.parse(result);
                     if (obj.error) {
                         reject(obj.error.message);
                     } else {
@@ -155,7 +155,7 @@ export class RpcClient {
 
     public getBlock(hash: string): Promise<RpcBlock> {
         return new Promise<RpcBlock>((resolve, reject) => {
-            let req = http.request({
+            const req = http.request({
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
@@ -167,7 +167,7 @@ export class RpcClient {
                     result += d;
                 })
                 res.on('end', () => {
-                    let obj: RpcResponse<RpcBlock> = JSON.parse(result);
+                    const obj: RpcResponse<RpcBlock> = JSON.parse(result);
                     if (obj.error) {
                         reject(obj.error.message);
                     } else {
@@ -186,7 +186,7 @@ export class RpcClient {
 
     public getRawTransaction(txid: string): Promise<RpcTx> {
         return new Promise<RpcTx>((resolve, reject) => {
-            let req = http.request({
+            const req = http.request({
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
@@ -198,7 +198,7 @@ export class RpcClient {
                     result += d;
                 })
                 res.on('end', () => {
-                    let obj: RpcResponse<RpcTx> = JSON.parse(result);
+                    const obj: RpcResponse<RpcTx> = JSON.parse(result);
                     if (obj.error) {
                         reject(obj.error.message);
                     } else {
@@ -217,7 +217,7 @@ export class RpcClient {
 
     public getRawMempool(): Promise<string[]> {
         return new Promise<string[]>((resolve, reject) => {
-            let req = http.request({
+            const req = http.request({
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
@@ -229,7 +229,7 @@ export class RpcClient {
                     result += d;
                 })
                 res.on('end', () => {
-                    let obj: RpcResponse<string[]> = JSON.parse(result);
+                    const obj: RpcResponse<string[]> = JSON.parse(result);
                     if (obj.error) {
                         reject(obj.error.message);
                     } else {
@@ -248,7 +248,7 @@ export class RpcClient {
 
     public getMempool(): Promise<RpcMempool> {
         return new Promise<RpcMempool>((resolve, reject) => {
-            let req = http.request({
+            const req = http.request({
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
@@ -260,7 +260,7 @@ export class RpcClient {
                     result += d;
                 })
                 res.on('end', () => {
-                    let obj: RpcResponse<RpcMempool> = JSON.parse(result);
+                    const obj: RpcResponse<RpcMempool> = JSON.parse(result);
                     if (obj.error) {
                         reject(obj.error.message);
                     } else {
@@ -279,7 +279,7 @@ export class RpcClient {
 
     public sendRawTransaction(hexstring: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            let req = http.request({
+            const req = http.request({
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
@@ -291,7 +291,7 @@ export class RpcClient {
                     result += d;
                 })
                 res.on('end', () => {
-                    let obj: RpcResponse<string> = JSON.parse(result);
+                    const obj: RpcResponse<string> = JSON.parse(result);
                     if (obj.error) {
                         reject(obj.error.message);
                     } else {

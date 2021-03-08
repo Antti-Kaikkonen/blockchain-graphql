@@ -37,12 +37,12 @@ async function run() {
         throw result.error;
     }
 
-    let contactPoints = process.env.CASSANDRA_HOST;
-    let contactPointsArr = contactPoints.split(/\s+/);
+    const contactPoints = process.env.CASSANDRA_HOST;
+    const contactPointsArr = contactPoints.split(/\s+/);
 
-    let coins_keyspace = process.env.CASSANDRA_COINS_KEYSPACE || "coins";
+    const coins_keyspace = process.env.CASSANDRA_COINS_KEYSPACE || "coins";
 
-    let api_port: number = process.env.API_PORT !== undefined ? Number.parseInt(process.env.API_PORT) : 6545;
+    const api_port: number = process.env.API_PORT !== undefined ? Number.parseInt(process.env.API_PORT) : 6545;
 
     const client = new Client({
         contactPoints: contactPointsArr,
@@ -53,14 +53,14 @@ async function run() {
 
     const limitedCapcityClient = new LimitedCapacityClient(client, 100);
 
-    let nameToCoin: Map<string, Coin> = new Map();
-    let coins_updater: CoinsUpdater = new CoinsUpdater(nameToCoin, limitedCapcityClient, coins_keyspace);
+    const nameToCoin: Map<string, Coin> = new Map();
+    const coins_updater: CoinsUpdater = new CoinsUpdater(nameToCoin, limitedCapcityClient, coins_keyspace);
     await coins_updater.start();
     Container.set("coins", nameToCoin);
     Container.set("cassandra_client", limitedCapcityClient);
     Container.set("coins_keyspace", coins_keyspace);
 
-    let schema = await buildSchema({
+    const schema = await buildSchema({
         resolvers: [RichlistResolver, AddressTransactionsResolver, AddressResolver,
             DateResolver, BlockResolver, ConfirmedTransactionResolver,
             BlockHashResolver, TransactionResolver, TransactionInputResolver,
@@ -123,9 +123,9 @@ async function run() {
                     console.log("Used query complexity points:", complexity);
                     if (complexity > 0) {
                         //Your HTTP server (e.g NGINX or Apache) must send client IP-address with this header for rate limiting to take effect. 
-                        let x_forwarded_for: string = requestContext.request.http.headers.get('X-Forwarded-For');
+                        const x_forwarded_for: string = requestContext.request.http.headers.get('X-Forwarded-For');
                         if (x_forwarded_for !== undefined && x_forwarded_for !== null) {
-                            let ips: string[] = x_forwarded_for.split(", ");
+                            const ips: string[] = x_forwarded_for.split(", ");
                             if (ips.length > 0) {
                                 const ip: string = ips[ips.length - 1];
                                 const oldValue = ipToQueries.get(ip);

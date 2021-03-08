@@ -54,7 +54,7 @@ export class AddressClusterResolver {
     constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
     }
 
-    static CLUSTER_DAILY_BALANCES_BIN_COUNT: number = 20;
+    static CLUSTER_DAILY_BALANCES_BIN_COUNT = 20;
 
     @FieldResolver(returns => PaginatedClusterTransactionResponse, { nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity })
     async transactions(@Root() cluster: AddressCluster,
@@ -68,14 +68,14 @@ export class AddressClusterResolver {
         }
         query += " LIMIT ?";
         args.push(limit + 1);
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: ClusterTransaction[] = resultSet.rows.map(row => {
+        const res: ClusterTransaction[] = resultSet.rows.map(row => {
             return <ClusterTransaction>{
                 timestamp: row.get("timestamp"),
                 height: row.get("height"),
@@ -102,14 +102,14 @@ export class AddressClusterResolver {
         }
         query += " LIMIT ?";
         args.push(limit + 1);
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: Address[] = resultSet.rows.map(row => new Address({ address: row.get("address"), coin: cluster.coin }));
+        const res: Address[] = resultSet.rows.map(row => new Address({ address: row.get("address"), coin: cluster.coin }));
         return {
             hasMore: hasMore,
             items: res,
@@ -120,7 +120,7 @@ export class AddressClusterResolver {
     async dailyBalanceChanges(@Root() cluster: AddressCluster,
         @Args() { limit, cursor }: DailyBalanceChangeArgs
     ): Promise<PaginatedAddressClusterDailyBalanceChangeResponse> {
-        let bin = Math.abs(hashCode(cluster.clusterId)) % AddressClusterResolver.CLUSTER_DAILY_BALANCES_BIN_COUNT;
+        const bin = Math.abs(hashCode(cluster.clusterId)) % AddressClusterResolver.CLUSTER_DAILY_BALANCES_BIN_COUNT;
         let args: any[] = [cluster.clusterId, bin];
         let query: string = "SELECT date, balance_change FROM " + cluster.coin.keyspace + ".cluster_daily_balance_change WHERE cluster_id=? AND bin = ?";
         if (cursor) {
@@ -129,14 +129,14 @@ export class AddressClusterResolver {
         }
         args.push(limit + 1);
         query += " ORDER BY date ASC LIMIT ?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: AddressClusterDailyBalanceChange[] = resultSet.rows.map(row => {
+        const res: AddressClusterDailyBalanceChange[] = resultSet.rows.map(row => {
             return <AddressClusterDailyBalanceChange>{
                 date: row.get("date"),
                 balanceChange: row.get("balance_change")
@@ -151,15 +151,15 @@ export class AddressClusterResolver {
     @FieldResolver(returns => AddressClusterDetails, { nullable: true, complexity: ({ childComplexity, args }) => 100 })
     async details(@Root() cluster: AddressCluster,
     ): Promise<AddressClusterDetails> {
-        let bin = Math.abs(hashCode(cluster.clusterId)) % CoinResolver.CLUSTER_RICHLIST_BIN_COUNT;
-        let args: any[] = [cluster.clusterId, bin];
-        let query: string = "SELECT * FROM " + cluster.coin.keyspace + ".cluster_details WHERE cluster_id=? AND bin = ?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const bin = Math.abs(hashCode(cluster.clusterId)) % CoinResolver.CLUSTER_RICHLIST_BIN_COUNT;
+        const args: any[] = [cluster.clusterId, bin];
+        const query: string = "SELECT * FROM " + cluster.coin.keyspace + ".cluster_details WHERE cluster_id=? AND bin = ?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let res: AddressClusterDetails[] = resultSet.rows.map(row => {
+        const res: AddressClusterDetails[] = resultSet.rows.map(row => {
             return <AddressClusterDetails>{
                 balance: row.get("balance")
             }

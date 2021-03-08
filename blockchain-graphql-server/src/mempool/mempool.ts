@@ -22,7 +22,7 @@ export class Mempool {
     public blockByHash: Map<string, MempoolBlock> = new Map();
     public blockByHeight: Map<number, MempoolBlock> = new Map();
     public outpointToInpoint: Map<string, { spending_txid: string, spending_index: number }> = new Map();
-    public addressBalances: Map<String, AddressBalance[]> = new Map();
+    public addressBalances: Map<string, AddressBalance[]> = new Map();
     public addressTransactions: Map<string, AddressTransaction[]> = new Map();
     public unconfirmedMempool: UnconfirmedMempool = new UnconfirmedMempool();
 
@@ -54,7 +54,7 @@ export class Mempool {
         Readable.from(this.socket).pipe(this.zmqParser, { end: false });
         this.blockReader.pipe(this.blockFetcher).pipe(this.inputFetcher).pipe(this.blockHandler);
         await new Promise((resolve) => setTimeout(resolve, 10000));
-        let txids: string[] = await this.rpcClient.getRawMempool();
+        const txids: string[] = await this.rpcClient.getRawMempool();
         txids.forEach(txid => this.unconfirmedTxidFetcher.write(<MempoolEvent3>{ type: "hashtx", txid: txid }));
         if (this.coin.zmq_addresses && this.coin.zmq_addresses.length > 0) {
             this.socket.connect(this.coin.zmq_addresses[0]);

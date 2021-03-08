@@ -16,18 +16,18 @@ export class MempoolTransactionsResolver {
     @FieldResolver(returns => Transaction, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async transaction(@Root() rootTx: UnconfirmedTransaction,
     ): Promise<Transaction> {
-        let mempoolTransaction: MempoolTx = rootTx.coin.mempool?.txById.get(rootTx.txid);
+        const mempoolTransaction: MempoolTx = rootTx.coin.mempool?.txById.get(rootTx.txid);
         if (mempoolTransaction !== undefined) {
             return mempoolTransaction.toGraphQL(rootTx.coin);
         }
-        let args: any[] = [rootTx.txid];
-        let query: string = "SELECT * FROM " + rootTx.coin.keyspace + ".transaction WHERE txid=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [rootTx.txid];
+        const query: string = "SELECT * FROM " + rootTx.coin.keyspace + ".transaction WHERE txid=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: Transaction[] = resultSet.rows.map(row => {
+        const res: Transaction[] = resultSet.rows.map(row => {
             return <Transaction>{
                 txid: row.get('txid'),
                 lockTime: row.get('locktime'),

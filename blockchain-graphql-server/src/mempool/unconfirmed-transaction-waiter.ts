@@ -12,7 +12,7 @@ export class UnconfirmedTransactionWaiter extends Transform {
         super({
             objectMode: true,
             transform: async (event: MempoolEvent2, encoding: BufferEncoding, callback: TransformCallback) => {
-                let rpcTx = await event.rpcTx;
+                const rpcTx = await event.rpcTx;
                 if (rpcTx !== undefined && rpcTx !== null) {
                     this.push(<ResolvedMempoolTransaction>{ txid: event.txid, rpcTx: rpcTx, type: "hashtx" });
                 }

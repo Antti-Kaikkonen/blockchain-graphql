@@ -1,4 +1,4 @@
-import { ObjectType, InputType, Field, Int } from "type-graphql";
+import { ObjectType, InputType, Field } from "type-graphql";
 import { PaginatedResponse } from "./paginated-response";
 
 @ObjectType()

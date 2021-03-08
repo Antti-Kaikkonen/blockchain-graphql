@@ -39,7 +39,7 @@ export class TransactionResolver {
     async blockHash(@Root() transaction: Transaction,
     ): Promise<BlockHash> {
         if (transaction.height === undefined || transaction.height === null) return null;
-        let mempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
+        const mempoolBlock = transaction.coin.mempool?.blockByHeight.get(transaction.height);
         if (mempoolBlock !== undefined) {
             return <BlockHash>{
                 hash: mempoolBlock.rpcBlock.hash,
@@ -47,14 +47,14 @@ export class TransactionResolver {
                 coin: transaction.coin
             };
         }
-        let args: any[] = [transaction.height];
-        let query: string = "SELECT * FROM " + transaction.coin.keyspace + ".longest_chain WHERE height=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [transaction.height];
+        const query: string = "SELECT * FROM " + transaction.coin.keyspace + ".longest_chain WHERE height=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: BlockHash[] = resultSet.rows.map(row => {
+        const res: BlockHash[] = resultSet.rows.map(row => {
             return <BlockHash>{
                 hash: row.get('hash'),
                 height: row.get('height'),
@@ -70,10 +70,10 @@ export class TransactionResolver {
     async inputs(@Root() transaction: Transaction,
         @Args() { cursor, limit }: TransactionInputArgs
     ): Promise<PaginatedTransactionInputResponse> {
-        let mempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
+        const mempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
         if (mempoolTx !== undefined) {
-            let res: TransactionInput[] = [];
-            let fromIndex = cursor === undefined ? 0 : cursor.spendingIndex + 1;
+            const res: TransactionInput[] = [];
+            const fromIndex = cursor === undefined ? 0 : cursor.spendingIndex + 1;
             for (let spending_index = fromIndex; spending_index < mempoolTx.rpcTx.vin.length; spending_index++) {
                 if (res.length == limit) {
                     return {
@@ -81,7 +81,7 @@ export class TransactionResolver {
                         items: res
                     };
                 }
-                let rpcVin = mempoolTx.rpcTx.vin[spending_index];
+                const rpcVin = mempoolTx.rpcTx.vin[spending_index];
                 res.push(new TransactionInput({
                     coinbase: rpcVin.coinbase,
                     scriptSig: rpcVin.scriptSig,
@@ -106,15 +106,15 @@ export class TransactionResolver {
         }
         query += " LIMIT ?"
         args.push(limit + 1);
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
 
-        let res: TransactionInput[] = resultSet.rows.map(row => {
+        const res: TransactionInput[] = resultSet.rows.map(row => {
             return new TransactionInput({
                 coinbase: row.get('coinbase'),
                 scriptSig: row.get('scriptsig'),
@@ -136,10 +136,10 @@ export class TransactionResolver {
     async outputs(@Root() transaction: Transaction,
         @Args() { cursor, limit }: TransactionOutputArgs
     ): Promise<PaginatedTransactionOutputResponse> {
-        let mempoolTx: MempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
+        const mempoolTx: MempoolTx = transaction.coin.mempool?.txById.get(transaction.txid);
         if (mempoolTx !== undefined) {
-            let res: TransactionOutput[] = [];
-            let fromIndex = cursor === undefined ? 0 : cursor.n + 1;
+            const res: TransactionOutput[] = [];
+            const fromIndex = cursor === undefined ? 0 : cursor.n + 1;
             for (let n = fromIndex; n < mempoolTx.rpcTx.vout.length; n++) {
                 if (res.length == limit) {
                     return {
@@ -147,8 +147,8 @@ export class TransactionResolver {
                         items: res
                     };
                 }
-                let rpcVout: RpcVout = mempoolTx.rpcTx.vout[n];
-                let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
+                const rpcVout: RpcVout = mempoolTx.rpcTx.vout[n];
+                const scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
                 scriptpubkey.asm = rpcVout.scriptPubKey.asm;
                 scriptpubkey.hex = rpcVout.scriptPubKey.hex;
                 scriptpubkey.reqSigs = rpcVout.scriptPubKey.reqSigs;
@@ -159,7 +159,7 @@ export class TransactionResolver {
 
                 let spendingTxid: string;
                 let spendingIndex: number;
-                let spending_inpoint = transaction.coin.mempool.outpointToInpoint.get(mempoolTx.rpcTx.txid + n);
+                const spending_inpoint = transaction.coin.mempool.outpointToInpoint.get(mempoolTx.rpcTx.txid + n);
                 if (spending_inpoint !== undefined) {
                     spendingTxid = spending_inpoint.spending_txid;
                     spendingIndex = spending_inpoint.spending_index;
@@ -189,24 +189,24 @@ export class TransactionResolver {
         }
         query += " LIMIT ?"
         args.push(limit + 1);
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: limit }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: TransactionOutput[] = resultSet.rows.map(row => {
+        const res: TransactionOutput[] = resultSet.rows.map(row => {
 
-            let n: number = row.get('n');
-            let scriptpubkey = row.get('scriptpubkey');
+            const n: number = row.get('n');
+            const scriptpubkey = row.get('scriptpubkey');
             if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
                 scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address({ address: address, coin: transaction.coin }));
             }
             let spendingTxid: string = row.get('spending_txid');
             let spendingIndex: number = row.get('spending_index');
             if (spendingTxid === undefined || spendingTxid === null) {
-                let spending_inpoint = transaction.coin.mempool?.outpointToInpoint.get(transaction.txid + n);
+                const spending_inpoint = transaction.coin.mempool?.outpointToInpoint.get(transaction.txid + n);
                 if (spending_inpoint !== undefined) {
                     spendingTxid = spending_inpoint.spending_txid;
                     spendingIndex = spending_inpoint.spending_index;

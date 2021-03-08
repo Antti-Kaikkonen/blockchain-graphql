@@ -1,7 +1,5 @@
 import { ObjectType, Field, InputType, Int } from "type-graphql";
 import { ScriptPubKey } from "./scriptpubkey";
-import { TransactionInput } from "./transaction-input";
-import { Transaction } from "./transaction";
 import { PaginatedResponse } from "./paginated-response";
 import { Coin } from "./coin";
 

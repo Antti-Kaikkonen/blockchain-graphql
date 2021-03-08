@@ -35,8 +35,8 @@ export class BlockReader extends Readable {
     private heightToHash: Map<number, string> = new Map();
 
     private async newBlocksToHeight(height: number) {
-        let hash = await this.rpcClient.getBlockHash(height);
-        let oldHash: string = this.heightToHash.get(height);
+        const hash = await this.rpcClient.getBlockHash(height);
+        const oldHash: string = this.heightToHash.get(height);
         this.heightToHash.set(height, hash);
         if (oldHash !== undefined) {
             if (oldHash === hash) {//Found common ancestor
@@ -53,7 +53,7 @@ export class BlockReader extends Readable {
         this.push(<ChainEvent>{ type: "add", hash: hash, height: height });
     }
 
-    async _read(n: number) {
+    async _read(n: number): Promise<number> {
         let height: number;
         while (true) {
             if (this.destroyed) return;

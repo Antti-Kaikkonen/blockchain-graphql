@@ -19,7 +19,7 @@ export class Semaphore {
             this.available_slots--;
         } else {
             this.available_slots--;
-            let p: Promise<any> = new Promise<void>((resolve, reject) => {
+            const p: Promise<void> = new Promise<void>((resolve, reject) => {
                 this.releaseQueue.enqueue(resolve);
             });
             this.promiseQueue.enqueue(p);
@@ -27,9 +27,9 @@ export class Semaphore {
         }
     }
 
-    public release() {
+    public release(): void {
         this.available_slots++;
-        let releaseFunction = this.releaseQueue.dequeue();
+        const releaseFunction = this.releaseQueue.dequeue();
         if (releaseFunction !== undefined) releaseFunction();
     }
 

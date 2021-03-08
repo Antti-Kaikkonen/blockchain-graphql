@@ -47,9 +47,9 @@ export class CoinResolver {
         this.coins();//updates lastCoinCount;
     }
 
-    private static lastCoinCount: number = 1;
+    private static lastCoinCount = 1;
 
-    public static CLUSTER_RICHLIST_BIN_COUNT: number = 100;
+    public static CLUSTER_RICHLIST_BIN_COUNT = 100;
     static CLUSTER_RICHLIST_BINS: number[] = Array.from(new Array(CoinResolver.CLUSTER_RICHLIST_BIN_COUNT).keys());
 
     @Query(returns => [Coin], { nullable: false, complexity: ({ childComplexity, args }) => 100 + CoinResolver.lastCoinCount * childComplexity })
@@ -82,25 +82,25 @@ export class CoinResolver {
     }
 
     @FieldResolver(returns => Address, { nullable: false, complexity: 1 })
-    async address(@Root() coin: Coin, @Arg("address") address: string) {
-        let res = new Address({ address: address, coin: coin });
+    async address(@Root() coin: Coin, @Arg("address") address: string): Promise<Address> {
+        const res = new Address({ address: address, coin: coin });
         return res;
     }
 
     @FieldResolver(returns => Transaction, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async transaction(@Root() coin: Coin, @Arg("txid") txid: string): Promise<Transaction> {
-        let mempoolTransaction = coin.mempool?.txById.get(txid);
+        const mempoolTransaction = coin.mempool?.txById.get(txid);
         if (mempoolTransaction !== undefined) {
             return mempoolTransaction.toGraphQL(coin);
         }
-        let args: any[] = [txid];
-        let query: string = "SELECT * FROM " + coin.keyspace + ".transaction WHERE txid=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [txid];
+        const query: string = "SELECT * FROM " + coin.keyspace + ".transaction WHERE txid=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: Transaction[] = resultSet.rows.map(row => {
+        const res: Transaction[] = resultSet.rows.map(row => {
             return <Transaction>{
                 txid: row.get('txid'),
                 lockTime: row.get('locktime'),
@@ -121,11 +121,11 @@ export class CoinResolver {
         @Arg("spendingTxid", type => String) spendingTxid: string,
         @Arg("spendingIndex", type => Int) spendingIndex: number
     ): Promise<TransactionInput> {
-        let mempoolTx: MempoolTx = coin.mempool?.txById.get(spendingTxid);
+        const mempoolTx: MempoolTx = coin.mempool?.txById.get(spendingTxid);
         if (mempoolTx !== undefined) {
-            let spending_input: RpcVin = mempoolTx.rpcTx.vin[spendingIndex];
+            const spending_input: RpcVin = mempoolTx.rpcTx.vin[spendingIndex];
             if (spending_input === undefined) return null;
-            let vin: TransactionInput = new TransactionInput({
+            const vin: TransactionInput = new TransactionInput({
                 coinbase: spending_input.coinbase,
                 scriptSig: spending_input.scriptSig,
                 sequence: spending_input.sequence,
@@ -138,15 +138,15 @@ export class CoinResolver {
             return vin;
         }
 
-        let args: any[] = [spendingTxid, spendingIndex];
-        let query: string = "SELECT * FROM " + coin.keyspace + ".transaction_input WHERE spending_txid=? AND spending_index=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [spendingTxid, spendingIndex];
+        const query: string = "SELECT * FROM " + coin.keyspace + ".transaction_input WHERE spending_txid=? AND spending_index=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: TransactionInput[] = resultSet.rows.map(row => {
-            let vin: TransactionInput = new TransactionInput({
+        const res: TransactionInput[] = resultSet.rows.map(row => {
+            const vin: TransactionInput = new TransactionInput({
                 coinbase: row.get("coinbase"),
                 scriptSig: row.get("scriptsig"),
                 sequence: row.get('sequence'),
@@ -167,11 +167,11 @@ export class CoinResolver {
         @Arg("txid", type => String) txid: string,
         @Arg("n", type => Int) n: number
     ): Promise<TransactionOutput> {
-        let mempoolTx = coin.mempool?.txById.get(txid);
+        const mempoolTx = coin.mempool?.txById.get(txid);
         if (mempoolTx !== undefined) {
-            let rpcVout: RpcVout = mempoolTx.rpcTx.vout[n];
+            const rpcVout: RpcVout = mempoolTx.rpcTx.vout[n];
             if (rpcVout === undefined) return null;
-            let scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
+            const scriptpubkey: ScriptPubKey = new ScriptPubKey();// = rpcVout.scriptPubKey;
             scriptpubkey.asm = rpcVout.scriptPubKey.asm;
             scriptpubkey.hex = rpcVout.scriptPubKey.hex;
             scriptpubkey.reqSigs = rpcVout.scriptPubKey.reqSigs;
@@ -179,36 +179,36 @@ export class CoinResolver {
             if (rpcVout.scriptPubKey.addresses !== undefined && rpcVout.scriptPubKey.addresses !== null) {
                 scriptpubkey.addresses = rpcVout.scriptPubKey.addresses.map(address => new Address({ address: address, coin: coin }));
             }
-            let vout: TransactionOutput = new TransactionOutput({
+            const vout: TransactionOutput = new TransactionOutput({
                 txid: mempoolTx.rpcTx.txid,
                 n: rpcVout.n,
                 value: rpcVout.value,
                 scriptPubKey: scriptpubkey,
                 coin: coin
             });
-            let spending_inpoint = coin.mempool.outpointToInpoint.get(vout.txid + vout.n);
+            const spending_inpoint = coin.mempool.outpointToInpoint.get(vout.txid + vout.n);
             if (spending_inpoint !== null) {
                 vout.spendingTxid = spending_inpoint.spending_txid;
                 vout.spendingIndex = spending_inpoint.spending_index;
             }
             return vout;
         }
-        let args: any[] = [txid, n];
-        let query: string = "SELECT * FROM " + coin.keyspace + ".transaction_output WHERE txid=? AND n=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [txid, n];
+        const query: string = "SELECT * FROM " + coin.keyspace + ".transaction_output WHERE txid=? AND n=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: TransactionOutput[] = resultSet.rows.map(row => {
-            let scriptpubkey = row.get('scriptpubkey');
+        const res: TransactionOutput[] = resultSet.rows.map(row => {
+            const scriptpubkey = row.get('scriptpubkey');
             if (scriptpubkey.addresses !== undefined && scriptpubkey.addresses !== null) {
                 scriptpubkey.addresses = scriptpubkey.addresses.map(address => new Address({ address: address, coin: coin }));
             }
             let spendingTxid: string = row.get('spending_txid');
             let spendingIndex: number = row.get('spending_index');
             if (spendingTxid === undefined || spendingTxid === null) {
-                let spending_inpoint = coin.mempool?.outpointToInpoint.get(txid + n);
+                const spending_inpoint = coin.mempool?.outpointToInpoint.get(txid + n);
                 if (spending_inpoint !== null) {
                     spendingTxid = spending_inpoint.spending_txid;
                     spendingIndex = spending_inpoint.spending_index;
@@ -233,9 +233,9 @@ export class CoinResolver {
         @Arg("height", type => Int) height: number,
         @Arg("tx_n", type => Int) tx_n: number
     ): Promise<ConfirmedTransaction> {
-        let mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height);
+        const mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height);
         if (mempoolBlock !== undefined) {
-            let mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
+            const mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
             return <ConfirmedTransaction>{
                 height: mempoolTx.height,
                 txN: mempoolTx.txN,
@@ -243,14 +243,14 @@ export class CoinResolver {
                 coin: coin
             };
         }
-        let args: any[] = [height, tx_n];
-        let query: string = "SELECT * FROM " + coin.keyspace + ".confirmed_transaction WHERE height=? AND tx_n=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [height, tx_n];
+        const query: string = "SELECT * FROM " + coin.keyspace + ".confirmed_transaction WHERE height=? AND tx_n=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: ConfirmedTransaction[] = resultSet.rows.map(row => {
+        const res: ConfirmedTransaction[] = resultSet.rows.map(row => {
             return <ConfirmedTransaction>{
                 height: row.get('height'),
                 txN: row.get('tx_n'),
@@ -266,21 +266,25 @@ export class CoinResolver {
         @Root() coin: Coin,
         @Args() { limit, cursor }: BlockHashArgs
     ): Promise<PaginatedAddressBlockHashtResponse> {
-        let lastBlockHeight: number = coin.mempool?.height;
+        const lastBlockHeight: number = coin.mempool?.height;
         if (lastBlockHeight === undefined) {
             return { hasMore: false, items: [] };
         }
-        let fromHeight = (cursor?.height === undefined || cursor?.height === null) ? lastBlockHeight : Math.min(cursor.height - 1, lastBlockHeight);
-        let res: Promise<BlockHash>[] = [];
+        const fromHeight = (cursor?.height === undefined || cursor?.height === null) ? lastBlockHeight : Math.min(cursor.height - 1, lastBlockHeight);
+        const res: Promise<BlockHash>[] = [];
         for (let currentHeight: number = fromHeight; currentHeight >= Math.max(fromHeight - limit + 1, 0); currentHeight--) {
             res.push(this.blockByHeight(coin, currentHeight));
         }
-        return new Promise<PaginatedAddressBlockHashtResponse>(async (resolve, reject) => {
+        return {
+            hasMore: fromHeight - limit + 1 > 0,
+            items: await Promise.all(res)
+        };
+        /*return new Promise<PaginatedAddressBlockHashtResponse>(async (resolve, reject) => {
             resolve({
                 hasMore: fromHeight - limit + 1 > 0,
                 items: await Promise.all(res)
             })
-        });
+        });*/
     }
 
     @FieldResolver(returns => BlockHash, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
@@ -288,7 +292,7 @@ export class CoinResolver {
         @Root() coin: Coin,
         @Arg("height", type => Int) height: number
     ): Promise<BlockHash> {
-        let mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height);
+        const mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height);
         if (mempoolBlock !== undefined) {
             return <BlockHash>{
                 hash: mempoolBlock.rpcBlock.hash,
@@ -296,14 +300,14 @@ export class CoinResolver {
                 coin: coin
             }
         }
-        let args: any[] = [height];
-        let query: string = "SELECT * FROM " + coin.keyspace + ".longest_chain WHERE height=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [height];
+        const query: string = "SELECT * FROM " + coin.keyspace + ".longest_chain WHERE height=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: BlockHash[] = resultSet.rows.map(row => {
+        const res: BlockHash[] = resultSet.rows.map(row => {
             return <BlockHash>{
                 hash: row.get('hash'),
                 height: row.get('height'),
@@ -318,7 +322,7 @@ export class CoinResolver {
         @Root() coin: Coin,
         @Arg("hash") hash: string
     ): Promise<Block> {
-        let mempooBlock: MempoolBlock = coin.mempool?.blockByHash.get(hash);
+        const mempooBlock: MempoolBlock = coin.mempool?.blockByHash.get(hash);
         if (mempooBlock !== undefined) {
             return <Block>{
                 height: mempooBlock.rpcBlock.height,
@@ -338,14 +342,14 @@ export class CoinResolver {
                 coin: coin
             }
         }
-        let args: any[] = [hash];
-        let query: string = "SELECT * FROM " + coin.keyspace + ".block WHERE hash=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [hash];
+        const query: string = "SELECT * FROM " + coin.keyspace + ".block WHERE hash=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: Block[] = resultSet.rows.map(row => {
+        const res: Block[] = resultSet.rows.map(row => {
             return <Block>{
                 height: row.get('height'),
                 hash: row.get('hash'),
@@ -379,14 +383,14 @@ export class CoinResolver {
         }
         args.push(limit + 1);
         query += " ORDER BY balance DESC, cluster_id DESC LIMIT ?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
         );
-        let hasMore: boolean = resultSet.rows.length > limit;
+        const hasMore: boolean = resultSet.rows.length > limit;
         if (hasMore) resultSet.rows.pop();
-        let res: AddressClusterRichlist[] = resultSet.rows.map(row => {
+        const res: AddressClusterRichlist[] = resultSet.rows.map(row => {
             return <AddressClusterRichlist>{
                 balance: row.get("balance"),
                 cluster: <AddressCluster>{
@@ -403,7 +407,7 @@ export class CoinResolver {
 
     @Mutation(returns => SendRawTransactionResult, { nullable: false, complexity: ({ childComplexity, args }) => 20000 + childComplexity })
     async sendRawTransaction(@Arg("coinName") coinName: string, @Arg("hexString") hexString: string): Promise<SendRawTransactionResult> {
-        let coin = this.available_coins.get(coinName);
+        const coin = this.available_coins.get(coinName);
         if (coin === undefined) throw new Error("Coin " + coinName + " not available.");
         return { txid: await coin.mempool.rpcClient.sendRawTransaction(hexString) };
     }

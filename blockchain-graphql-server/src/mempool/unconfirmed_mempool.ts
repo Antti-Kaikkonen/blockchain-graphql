@@ -26,7 +26,7 @@ export class AddressUnconfirmedMempool {
         }
     });
 
-    public balanceChangeSat: number = 0;
+    public balanceChangeSat = 0;
 
     public add(tx: TX): void {
         this.balanceChangeSat += Math.round(tx.balanceChange * 1e8);
@@ -62,10 +62,10 @@ export class UnconfirmedMempool {
 
     public txs: Map<string, { tx: MempoolTx, txDetails: TxDetails, timestamp: number }> = new Map();
 
-    public totalFeesSat: number = 0;
+    public totalFeesSat = 0;
 
-    public add(tx: MempoolTx, txDetails: TxDetails) {
-        let time = new Date().getTime();
+    public add(tx: MempoolTx, txDetails: TxDetails): void {
+        const time = new Date().getTime();
         this.txids.insert({ timestamp: time, txid: tx.rpcTx.txid });
         this.txs = this.txs.set(tx.rpcTx.txid, { tx: tx, txDetails: txDetails, timestamp: time });
         this.totalFeesSat += Math.round(txDetails.fee * 1e8);
@@ -79,8 +79,8 @@ export class UnconfirmedMempool {
         });
     }
 
-    public remove(txid: string) {//To remove a confirmed transaction or a double spent transaction
-        let e = this.txs.get(txid);
+    public remove(txid: string): void {//To remove a confirmed transaction or a double spent transaction
+        const e = this.txs.get(txid);
         if (e !== undefined) {
             this.txids.remove({ timestamp: e.timestamp, txid: e.tx.rpcTx.txid });
             this.txs.delete(txid);

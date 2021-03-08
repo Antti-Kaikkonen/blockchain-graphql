@@ -15,7 +15,7 @@ export class BlockHashResolver {
     @FieldResolver(returns => Block, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async block(@Root() blockHash: BlockHash,
     ): Promise<Block> {
-        let mempooBlock = blockHash.coin.mempool?.blockByHash.get(blockHash.hash);
+        const mempooBlock = blockHash.coin.mempool?.blockByHash.get(blockHash.hash);
         if (mempooBlock !== undefined) {
             return <Block>{
                 height: mempooBlock.rpcBlock.height,
@@ -35,14 +35,14 @@ export class BlockHashResolver {
                 coin: blockHash.coin
             }
         }
-        let args: any[] = [blockHash.hash];
-        let query: string = "SELECT * FROM " + blockHash.coin.keyspace + ".block WHERE hash=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [blockHash.hash];
+        const query: string = "SELECT * FROM " + blockHash.coin.keyspace + ".block WHERE hash=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: Block[] = resultSet.rows.map(row => {
+        const res: Block[] = resultSet.rows.map(row => {
             return <Block>{
                 height: row.get("height"),
                 hash: row.get("hash"),

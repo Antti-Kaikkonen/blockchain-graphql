@@ -1,6 +1,4 @@
 import { ObjectType, Field, InputType, Int } from "type-graphql";
-import { Transaction } from "./transaction";
-import { BlockHash } from "./block_hash";
 import { PaginatedResponse } from "./paginated-response";
 import { Coin } from "./coin";
 

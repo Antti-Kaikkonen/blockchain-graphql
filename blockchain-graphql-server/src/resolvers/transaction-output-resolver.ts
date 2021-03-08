@@ -19,10 +19,10 @@ export class TransactionOutputResolver {
     async spendingInput(@Root() transactionOutput: TransactionOutput,
     ): Promise<TransactionInput> {
         if (transactionOutput.spendingTxid === null || transactionOutput.spendingTxid === undefined) return null;
-        let mempoolTx: MempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.spendingTxid);
+        const mempoolTx: MempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.spendingTxid);
         if (mempoolTx !== undefined) {
-            let spending_input: RpcVin = mempoolTx.rpcTx.vin[transactionOutput.spendingIndex];
-            let vin: TransactionInput = new TransactionInput({
+            const spending_input: RpcVin = mempoolTx.rpcTx.vin[transactionOutput.spendingIndex];
+            const vin: TransactionInput = new TransactionInput({
                 coinbase: spending_input.coinbase,
                 scriptSig: spending_input.scriptSig,
                 sequence: spending_input.sequence,
@@ -35,15 +35,15 @@ export class TransactionOutputResolver {
             return vin;
         }
 
-        let args: any[] = [transactionOutput.spendingTxid, transactionOutput.spendingIndex];
-        let query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction_input WHERE spending_txid=? AND spending_index=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [transactionOutput.spendingTxid, transactionOutput.spendingIndex];
+        const query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction_input WHERE spending_txid=? AND spending_index=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: TransactionInput[] = resultSet.rows.map(row => {
-            let vin: TransactionInput = new TransactionInput({
+        const res: TransactionInput[] = resultSet.rows.map(row => {
+            const vin: TransactionInput = new TransactionInput({
                 coinbase: row.get("coinbase"),
                 scriptSig: row.get("scriptsig"),
                 sequence: row.get('sequence'),
@@ -62,7 +62,7 @@ export class TransactionOutputResolver {
     async transaction(@Root() transactionOutput: TransactionOutput,
     ): Promise<Transaction> {
         if (transactionOutput.txid === null || transactionOutput.txid === undefined) return null;
-        let mempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.txid);
+        const mempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.txid);
         if (mempoolTx !== undefined) {
             return <Transaction>{
                 txid: mempoolTx.rpcTx.txid,
@@ -75,14 +75,14 @@ export class TransactionOutputResolver {
                 coin: transactionOutput.coin
             };
         }
-        let args: any[] = [transactionOutput.txid];
-        let query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction WHERE txid=?";
-        let resultSet: types.ResultSet = await this.client.execute(
+        const args: any[] = [transactionOutput.txid];
+        const query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction WHERE txid=?";
+        const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
         );
-        let res: Transaction[] = resultSet.rows.map(row => {
+        const res: Transaction[] = resultSet.rows.map(row => {
             return <Transaction>{
                 txid: row.get('txid'),
                 lockTime: row.get('locktime'),
