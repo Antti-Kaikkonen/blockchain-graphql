@@ -21,19 +21,19 @@ export class BlockHandler extends Writable {
         let coinbase: boolean = tx.rpcTx.vin.length === 1 && tx.rpcTx.vin[0].coinbase !== undefined;
         if (!coinbase) {
             tx.rpcTx.vin.forEach((vin, spending_index) => {
-                const already_spent_in = this.mempool.outpointToInpoint.get(vin.txid+vin.vout);
+                const already_spent_in = this.mempool.outpointToInpoint.get(vin.txid + vin.vout);
                 if (already_spent_in !== undefined && already_spent_in.spending_txid !== tx.rpcTx.txid) {
                     this.mempool.txById.delete(already_spent_in.spending_txid);//Delete double spent transaction
                     this.mempool.unconfirmedMempool.remove(already_spent_in.spending_txid);
                 }
-                this.mempool.outpointToInpoint.set(vin.txid+vin.vout, {spending_txid: tx.rpcTx.txid, spending_index: spending_index});
+                this.mempool.outpointToInpoint.set(vin.txid + vin.vout, { spending_txid: tx.rpcTx.txid, spending_index: spending_index });
             });
         }
     }
 
     constructor(private client: LimitedCapacityClient, private coin: Coin, private mempool: Mempool) {
         super({
-            objectMode: true, 
+            objectMode: true,
             write: async (event: DeleteEvent | AddEvent3 | MempoolEvent3, encoding: BufferEncoding, callback: (error?: any) => void) => {
                 let blockToDelete: MempoolBlock;
                 if (event.type === "hashtx") {
@@ -48,7 +48,7 @@ export class BlockHandler extends Writable {
                     }
                 } else if (event.type === "add") {
                     if (this.mempool.time === undefined) {
-                        this.mempool.time = await this.getDbBlockTimestamp(event.height-1);
+                        this.mempool.time = await this.getDbBlockTimestamp(event.height - 1);
                     }
                     this.mempool.height = event.height;
                     let mempoolBlock = new MempoolBlock(await event.block);
@@ -63,7 +63,7 @@ export class BlockHandler extends Writable {
                         this.mempool.unconfirmedMempool.remove(tx.rpcTx.txid);
                         this.processTx(tx);
                     });
-                    let inputDetails: Map<string, Promise<{address: string, value: number}>> = event.inputDetails;
+                    let inputDetails: Map<string, Promise<{ address: string, value: number }>> = event.inputDetails;
                     let blockAddressDeltas: Map<string, number> = new Map();
                     let blockTxDetails = await Promise.all(mempoolBlock.tx.map(tx => this.txDetails(tx, inputDetails)));
                     for (let i = 0; i < mempoolBlock.tx.length; i++) {
@@ -72,22 +72,22 @@ export class BlockHandler extends Writable {
                         tx.fee = txDetails.fee;
                         txDetails.addressDeltas.forEach((delta: number, address: string) => {
                             let oldDelta = blockAddressDeltas.get(address);
-                            blockAddressDeltas.set(address, oldDelta === undefined ? delta: oldDelta + delta);
+                            blockAddressDeltas.set(address, oldDelta === undefined ? delta : oldDelta + delta);
                         });
                     }
                     let blockAddressBalances = await this.blockAddressBalances(mempoolBlock, blockAddressDeltas);
                     blockAddressBalances.forEach(e => {
                         let addressBalance: AddressBalance = new AddressBalance();
                         addressBalance.balance = e.balance;
-                        addressBalance.timestamp = new Date(mempoolBlock.rpcBlock.time*1000);
+                        addressBalance.timestamp = new Date(mempoolBlock.rpcBlock.time * 1000);
                         if (!this.mempool.addressBalances.has(e.address)) this.mempool.addressBalances.set(e.address, []);
                         this.mempool.addressBalances.get(e.address).push(addressBalance);
                     });
                     this.updateAddressTransactions(mempoolBlock, blockTxDetails, blockAddressDeltas);
-                    blockToDelete = this.mempool.blockByHeight.get(event.height-10);
+                    blockToDelete = this.mempool.blockByHeight.get(event.height - 10);
                     if (blockToDelete !== undefined) this.deleteExpiredAddressTransactions(blockToDelete);
                 } else if (event.type === "delete") {
-                    this.mempool.height = event.height-1;
+                    this.mempool.height = event.height - 1;
                     blockToDelete = this.mempool.blockByHash.get(event.hash);
                     this.deleteOrphanedAddressTransactions(blockToDelete);
                 }
@@ -95,7 +95,7 @@ export class BlockHandler extends Writable {
                     blockToDelete.tx.forEach(tx => {
                         this.mempool.txById.delete(tx.rpcTx.txid);
                         tx.rpcTx.vin.forEach(vin => {
-                            this.mempool.outpointToInpoint.delete(vin.txid+vin.vout);
+                            this.mempool.outpointToInpoint.delete(vin.txid + vin.vout);
                         });
                     });
                     this.mempool.blockByHeight.delete(blockToDelete.rpcBlock.height);
@@ -107,13 +107,13 @@ export class BlockHandler extends Writable {
     }
 
 
-    private async txDetails(tx: MempoolTx, inputToDetails: Map<string, Promise<{address: string, value: number}>>): Promise<TxDetails> {
+    private async txDetails(tx: MempoolTx, inputToDetails: Map<string, Promise<{ address: string, value: number }>>): Promise<TxDetails> {
         return new Promise(async (resolve, reject) => {
             let feeSats: number = 0;
             let addressDeltas: Map<string, number> = new Map();
             let coinbase: boolean = tx.rpcTx.vin.length === 1 && tx.rpcTx.vin[0].coinbase !== undefined;
             tx.rpcTx.vout.forEach(vout => {
-                let valueSats = Math.round(vout.value*1e8);
+                let valueSats = Math.round(vout.value * 1e8);
                 if (vout.scriptPubKey.addresses !== undefined && vout.scriptPubKey.addresses !== null && vout.scriptPubKey.addresses.length === 1) {
                     let address: string = vout.scriptPubKey.addresses[0];
                     let oldValue = addressDeltas.get(address);
@@ -124,9 +124,9 @@ export class BlockHandler extends Writable {
             if (!coinbase && tx.rpcTx.vin.length > 0) {
                 let pending_promises = tx.rpcTx.vin.length;
                 tx.rpcTx.vin.forEach(async (vin, spending_index) => {
-                    let inputDetails = await inputToDetails.get(vin.txid+vin.vout);
-                    let valueSats = Math.round(inputDetails.value*1e8);
-                    feeSats+=valueSats;
+                    let inputDetails = await inputToDetails.get(vin.txid + vin.vout);
+                    let valueSats = Math.round(inputDetails.value * 1e8);
+                    feeSats += valueSats;
                     if (inputDetails.address !== undefined) {
                         let oldValue = addressDeltas.get(inputDetails.address);
                         addressDeltas.set(inputDetails.address, oldValue === undefined ? -valueSats : oldValue - valueSats);
@@ -134,14 +134,14 @@ export class BlockHandler extends Writable {
                     pending_promises--;
                     if (pending_promises === 0) {
                         resolve({
-                            fee: feeSats/1e8,
+                            fee: feeSats / 1e8,
                             addressDeltas: addressDeltas
                         });
                     }
                 });
             } else {
                 resolve({
-                    fee: feeSats/1e8,
+                    fee: feeSats / 1e8,
                     addressDeltas: addressDeltas
                 });
             }
@@ -151,55 +151,55 @@ export class BlockHandler extends Writable {
 
     private async getDbBlockTimestamp(height: number): Promise<number> {
         try {
-            let res = await this.client.execute("SELECT hash FROM "+this.coin.keyspace+".longest_chain WHERE height = ?;", [height], {prepare: true});
+            let res = await this.client.execute("SELECT hash FROM " + this.coin.keyspace + ".longest_chain WHERE height = ?;", [height], { prepare: true });
             let hash: string;
             res.rows.forEach(row => {
                 hash = row.get("hash");
             });
-            if (hash === undefined) throw new Error("Failed to get block hash for height "+height);
-            let res2 = await this.client.execute("SELECT time FROM "+this.coin.keyspace+".block WHERE hash = ?;", [hash], {prepare: true});
+            if (hash === undefined) throw new Error("Failed to get block hash for height " + height);
+            let res2 = await this.client.execute("SELECT time FROM " + this.coin.keyspace + ".block WHERE hash = ?;", [hash], { prepare: true });
             let time: number;
             res2.rows.forEach(row => {
                 time = row.get("time");
             });
-            if (time === undefined) throw new Error("Failed to get time for block "+hash+" at height "+height);
+            if (time === undefined) throw new Error("Failed to get time for block " + hash + " at height " + height);
             return time;
-        } catch(error) {
+        } catch (error) {
             throw error;
         }
     }
 
     private async getDbAddressBalance(address: string, beforeTimestamnp: number): Promise<number> {
         try {
-            let res = await this.client.execute("SELECT balance FROM "+this.coin.keyspace+".address_balance WHERE address = ? AND timestamp < ? LIMIT 1;", [address, beforeTimestamnp], {prepare: true});
+            let res = await this.client.execute("SELECT balance FROM " + this.coin.keyspace + ".address_balance WHERE address = ? AND timestamp < ? LIMIT 1;", [address, beforeTimestamnp], { prepare: true });
             let balance: number;
             res.rows.forEach(row => {
                 balance = row.get("balance");
             });
             return balance;
-        } catch(error) {
+        } catch (error) {
             throw error;
         }
     }
 
-    private async blockAddressBalances(block: MempoolBlock, blockAddressDeltas: Map<string, number>): Promise<{address: string, balance: number}[]> {
+    private async blockAddressBalances(block: MempoolBlock, blockAddressDeltas: Map<string, number>): Promise<{ address: string, balance: number }[]> {
         return Promise.all(Array.from(blockAddressDeltas.entries()).map(async ([address, delta]) => {
             try {
                 let oldBalances = this.mempool.addressBalances.get(address);
                 let oldBalance: number;
                 if (oldBalances === undefined) {
                     //this.addressBalances.set(address, []);
-                    oldBalance = await this.getDbAddressBalance(address, block.rpcBlock.time*1000);
+                    oldBalance = await this.getDbAddressBalance(address, block.rpcBlock.time * 1000);
                     if (oldBalance === undefined) {
                         oldBalance = 0;
                     } else {
-                        oldBalance = Math.round(oldBalance*1e8);
+                        oldBalance = Math.round(oldBalance * 1e8);
                     }
                 } else {
-                    oldBalance = Math.round(oldBalances[oldBalances.length-1].balance * 1e8);
+                    oldBalance = Math.round(oldBalances[oldBalances.length - 1].balance * 1e8);
                 }
-                return {address: address, balance: (oldBalance+delta)/1e8};
-            } catch(error) {
+                return { address: address, balance: (oldBalance + delta) / 1e8 };
+            } catch (error) {
                 throw error;
             }
         }));
@@ -210,7 +210,7 @@ export class BlockHandler extends Writable {
             let txDetails = blockTxDetails[tx_n];
             txDetails.addressDeltas.forEach((delta: number, address: string) => {
                 let oldDelta = blockAddressDeltas.get(address);
-                blockAddressDeltas.set(address, oldDelta === undefined ? delta: oldDelta + delta);
+                blockAddressDeltas.set(address, oldDelta === undefined ? delta : oldDelta + delta);
                 let addressTxs = this.mempool.addressTransactions.get(address);
                 if (addressTxs === undefined) {
                     addressTxs = [];
@@ -218,25 +218,25 @@ export class BlockHandler extends Writable {
                 }
                 let aTx = new AddressTransaction();
                 aTx.coin = this.coin;
-                aTx.balanceChange = delta/1e8;
+                aTx.balanceChange = delta / 1e8;
                 aTx.height = block.rpcBlock.height;
                 aTx.txN = tx_n;
-                aTx.timestamp = new Date(block.rpcBlock.time*1000);
+                aTx.timestamp = new Date(block.rpcBlock.time * 1000);
                 let addressBalances = this.mempool.addressBalances.get(address);
-                aTx.balanceAfterBlock = addressBalances[addressBalances.length-1].balance;
+                aTx.balanceAfterBlock = addressBalances[addressBalances.length - 1].balance;
                 addressTxs.push(aTx);
             });
         }
-    } 
+    }
     private deleteOrphanedAddressTransactions(block: MempoolBlock): void {
         this.mempool.addressBalances.forEach((balances: AddressBalance[], address: string) => {
-            while (balances.length > 0 && balances[balances.length-1].timestamp.getTime() === block.rpcBlock.time*1000) {
+            while (balances.length > 0 && balances[balances.length - 1].timestamp.getTime() === block.rpcBlock.time * 1000) {
                 balances.pop();
             }
             if (balances.length === 0) this.mempool.addressBalances.delete(address);
         });
         this.mempool.addressTransactions.forEach((txs: AddressTransaction[], address: string) => {
-            while (txs.length > 0 && txs[txs.length-1].timestamp.getTime() === block.rpcBlock.time*1000) {
+            while (txs.length > 0 && txs[txs.length - 1].timestamp.getTime() === block.rpcBlock.time * 1000) {
                 txs.pop();
             }
             if (txs.length === 0) this.mempool.addressTransactions.delete(address);
@@ -245,13 +245,13 @@ export class BlockHandler extends Writable {
 
     private deleteExpiredAddressTransactions(block: MempoolBlock): void {
         this.mempool.addressBalances.forEach((balances: AddressBalance[], address: string) => {
-            while (balances.length > 0 && balances[0].timestamp.getTime() === block.rpcBlock.time*1000) {
+            while (balances.length > 0 && balances[0].timestamp.getTime() === block.rpcBlock.time * 1000) {
                 balances.shift();
             }
             if (balances.length === 0) this.mempool.addressBalances.delete(address);
         });
         this.mempool.addressTransactions.forEach((txs: AddressTransaction[], address: string) => {
-            while (txs.length > 0 && txs[0].timestamp.getTime() === block.rpcBlock.time*1000) {
+            while (txs.length > 0 && txs[0].timestamp.getTime() === block.rpcBlock.time * 1000) {
                 txs.shift();
             }
             if (txs.length === 0) this.mempool.addressTransactions.delete(address);

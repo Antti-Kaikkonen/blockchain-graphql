@@ -6,7 +6,7 @@ import { LimitedCapacityClient } from "../limited-capacity-client";
 @Resolver(of => RichList)
 export class RichlistResolver {
 
-  constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
-  }
+    constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
+    }
 
 }

@@ -3,7 +3,7 @@ import url, { URL } from "url";
 
 class RpcResponse<T> {
     result: T;
-    error: {message: string, code: number};
+    error: { message: string, code: number };
 }
 
 export class RpcMempool {
@@ -78,7 +78,7 @@ export class RpcBlockNoTx {
     public nextblockhash: string;
 }
 
-export class RpcBlock extends RpcBlockNoTx{
+export class RpcBlock extends RpcBlockNoTx {
     public tx: RpcTx[];
 }
 
@@ -90,7 +90,7 @@ export class RpcClient {
     constructor(rpc_urls: string[], private rpc_username: string, private rpc_password: string) {
         this.rpc_url = url.parse(rpc_urls[0]);
     }
-    
+
     public getBlockCount(): Promise<number> {
         return new Promise<number>((resolve, reject) => {
             let req = http.request({
@@ -102,7 +102,7 @@ export class RpcClient {
             }, (res: http.IncomingMessage) => {
                 let result = "";
                 res.on('data', (d) => {
-                    result+=d;
+                    result += d;
                 })
                 res.on('end', () => {
                     let obj: RpcResponse<number> = JSON.parse(result);
@@ -113,11 +113,11 @@ export class RpcClient {
                     }
                 });
             });
-    
+
             req.on('error', (error: Error) => {
                 reject(error);
             });
-            req.write(JSON.stringify({method:"getblockcount", params:[]}));
+            req.write(JSON.stringify({ method: "getblockcount", params: [] }));
             req.end();
         });
     }
@@ -133,7 +133,7 @@ export class RpcClient {
             }, (res: http.IncomingMessage) => {
                 let result = "";
                 res.on('data', (d) => {
-                    result+=d;
+                    result += d;
                 })
                 res.on('end', () => {
                     let obj: RpcResponse<string> = JSON.parse(result);
@@ -144,11 +144,11 @@ export class RpcClient {
                     }
                 });
             });
-    
+
             req.on('error', (error: Error) => {
                 reject(error);
             });
-            req.write(JSON.stringify({method:"getblockhash", params:[height]}));
+            req.write(JSON.stringify({ method: "getblockhash", params: [height] }));
             req.end();
         });
     }
@@ -164,7 +164,7 @@ export class RpcClient {
             }, (res: http.IncomingMessage) => {
                 let result = "";
                 res.on('data', (d) => {
-                    result+=d;
+                    result += d;
                 })
                 res.on('end', () => {
                     let obj: RpcResponse<RpcBlock> = JSON.parse(result);
@@ -175,11 +175,11 @@ export class RpcClient {
                     }
                 });
             });
-    
+
             req.on('error', (error: Error) => {
                 reject(error);
             });
-            req.write(JSON.stringify({method:"getblock", params:[hash, 2]}));
+            req.write(JSON.stringify({ method: "getblock", params: [hash, 2] }));
             req.end();
         });
     }
@@ -195,7 +195,7 @@ export class RpcClient {
             }, (res: http.IncomingMessage) => {
                 let result = "";
                 res.on('data', (d) => {
-                    result+=d;
+                    result += d;
                 })
                 res.on('end', () => {
                     let obj: RpcResponse<RpcTx> = JSON.parse(result);
@@ -206,11 +206,11 @@ export class RpcClient {
                     }
                 });
             });
-    
+
             req.on('error', (error: Error) => {
                 reject(error);
             });
-            req.write(JSON.stringify({method:"getrawtransaction", params:[txid, 2]}));
+            req.write(JSON.stringify({ method: "getrawtransaction", params: [txid, 2] }));
             req.end();
         });
     }
@@ -226,7 +226,7 @@ export class RpcClient {
             }, (res: http.IncomingMessage) => {
                 let result = "";
                 res.on('data', (d) => {
-                    result+=d;
+                    result += d;
                 })
                 res.on('end', () => {
                     let obj: RpcResponse<string[]> = JSON.parse(result);
@@ -237,11 +237,11 @@ export class RpcClient {
                     }
                 });
             });
-    
+
             req.on('error', (error: Error) => {
                 reject(error);
             });
-            req.write(JSON.stringify({method:"getrawmempool", params:[]}));
+            req.write(JSON.stringify({ method: "getrawmempool", params: [] }));
             req.end();
         });
     }
@@ -257,7 +257,7 @@ export class RpcClient {
             }, (res: http.IncomingMessage) => {
                 let result = "";
                 res.on('data', (d) => {
-                    result+=d;
+                    result += d;
                 })
                 res.on('end', () => {
                     let obj: RpcResponse<RpcMempool> = JSON.parse(result);
@@ -268,11 +268,11 @@ export class RpcClient {
                     }
                 });
             });
-    
+
             req.on('error', (error: Error) => {
                 reject(error);
             });
-            req.write(JSON.stringify({method:"getrawmempool", params:[true]}));
+            req.write(JSON.stringify({ method: "getrawmempool", params: [true] }));
             req.end();
         });
     }
@@ -288,7 +288,7 @@ export class RpcClient {
             }, (res: http.IncomingMessage) => {
                 let result = "";
                 res.on('data', (d) => {
-                    result+=d;
+                    result += d;
                 })
                 res.on('end', () => {
                     let obj: RpcResponse<string> = JSON.parse(result);
@@ -299,14 +299,14 @@ export class RpcClient {
                     }
                 });
             });
-    
+
             req.on('error', (error: Error) => {
                 reject(error);
             });
-            req.write(JSON.stringify({method:"sendrawtransaction", params:[hexstring]}));
+            req.write(JSON.stringify({ method: "sendrawtransaction", params: [hexstring] }));
             req.end();
         });
     }
 
-   
+
 }

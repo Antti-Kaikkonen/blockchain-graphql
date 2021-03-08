@@ -9,46 +9,46 @@ import { RpcBlock, RpcClient, RpcTx, RpcVin } from "../rpc-client";
 import { Mempool } from "./mempool";
 
 export interface AddEvent3 extends AddEvent2 {
-    inputDetails: Map<string, Promise<{address: string, value: number}>>;
+    inputDetails: Map<string, Promise<{ address: string, value: number }>>;
 }
 
 export interface MempoolEvent3 extends MempoolEvent2 {
-    inputDetails: Map<string, Promise<{address: string, value: number}>>;
+    inputDetails: Map<string, Promise<{ address: string, value: number }>>;
 }
 
 
 export class BlockInputDetailsFetcher extends Transform {
 
     public txById: Map<string, RpcTx> = new Map();
-    public blockByHeight : Map<number, RpcBlock> = new Map();
-    public outpointToInpoint: Map<string, {spending_txid: string, spending_index: number}> = new Map();
+    public blockByHeight: Map<number, RpcBlock> = new Map();
+    public outpointToInpoint: Map<string, { spending_txid: string, spending_index: number }> = new Map();
 
-    private processTx(tx: RpcTx, inputDetails: Map<string, Promise<{address: string, value: number}>>) {
+    private processTx(tx: RpcTx, inputDetails: Map<string, Promise<{ address: string, value: number }>>) {
         let coinbase: boolean = tx.vin.length === 1 && tx.vin[0].coinbase !== undefined;
         if (!coinbase) {
             tx.vin.forEach((vin, spending_index) => {
-                const already_spent_in = this.outpointToInpoint.get(vin.txid+vin.vout);
+                const already_spent_in = this.outpointToInpoint.get(vin.txid + vin.vout);
                 if (already_spent_in !== undefined && already_spent_in.spending_txid !== tx.txid) {
-                    console.log("Output "+vin.txid+"-"+vin.vout+" already spent by input "+already_spent_in.spending_txid+"-"+already_spent_in.spending_index+" but double spent by input "+tx.txid+"-"+spending_index);
+                    console.log("Output " + vin.txid + "-" + vin.vout + " already spent by input " + already_spent_in.spending_txid + "-" + already_spent_in.spending_index + " but double spent by input " + tx.txid + "-" + spending_index);
                     this.txById.delete(already_spent_in.spending_txid);//Delete double spent transaction
                 }
-                this.outpointToInpoint.set(vin.txid+vin.vout, {spending_txid: tx.txid, spending_index: spending_index});
-                inputDetails.set(vin.txid+vin.vout, this.getInputDetails(vin));
+                this.outpointToInpoint.set(vin.txid + vin.vout, { spending_txid: tx.txid, spending_index: spending_index });
+                inputDetails.set(vin.txid + vin.vout, this.getInputDetails(vin));
             });
         }
     }
 
-    constructor(private client: LimitedCapacityClient, private rpcClient: RpcClient,  private coin: Coin, private mempool: Mempool) {
+    constructor(private client: LimitedCapacityClient, private rpcClient: RpcClient, private coin: Coin, private mempool: Mempool) {
         super({
-            objectMode: true, 
+            objectMode: true,
             transform: async (event: DeleteEvent | AddEvent2 | ResolvedMempoolTransaction, encoding: BufferEncoding, callback: TransformCallback) => {
                 let blockToDelete: RpcBlock;
                 if (event.type === "hashtx") {
                     if (!this.txById.has(event.txid)) {
                         this.txById.set(event.txid, event.rpcTx);
-                        let inputDetails: Map<string, Promise<{address: string, value: number}>> = new Map();
+                        let inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
                         this.processTx(event.rpcTx, inputDetails);
-                        this.push({...event, inputDetails: inputDetails});
+                        this.push({ ...event, inputDetails: inputDetails });
                     }
                 } else if (event.type === "add") {
                     let rpcBlock = await event.block;
@@ -56,12 +56,12 @@ export class BlockInputDetailsFetcher extends Transform {
                     rpcBlock.tx.forEach(tx => {
                         this.txById.set(tx.txid, tx);
                     });
-                    let inputDetails: Map<string, Promise<{address: string, value: number}>> = new Map();
+                    let inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
                     rpcBlock.tx.forEach(tx => {
                         this.processTx(tx, inputDetails);
                     });
-                    this.push({...event, inputDetails: inputDetails})
-                    blockToDelete = this.blockByHeight.get(event.height-10);
+                    this.push({ ...event, inputDetails: inputDetails })
+                    blockToDelete = this.blockByHeight.get(event.height - 10);
 
                 } else if (event.type === "delete") {
                     blockToDelete = this.blockByHeight.get(event.height);
@@ -72,7 +72,7 @@ export class BlockInputDetailsFetcher extends Transform {
                     blockToDelete.tx.forEach(tx => {
                         this.txById.delete(tx.txid);
                         tx.vin.forEach(vin => {
-                            this.outpointToInpoint.delete(vin.txid+vin.vout);
+                            this.outpointToInpoint.delete(vin.txid + vin.vout);
                         });
                     });
                 }
@@ -81,11 +81,11 @@ export class BlockInputDetailsFetcher extends Transform {
         })
     }
 
-    private getInputDetailsFromDB(vin: RpcVin): Promise<{address: string, value: number}> {
+    private getInputDetailsFromDB(vin: RpcVin): Promise<{ address: string, value: number }> {
         return new Promise(async (resolve, reject) => {
-            let res: types.ResultSet = await this.client.execute("SELECT value, scriptpubkey.addresses FROM "+this.coin.keyspace+".transaction_output WHERE txid = ? AND n=?;", [vin.txid, vin.vout], {prepare: true});
+            let res: types.ResultSet = await this.client.execute("SELECT value, scriptpubkey.addresses FROM " + this.coin.keyspace + ".transaction_output WHERE txid = ? AND n=?;", [vin.txid, vin.vout], { prepare: true });
             if (res.rows.length === 0) {
-                reject(this.coin.name+" output "+vin.txid+"-"+vin.vout+" was not found in db. Make sure your db is synchronized with the blockchain.");
+                reject(this.coin.name + " output " + vin.txid + "-" + vin.vout + " was not found in db. Make sure your db is synchronized with the blockchain.");
             } else {
                 let address: string;
                 res.rows.forEach(row => {
@@ -103,7 +103,7 @@ export class BlockInputDetailsFetcher extends Transform {
         });
     }
 
-    private getMempoolInputDetails(vin: RpcVin): {address: string, value: number} {
+    private getMempoolInputDetails(vin: RpcVin): { address: string, value: number } {
         let mempool_tx = this.txById.get(vin.txid);
         if (mempool_tx === undefined) {
             return undefined;
@@ -120,7 +120,7 @@ export class BlockInputDetailsFetcher extends Transform {
         }
     }
 
-    private getInputDetails(vin: RpcVin): Promise<{address: string, value: number}> {
+    private getInputDetails(vin: RpcVin): Promise<{ address: string, value: number }> {
         let mempoolDetails = this.getMempoolInputDetails(vin);
         if (mempoolDetails !== undefined) {
             return Promise.resolve(mempoolDetails);
@@ -128,5 +128,5 @@ export class BlockInputDetailsFetcher extends Transform {
             return this.getInputDetailsFromDB(vin);
         }
     }
-    
+
 }

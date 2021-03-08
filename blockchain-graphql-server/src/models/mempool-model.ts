@@ -4,6 +4,6 @@ import { Coin } from "./coin";
 @ObjectType("Mempool")
 export class MempoolModel {
 
-  readonly coin: Coin;
+    readonly coin: Coin;
 
 }

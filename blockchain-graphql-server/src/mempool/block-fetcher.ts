@@ -17,10 +17,10 @@ export class BlockFetcher extends Transform {
 
     constructor(private rpcClient: RpcClient, private mempool: Mempool) {
         super({
-            objectMode: true, 
+            objectMode: true,
             transform: (event: ChainEvent, encoding: BufferEncoding, callback: TransformCallback) => {
                 if (event.type === "add") {
-                    this.push(<AddEvent2> {...event, block: this.rpcClient.getBlock(event.hash)});
+                    this.push(<AddEvent2>{ ...event, block: this.rpcClient.getBlock(event.hash) });
                 } else if (event.type === "delete") {
                     this.push(event);
                 }
@@ -28,5 +28,5 @@ export class BlockFetcher extends Transform {
             }
         })
     }
-    
+
 }

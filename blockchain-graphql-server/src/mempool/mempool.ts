@@ -18,12 +18,12 @@ import { ZmqParser } from "./zmq-parser";
 export class Mempool {
     public time: number;
     public height: number;
-    public txById : Map<string, MempoolTx> = new Map();
-    public blockByHash : Map<string, MempoolBlock> = new Map();
-    public blockByHeight : Map<number, MempoolBlock> = new Map();
-    public outpointToInpoint: Map<string, {spending_txid: string, spending_index: number}> = new Map();
-    public addressBalances : Map<String, AddressBalance[]> = new Map();
-    public addressTransactions : Map<string, AddressTransaction[]> = new Map();
+    public txById: Map<string, MempoolTx> = new Map();
+    public blockByHash: Map<string, MempoolBlock> = new Map();
+    public blockByHeight: Map<number, MempoolBlock> = new Map();
+    public outpointToInpoint: Map<string, { spending_txid: string, spending_index: number }> = new Map();
+    public addressBalances: Map<String, AddressBalance[]> = new Map();
+    public addressTransactions: Map<string, AddressTransaction[]> = new Map();
     public unconfirmedMempool: UnconfirmedMempool = new UnconfirmedMempool();
 
     private blockReader: BlockReader;
@@ -49,13 +49,13 @@ export class Mempool {
     public async start(): Promise<void> {
         console.log("Starting mempool");
         this.socket = new Subscriber();
-        this.zmqParser.pipe(this.unconfirmedTxidFetcher, {end: false});
-        this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, {end: false}).pipe(this.inputFetcher, {end: false});
-        Readable.from(this.socket).pipe(this.zmqParser, {end: false});
+        this.zmqParser.pipe(this.unconfirmedTxidFetcher, { end: false });
+        this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, { end: false }).pipe(this.inputFetcher, { end: false });
+        Readable.from(this.socket).pipe(this.zmqParser, { end: false });
         this.blockReader.pipe(this.blockFetcher).pipe(this.inputFetcher).pipe(this.blockHandler);
         await new Promise((resolve) => setTimeout(resolve, 10000));
         let txids: string[] = await this.rpcClient.getRawMempool();
-        txids.forEach(txid => this.unconfirmedTxidFetcher.write(<MempoolEvent3>{type:"hashtx", txid: txid}));
+        txids.forEach(txid => this.unconfirmedTxidFetcher.write(<MempoolEvent3>{ type: "hashtx", txid: txid }));
         if (this.coin.zmq_addresses && this.coin.zmq_addresses.length > 0) {
             this.socket.connect(this.coin.zmq_addresses[0]);
             this.socket.subscribe("hashtx");
@@ -83,9 +83,9 @@ export class MempoolTx {
     }
 
     fee: number;
-    
+
     public toGraphQL(coin: Coin): Transaction {
-        return <Transaction> {
+        return <Transaction>{
             txid: this.rpcTx.txid,
             lockTime: this.rpcTx.locktime,
             size: this.rpcTx.size,

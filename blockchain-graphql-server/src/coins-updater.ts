@@ -53,7 +53,7 @@ export class CoinsUpdater {
     }
 
     private async update(): Promise<void> {
-        let coins: types.ResultSet = await this.client.execute("SELECT * FROM "+this.coins_keyspace+".available_coins");
+        let coins: types.ResultSet = await this.client.execute("SELECT * FROM " + this.coins_keyspace + ".available_coins");
         let promises: Promise<void>[] = [];
         coins.rows.forEach(row => {
             promises.push(this.updateRow(row));
@@ -64,7 +64,7 @@ export class CoinsUpdater {
     private async updater() {
         try {
             await this.update();
-        } catch(err) {
+        } catch (err) {
         }
         this.timeout = setTimeout(() => {
             this.updater();

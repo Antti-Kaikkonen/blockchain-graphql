@@ -9,13 +9,13 @@ export class Semaphore {
     }
 
     public promiseQueue: Queue<Promise<void>> = new Queue();
-    public releaseQueue: Queue<()=>void> = new Queue();
+    public releaseQueue: Queue<() => void> = new Queue();
     public drainPromise: Promise<void>;
     //private queue: Array<()=>void> = [];
-    
+
 
     public async acquire(): Promise<void> {
-        if (this.available_slots>0) {
+        if (this.available_slots > 0) {
             this.available_slots--;
         } else {
             this.available_slots--;
@@ -37,5 +37,5 @@ export class Semaphore {
         if (this.promiseQueue.size() > 0) return;
 
     }*/
-    
+
 }

@@ -4,25 +4,25 @@ export class Queue<E> {
 
     constructor() {
     }
-  
+
     public enqueue(val: E): void {
-      this.s1.push(val);
+        this.s1.push(val);
     }
-  
+
     public dequeue(): E {
-      if (this.s2.length === 0) {
-        this.move();
-      }
-      return this.s2.pop(); // return undefined if empty
+        if (this.s2.length === 0) {
+            this.move();
+        }
+        return this.s2.pop(); // return undefined if empty
     }
 
     public size(): number {
-        return this.s1.length+this.s2.length;
+        return this.s1.length + this.s2.length;
     }
-  
+
     private move(): void {
-      while (this.s1.length) {
-        this.s2.push(this.s1.pop());
-      }
+        while (this.s1.length) {
+            this.s2.push(this.s1.pop());
+        }
     }
-  }
+}

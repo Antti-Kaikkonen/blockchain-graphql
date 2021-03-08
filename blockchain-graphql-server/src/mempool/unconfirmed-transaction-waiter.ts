@@ -10,11 +10,11 @@ export interface ResolvedMempoolTransaction extends MempoolEvent {
 export class UnconfirmedTransactionWaiter extends Transform {
     constructor() {
         super({
-            objectMode: true, 
+            objectMode: true,
             transform: async (event: MempoolEvent2, encoding: BufferEncoding, callback: TransformCallback) => {
                 let rpcTx = await event.rpcTx;
                 if (rpcTx !== undefined && rpcTx !== null) {
-                    this.push(<ResolvedMempoolTransaction> {txid: event.txid, rpcTx: rpcTx, type: "hashtx"});
+                    this.push(<ResolvedMempoolTransaction>{ txid: event.txid, rpcTx: rpcTx, type: "hashtx" });
                 }
                 callback();
             }

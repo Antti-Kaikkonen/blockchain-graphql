@@ -9,13 +9,13 @@ export class UnconfirmedTransactionFetcher extends Transform {
     private async getTransaction(txid: string): Promise<RpcTx> {
         return new Promise(async (resolve, reject) => {
             let fails = 0;
-            while(true) {
+            while (true) {
                 try {
                     resolve(await this.rpcClient.getRawTransaction(txid));
                     break;
-                } catch(err) {
+                } catch (err) {
                     if (++fails > 100) {
-                        console.log("Can't find "+txid);
+                        console.log("Can't find " + txid);
                         resolve(null);
                         break;
                     }
@@ -35,10 +35,10 @@ export class UnconfirmedTransactionFetcher extends Transform {
 
     constructor(private rpcClient: RpcClient, private mempool: Mempool) {
         super({
-            objectMode: true, 
+            objectMode: true,
             transform: (event: MempoolEvent, encoding: BufferEncoding, callback: TransformCallback) => {
                 if (!this.mempool.txById.has(event.txid)) {
-                    this.push(<MempoolEvent2>{type:"hashtx", txid: event.txid, rpcTx: this.getTransaction(event.txid)});
+                    this.push(<MempoolEvent2>{ type: "hashtx", txid: event.txid, rpcTx: this.getTransaction(event.txid) });
                 }
                 callback();
             }
