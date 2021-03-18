@@ -29,7 +29,7 @@ export class BlockInputDetailsFetcher extends Transform {
             tx.vin.forEach((vin, spending_index) => {
                 const already_spent_in = this.outpointToInpoint.get(vin.txid + vin.vout);
                 if (already_spent_in !== undefined && already_spent_in.spending_txid !== tx.txid) {
-                    console.log("Output " + vin.txid + "-" + vin.vout + " already spent by input " + already_spent_in.spending_txid + "-" + already_spent_in.spending_index + " but double spent by input " + tx.txid + "-" + spending_index);
+                    //console.log("Output " + vin.txid + "-" + vin.vout + " already spent by input " + already_spent_in.spending_txid + "-" + already_spent_in.spending_index + " but double spent by input " + tx.txid + "-" + spending_index);
                     this.txById.delete(already_spent_in.spending_txid);//Delete double spent transaction
                 }
                 this.outpointToInpoint.set(vin.txid + vin.vout, { spending_txid: tx.txid, spending_index: spending_index });

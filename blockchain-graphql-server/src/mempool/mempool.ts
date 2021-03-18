@@ -46,12 +46,15 @@ export class Mempool {
         this.unconfirmedTransactionWaiter = new UnconfirmedTransactionWaiter();
     }
 
+    private timeout: NodeJS.Timeout;
+
     public async start(): Promise<void> {
         console.log("Starting mempool");
         this.socket = new Subscriber();
         this.zmqParser.pipe(this.unconfirmedTxidFetcher, { end: false });
         this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, { end: false }).pipe(this.inputFetcher, { end: false });
-        Readable.from(this.socket).pipe(this.zmqParser, { end: false });
+        const socketStream = Readable.from(this.socket);
+        socketStream.pipe(this.zmqParser, { end: false });
         this.blockReader.pipe(this.blockFetcher).pipe(this.inputFetcher).pipe(this.blockHandler);
         await new Promise((resolve) => setTimeout(resolve, 10000));
         const txids: string[] = await this.rpcClient.getRawMempool();
@@ -60,10 +63,22 @@ export class Mempool {
             this.socket.connect(this.coin.zmq_addresses[0]);
             this.socket.subscribe("hashtx");
         }
+        this.timeout = setInterval(() => {
+            console.log(`${this.coin.name} streams
+            socketStream: R=${socketStream.readableLength}
+            blockReader: R=${this.blockReader.readableLength} 
+            blockFetcher: R=${this.blockFetcher.readableLength}, W=${this.blockFetcher.writableLength}
+            zmqParser: R=${this.zmqParser.readableLength}, W=${this.zmqParser.writableLength}
+            unconfirmedTxidFetcher: R=${this.unconfirmedTxidFetcher.readableLength}, W=${this.unconfirmedTxidFetcher.writableLength}
+            unconfirmedTransactionWaiter: R=${this.unconfirmedTxidFetcher.readableLength}, W=${this.unconfirmedTxidFetcher.writableLength}
+            blockHandler: W=${this.blockHandler.writableLength}`);
+            //console.log(this.coin.name + " streams - blockReader: R=" + this.blockReader.readableLength + " \n blockFetcher: R=" + this.blockFetcher.readableLength + ", W=" + this.blockFetcher.writableLength);
+        }, 5 * 60000);
     }
 
     public stop(): void {
-        console.log("Stopping mempool");
+        clearInterval(this.timeout);
+        console.log("Stopping " + this.coin.name + " mempool");
         if (this.socket !== undefined) this.socket.close();
         this.blockReader.destroy();
         this.blockFetcher.destroy();
