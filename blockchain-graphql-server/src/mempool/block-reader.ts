@@ -42,7 +42,8 @@ export class BlockReader extends Readable {
             if (oldHash === hash) {//Found common ancestor
                 return;
             } else {
-                this.push(<ChainEvent>{ type: "delete", hash: hash, height: height });
+                console.log(this.coin.name + " REWINDING BLOCK " + oldHash + " AT HEIGHT " + height);
+                this.push(<ChainEvent>{ type: "delete", hash: oldHash, height: height });
                 await this.newBlocksToHeight(height - 1);//Orphaned
             }
         } else if (!this.heightToHash.has(height + this.maxReorgDepth)) {
