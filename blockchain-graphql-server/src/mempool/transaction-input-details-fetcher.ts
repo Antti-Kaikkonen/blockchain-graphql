@@ -1,19 +1,18 @@
 import { types } from "cassandra-driver";
 import { Transform, TransformCallback } from "stream";
-import { AddEvent2 } from "./block-fetcher";
-import { DeleteEvent } from "./block-reader";
+import { MempoolEvent2 } from "./block-fetcher";
+import { ResolvedMempoolTransaction } from "./unconfirmed-transaction-waiter";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 import { Coin } from "../models/coin";
-import { RpcBlock, RpcClient, RpcTx, RpcVin } from "../rpc-client";
+import { RpcClient, RpcTx, RpcVin } from "../rpc-client";
 import { Mempool } from "./mempool";
 
-export interface AddEvent3 extends AddEvent2 {
+export interface MempoolEvent3 extends MempoolEvent2 {
     inputDetails: Map<string, Promise<{ address: string, value: number }>>;
 }
 
-export class BlockInputDetailsFetcher extends Transform {
 
-    public blockByHeight: Map<number, RpcBlock> = new Map();
+export class TransactionInputDetailsFetcher extends Transform {
 
     private processTx(tx: RpcTx, inputDetails: Map<string, Promise<{ address: string, value: number }>>) {
         const coinbase: boolean = tx.vin.length === 1 && tx.vin[0].coinbase !== undefined;
@@ -34,33 +33,14 @@ export class BlockInputDetailsFetcher extends Transform {
         public txById: Map<string, RpcTx>, public outpointToInpoint: Map<string, { spending_txid: string, spending_index: number }>) {
         super({
             objectMode: true,
-            transform: async (event: DeleteEvent | AddEvent2, encoding: BufferEncoding, callback: TransformCallback) => {
-                let blockToDelete: RpcBlock;
-                if (event.type === "add") {
-                    const rpcBlock = await event.block;
-                    this.blockByHeight.set(rpcBlock.height, rpcBlock);
-                    rpcBlock.tx.forEach(tx => {
-                        this.txById.set(tx.txid, tx);
-                    });
-                    const inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
-                    rpcBlock.tx.forEach(tx => {
-                        this.processTx(tx, inputDetails);
-                    });
-                    this.push({ ...event, inputDetails: inputDetails })
-                    blockToDelete = this.blockByHeight.get(event.height - 10);
-
-                } else if (event.type === "delete") {
-                    blockToDelete = this.blockByHeight.get(event.height);
-                    this.push(event);
-                }
-                if (blockToDelete !== undefined) {
-                    this.blockByHeight.delete(blockToDelete.height);
-                    blockToDelete.tx.forEach(tx => {
-                        this.txById.delete(tx.txid);
-                        tx.vin.forEach(vin => {
-                            this.outpointToInpoint.delete(vin.txid + vin.vout);
-                        });
-                    });
+            transform: async (event: ResolvedMempoolTransaction, encoding: BufferEncoding, callback: TransformCallback) => {
+                if (event.type === "hashtx") {
+                    if (!this.txById.has(event.txid)) {
+                        this.txById.set(event.txid, event.rpcTx);
+                        const inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map();
+                        this.processTx(event.rpcTx, inputDetails);
+                        this.push({ ...event, inputDetails: inputDetails });
+                    }
                 }
                 callback();
             }
@@ -104,12 +84,27 @@ export class BlockInputDetailsFetcher extends Transform {
         }
     }
 
-    private getInputDetails(vin: RpcVin): Promise<{ address: string, value: number }> {
-        const mempoolDetails = this.getMempoolInputDetails(vin);
-        if (mempoolDetails !== undefined) {
-            return Promise.resolve(mempoolDetails);
-        } else {
-            return this.getInputDetailsFromDB(vin);
+    private async getInputDetails(vin: RpcVin): Promise<{ address: string, value: number }> {
+        let fails = 0;
+        while (true) {
+            try {
+                const mempoolDetails = this.getMempoolInputDetails(vin);
+                if (mempoolDetails !== undefined) {
+                    return mempoolDetails;
+                } else {
+                    return await this.getInputDetailsFromDB(vin);
+                }
+            } catch (err) {
+                if (++fails > 100) {
+                    throw err;
+                }
+                await new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        resolve(null);
+                    }, 100);
+                });
+            }
+
         }
     }
 

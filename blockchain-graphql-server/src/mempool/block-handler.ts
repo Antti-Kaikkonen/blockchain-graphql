@@ -1,5 +1,6 @@
 import { Writable } from "stream";
-import { AddEvent3, MempoolEvent3 } from "./block-input-details-fetcher";
+import { AddEvent3 } from "./block-input-details-fetcher";
+import { MempoolEvent3 } from "./transaction-input-details-fetcher";
 import { DeleteEvent } from "./block-reader";
 import { LimitedCapacityClient } from "../limited-capacity-client";
 import { MempoolBlock, MempoolTx } from "../mempool/mempool";

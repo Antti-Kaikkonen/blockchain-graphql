@@ -8,7 +8,8 @@ import { Transaction } from "../models/transaction";
 import { RpcBlock, RpcClient, RpcTx } from "../rpc-client";
 import { BlockFetcher } from "./block-fetcher";
 import { BlockHandler } from "./block-handler";
-import { BlockInputDetailsFetcher, MempoolEvent3 } from "./block-input-details-fetcher";
+import { BlockInputDetailsFetcher } from "./block-input-details-fetcher";
+import { TransactionInputDetailsFetcher, MempoolEvent3 } from "./transaction-input-details-fetcher";
 import { BlockReader } from "./block-reader";
 import { UnconfirmedTransactionFetcher } from "./unconfirmed-transaction-fetcher";
 import { UnconfirmedTransactionWaiter } from "./unconfirmed-transaction-waiter";
@@ -28,7 +29,8 @@ export class Mempool {
 
     private blockReader: BlockReader;
     private blockFetcher: BlockFetcher;
-    private inputFetcher: BlockInputDetailsFetcher;
+    private blockInputFetcher: BlockInputDetailsFetcher;
+    private txInputFetcher: TransactionInputDetailsFetcher;
     private blockHandler: BlockHandler;
     private zmqParser: ZmqParser;
     private unconfirmedTxidFetcher: UnconfirmedTransactionFetcher;
@@ -39,7 +41,10 @@ export class Mempool {
     constructor(public rpcClient: RpcClient, private client: LimitedCapacityClient, private coin: Coin) {
         this.blockReader = new BlockReader(this.rpcClient, this.coin, 10, this);
         this.blockFetcher = new BlockFetcher(this.rpcClient, this);
-        this.inputFetcher = new BlockInputDetailsFetcher(this.client, this.rpcClient, this.coin, this);
+        const m1 = new Map();
+        const m2 = new Map();
+        this.blockInputFetcher = new BlockInputDetailsFetcher(this.client, this.rpcClient, this.coin, this, m1, m2);
+        this.txInputFetcher = new TransactionInputDetailsFetcher(this.client, this.rpcClient, this.coin, this, m1, m2);
         this.blockHandler = new BlockHandler(this.client, this.coin, this);
         this.zmqParser = new ZmqParser();
         this.unconfirmedTxidFetcher = new UnconfirmedTransactionFetcher(this.rpcClient, this);
@@ -52,10 +57,10 @@ export class Mempool {
         console.log("Starting mempool");
         this.socket = new Subscriber();
         this.zmqParser.pipe(this.unconfirmedTxidFetcher, { end: false });
-        this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, { end: false }).pipe(this.inputFetcher, { end: false });
+        this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, { end: false }).pipe(this.txInputFetcher, { end: false }).pipe(this.blockHandler);
         const socketStream = Readable.from(this.socket);
         socketStream.pipe(this.zmqParser, { end: false });
-        this.blockReader.pipe(this.blockFetcher).pipe(this.inputFetcher).pipe(this.blockHandler);
+        this.blockReader.pipe(this.blockFetcher, { end: false }).pipe(this.blockInputFetcher, { end: false }).pipe(this.blockHandler);
         await new Promise((resolve) => setTimeout(resolve, 10000));
         const txids: string[] = await this.rpcClient.getRawMempool();
         txids.forEach(txid => this.unconfirmedTxidFetcher.write(<MempoolEvent3>{ type: "hashtx", txid: txid }));
@@ -82,7 +87,7 @@ export class Mempool {
         if (this.socket !== undefined) this.socket.close();
         this.blockReader.destroy();
         this.blockFetcher.destroy();
-        this.inputFetcher.destroy();
+        this.blockInputFetcher.destroy();
         this.blockHandler.destroy();
         this.zmqParser.destroy();
         this.unconfirmedTxidFetcher.destroy();
