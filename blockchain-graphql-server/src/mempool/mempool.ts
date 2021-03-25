@@ -15,6 +15,7 @@ import { UnconfirmedTransactionFetcher } from "./unconfirmed-transaction-fetcher
 import { UnconfirmedTransactionWaiter } from "./unconfirmed-transaction-waiter";
 import { UnconfirmedMempool } from "./unconfirmed_mempool";
 import { ZmqParser } from "./zmq-parser";
+import { TransactionInputDetailsWaiter } from "./transaction-input-details-waiter";
 
 export class Mempool {
     public time: number;
@@ -31,6 +32,7 @@ export class Mempool {
     private blockFetcher: BlockFetcher;
     private blockInputFetcher: BlockInputDetailsFetcher;
     private txInputFetcher: TransactionInputDetailsFetcher;
+    private txInputWaiter: TransactionInputDetailsWaiter;
     private blockHandler: BlockHandler;
     private zmqParser: ZmqParser;
     private unconfirmedTxidFetcher: UnconfirmedTransactionFetcher;
@@ -45,6 +47,7 @@ export class Mempool {
         const m2 = new Map();
         this.blockInputFetcher = new BlockInputDetailsFetcher(this.client, this.rpcClient, this.coin, this, m1, m2);
         this.txInputFetcher = new TransactionInputDetailsFetcher(this.client, this.rpcClient, this.coin, this, m1, m2);
+        this.txInputWaiter = new TransactionInputDetailsWaiter();
         this.blockHandler = new BlockHandler(this.client, this.coin, this);
         this.zmqParser = new ZmqParser();
         this.unconfirmedTxidFetcher = new UnconfirmedTransactionFetcher(this.rpcClient, this);
@@ -57,7 +60,7 @@ export class Mempool {
         console.log("Starting mempool");
         this.socket = new Subscriber();
         this.zmqParser.pipe(this.unconfirmedTxidFetcher, { end: false });
-        this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, { end: false }).pipe(this.txInputFetcher, { end: false }).pipe(this.blockHandler);
+        this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, { end: false }).pipe(this.txInputFetcher, { end: false }).pipe(this.txInputWaiter, { end: false }).pipe(this.blockHandler);
         const socketStream = Readable.from(this.socket);
         socketStream.pipe(this.zmqParser, { end: false });
         this.blockReader.pipe(this.blockFetcher, { end: false }).pipe(this.blockInputFetcher, { end: false }).pipe(this.blockHandler);

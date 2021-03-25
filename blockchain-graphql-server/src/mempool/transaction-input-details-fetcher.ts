@@ -96,6 +96,7 @@ export class TransactionInputDetailsFetcher extends Transform {
                 }
             } catch (err) {
                 if (++fails > 100) {
+                    console.log("More than 100 getInputDetails attempts. Last error:", err);
                     throw err;
                 }
                 await new Promise((resolve, reject) => {
