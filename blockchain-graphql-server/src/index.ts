@@ -51,7 +51,7 @@ async function run() {
     });
     await client.connect();
 
-    const limitedCapcityClient = new LimitedCapacityClient(client, 100);
+    const limitedCapcityClient = new LimitedCapacityClient(client, 10);
 
     const nameToCoin: Map<string, Coin> = new Map();
     const coins_updater: CoinsUpdater = new CoinsUpdater(nameToCoin, limitedCapcityClient, coins_keyspace);
