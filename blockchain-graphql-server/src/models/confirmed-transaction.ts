@@ -14,6 +14,7 @@ export class ConfirmedTransaction {
     @Field({ nullable: false, complexity: 1 })
     txid: string;
 
+    @Field({ nullable: false, complexity: 1 })
     readonly coin: Coin;
 
 }

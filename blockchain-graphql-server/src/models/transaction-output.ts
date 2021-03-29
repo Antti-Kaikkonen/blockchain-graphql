@@ -33,6 +33,7 @@ export class TransactionOutput {
     @Field(type => Int, { nullable: true, complexity: 1 })
     spendingIndex: number;
 
+    @Field({ nullable: false, complexity: 1 })
     readonly coin: Coin;
 }
 

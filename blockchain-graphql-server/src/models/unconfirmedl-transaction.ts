@@ -10,6 +10,7 @@ export class UnconfirmedTransaction {
     @Field({ nullable: false, complexity: 1 })
     timestamp: Date;
 
+    @Field({ nullable: false, complexity: 1 })
     coin: Coin;
 
 }

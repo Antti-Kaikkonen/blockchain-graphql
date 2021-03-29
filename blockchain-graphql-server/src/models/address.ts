@@ -1,8 +1,4 @@
 import { ObjectType, Field } from "type-graphql";
-import { PaginatedAddressTransactionResponse } from "./address-transaction";
-import { PaginatedOHLCResponse } from "./ohlc";
-import { PaginatedAddressBalanceResponse } from "./address-balance";
-import { AddressCluster } from "./address-cluster";
 import { PaginatedResponse } from "./paginated-response";
 import { Coin } from "./coin";
 
@@ -14,6 +10,7 @@ export class Address {
         this.coin = coin;
     }
 
+    @Field({ nullable: false, complexity: 1 })
     readonly coin: Coin;
 
     @Field({ nullable: false, complexity: 1 })

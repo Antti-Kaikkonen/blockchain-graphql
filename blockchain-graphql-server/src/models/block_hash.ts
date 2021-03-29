@@ -11,6 +11,7 @@ export class BlockHash {
     @Field(type => Int, { nullable: false, complexity: 1 })
     height: number;
 
+    @Field({ nullable: false, complexity: 1 })
     readonly coin: Coin;
 
 }

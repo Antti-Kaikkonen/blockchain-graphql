@@ -25,6 +25,7 @@ export class Transaction {
     @Field({ nullable: false, complexity: 1 })
     fee: number;
 
+    @Field({ nullable: false, complexity: 1 })
     readonly coin: Coin;
 
 }

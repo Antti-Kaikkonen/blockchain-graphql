@@ -7,5 +7,6 @@ export class AddressCluster {
     @Field({ nullable: false, complexity: 1 })
     clusterId: string;
 
+    @Field({ nullable: false, complexity: 1 })
     coin: Coin;
 }
