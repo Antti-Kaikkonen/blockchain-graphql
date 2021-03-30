@@ -169,7 +169,7 @@ export class AddressResolver {
         const originalLimit: number = limit;
         let res: AddressTransaction[] = address.coin.mempool?.addressTransactions.get(address.address)
         if (res !== undefined) {
-            if (cursor !== undefined) {
+            if (cursor) {
                 const lastIndex = res.findIndex((e) => {
                     if (e.timestamp.getTime() === cursor.timestamp.getTime()) {
                         if (e.height === cursor.height) {
@@ -258,7 +258,7 @@ export class AddressResolver {
         const originalLimit: number = limit;
         let res: AddressBalance[] = address.coin.mempool?.addressBalances.get(address.address);
         if (res !== undefined) {
-            if (cursor !== undefined) {
+            if (cursor) {
                 const lastIndex = res.findIndex((e) => e.timestamp >= cursor.timestamp);//TODO: use binary search instead
                 if (lastIndex !== -1) {
                     res = res.slice(0, lastIndex);
