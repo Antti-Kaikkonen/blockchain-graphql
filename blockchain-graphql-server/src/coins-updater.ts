@@ -32,6 +32,8 @@ export class CoinsUpdater {
         if (coin === undefined) coin = new Coin();
         //let coin: Coin = new Coin();
         coin.name = row.get("name");
+        coin.bip44_index = row.get("bip44_index");
+        coin.bip44_symbol = row.get("bip44_symbol");
         coin.keyspace = row.get("key_space");
         this.nameToCoin.set(coin.name, coin);
         const rpc_urls: string[] = row.get("rpc_urls");
