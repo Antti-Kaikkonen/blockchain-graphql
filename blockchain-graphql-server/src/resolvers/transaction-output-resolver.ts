@@ -91,6 +91,8 @@ export class TransactionOutputResolver {
                 height: row.get('height'),
                 txN: row.get("tx_n"),
                 fee: row.get("fee"),
+                inputCount: row.get("input_count"),
+                outputCount: row.get("output_count"),
                 coin: transactionOutput.coin
             };
         });

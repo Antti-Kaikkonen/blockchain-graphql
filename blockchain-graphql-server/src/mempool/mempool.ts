@@ -116,6 +116,8 @@ export class MempoolTx {
             height: this.height,
             txN: this.txN,
             fee: this.fee,
+            inputCount: this.rpcTx.vin.length,
+            outputCount: this.rpcTx.vout.length,
             coin: coin
         };
     }

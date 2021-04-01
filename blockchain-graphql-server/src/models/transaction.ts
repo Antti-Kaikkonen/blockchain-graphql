@@ -25,6 +25,12 @@ export class Transaction {
     @Field({ nullable: false, complexity: 1 })
     fee: number;
 
+    @Field(type => Int, { nullable: false, complexity: 1 })
+    inputCount: number;
+
+    @Field(type => Int, { nullable: false, complexity: 1 })
+    outputCount: number;
+
     @Field({ nullable: false, complexity: 1 })
     readonly coin: Coin;
 
