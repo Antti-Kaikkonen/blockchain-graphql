@@ -2,7 +2,11 @@ package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind;
 
 
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteCluster;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetBalanceOperation;
+import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetDailyBalanceChange;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetParent;
+import java.util.Iterator;
 import java.util.Map;
 import org.apache.flink.statefun.sdk.Address;
 import org.apache.flink.statefun.sdk.Context;
@@ -12,10 +16,6 @@ import org.apache.flink.statefun.sdk.annotations.Persisted;
 import org.apache.flink.statefun.sdk.io.EgressIdentifier;
 import org.apache.flink.statefun.sdk.state.PersistedTable;
 import org.apache.flink.statefun.sdk.state.PersistedValue;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteCluster;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetBalanceOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetDailyBalanceChange;
-import java.util.Iterator;
 
 public class UnionFindFunction implements StatefulFunction {
     

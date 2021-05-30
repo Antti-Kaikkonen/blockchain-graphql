@@ -1,11 +1,11 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink;
 
-import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransaction;
-import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
-import io.github.anttikaikkonen.blockchainanalyticsflink.models.TransactionInputWithOutput;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionInput;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.TransactionOutput;
+import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransaction;
+import io.github.anttikaikkonen.blockchainanalyticsflink.models.ConfirmedTransactionWithInputs;
 import io.github.anttikaikkonen.blockchainanalyticsflink.models.SpentOutput;
+import io.github.anttikaikkonen.blockchainanalyticsflink.models.TransactionInputWithOutput;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;

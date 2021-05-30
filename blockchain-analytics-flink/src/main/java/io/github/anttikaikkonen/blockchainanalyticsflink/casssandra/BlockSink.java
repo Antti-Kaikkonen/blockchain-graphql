@@ -4,8 +4,8 @@ import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.LongestChain;
 import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Block;
+import io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.LongestChain;
 import java.util.List;
 
 public class BlockSink extends CassandraSaverFunction<Block> {

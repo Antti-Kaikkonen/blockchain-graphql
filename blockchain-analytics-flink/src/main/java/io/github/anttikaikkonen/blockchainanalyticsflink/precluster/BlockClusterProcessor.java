@@ -1,17 +1,12 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.precluster;
 
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.AddAddressesAndTransactionsOperation;
-import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.BlockTx;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.MergeOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind.UnionFindFunction;
 import java.time.Duration;
-import java.time.temporal.Temporal;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
