@@ -1,33 +1,33 @@
-import "reflect-metadata"
-import { Client } from "cassandra-driver"
-import { buildSchema } from "type-graphql"
+import 'reflect-metadata'
+import { Client } from 'cassandra-driver'
+import { buildSchema } from 'type-graphql'
 import { RichlistResolver } from './resolvers/richlist-resolver'
 import { AddressTransactionsResolver } from './resolvers/address-transactions-resolver'
-import { ApolloServer } from "apollo-server"
-import { Container } from "typedi"
-import { AddressResolver } from "./resolvers/address-resolver"
-import { DateResolver } from "./resolvers/date-resolver"
+import { ApolloServer } from 'apollo-server'
+import { Container } from 'typedi'
+import { AddressResolver } from './resolvers/address-resolver'
+import { DateResolver } from './resolvers/date-resolver'
 import {
     getComplexity,
     simpleEstimator,
     fieldExtensionsEstimator
 } from 'graphql-query-complexity'
-import { BlockResolver } from "./resolvers/block-resolver"
-import { ConfirmedTransactionResolver } from "./resolvers/confirmed-transaction-resolver"
-import { BlockHashResolver } from "./resolvers/block-hash-resolver"
-import { TransactionResolver } from "./resolvers/transaction-resolver"
-import { TransactionInputResolver } from "./resolvers/transaction-input-resolver"
-import { TransactionOutputResolver } from "./resolvers/transaction-output-resolver"
-import { AddressClusterResolver } from "./resolvers/address-cluster-resolver"
-import { ClusterTransactionResolver } from "./resolvers/cluster-transaction-resolver"
-import { config } from "dotenv"
-import { CoinResolver } from "./resolvers/coin-resolver"
-import { Coin } from "./models/coin"
-import { CoinsUpdater } from "./coins-updater"
-import { LimitedCapacityClient } from "./limited-capacity-client"
-import { MempoolResolver } from "./resolvers/mempool-resolver"
-import { MempoolTransactionsResolver } from "./resolvers/mempool-transaction-resolver"
-import { UnconfirmedAddressTransactionResolver } from "./resolvers/unconfirmed-address-transaction-resolver"
+import { BlockResolver } from './resolvers/block-resolver'
+import { ConfirmedTransactionResolver } from './resolvers/confirmed-transaction-resolver'
+import { BlockHashResolver } from './resolvers/block-hash-resolver'
+import { TransactionResolver } from './resolvers/transaction-resolver'
+import { TransactionInputResolver } from './resolvers/transaction-input-resolver'
+import { TransactionOutputResolver } from './resolvers/transaction-output-resolver'
+import { AddressClusterResolver } from './resolvers/address-cluster-resolver'
+import { ClusterTransactionResolver } from './resolvers/cluster-transaction-resolver'
+import { config } from 'dotenv'
+import { CoinResolver } from './resolvers/coin-resolver'
+import { Coin } from './models/coin'
+import { CoinsUpdater } from './coins-updater'
+import { LimitedCapacityClient } from './limited-capacity-client'
+import { MempoolResolver } from './resolvers/mempool-resolver'
+import { MempoolTransactionsResolver } from './resolvers/mempool-transaction-resolver'
+import { UnconfirmedAddressTransactionResolver } from './resolvers/unconfirmed-address-transaction-resolver'
 
 
 async function run() {
@@ -40,7 +40,7 @@ async function run() {
     const contactPoints = process.env.CASSANDRA_HOST
     const contactPointsArr = contactPoints.split(/\s+/)
 
-    const coins_keyspace = process.env.CASSANDRA_COINS_KEYSPACE || "coins"
+    const coins_keyspace = process.env.CASSANDRA_COINS_KEYSPACE || 'coins'
 
     const api_port: number = process.env.API_PORT !== undefined ? Number.parseInt(process.env.API_PORT) : 6545
 
@@ -56,9 +56,9 @@ async function run() {
     const nameToCoin: Map<string, Coin> = new Map()
     const coins_updater: CoinsUpdater = new CoinsUpdater(nameToCoin, limitedCapcityClient, coins_keyspace)
     await coins_updater.start()
-    Container.set("coins", nameToCoin)
-    Container.set("cassandra_client", limitedCapcityClient)
-    Container.set("coins_keyspace", coins_keyspace)
+    Container.set('coins', nameToCoin)
+    Container.set('cassandra_client', limitedCapcityClient)
+    Container.set('coins_keyspace', coins_keyspace)
 
     const schema = await buildSchema({
         resolvers: [RichlistResolver, AddressTransactionsResolver, AddressResolver,
@@ -67,7 +67,7 @@ async function run() {
             TransactionOutputResolver, AddressClusterResolver, ClusterTransactionResolver, CoinResolver, MempoolResolver, MempoolTransactionsResolver, UnconfirmedAddressTransactionResolver],
         validate: true,
         container: Container,
-        dateScalarMode: "timestamp"
+        dateScalarMode: 'timestamp'
     })
 
     const ipToQueries: Map<string, number> = new Map()
@@ -120,12 +120,12 @@ async function run() {
                         )
                     }
                     // And here we can e.g. subtract the complexity point from hourly API calls limit.
-                    console.log("Used query complexity points:", complexity)
+                    console.log('Used query complexity points:', complexity)
                     if (complexity > 0) {
                         //Your HTTP server (e.g NGINX or Apache) must send client IP-address with this header for rate limiting to take effect. 
                         const x_forwarded_for: string = requestContext.request.http.headers.get('X-Forwarded-For')
                         if (x_forwarded_for !== undefined && x_forwarded_for !== null) {
-                            const ips: string[] = x_forwarded_for.split(", ")
+                            const ips: string[] = x_forwarded_for.split(', ')
                             if (ips.length > 0) {
                                 const ip: string = ips[ips.length - 1]
                                 const oldValue = ipToQueries.get(ip)
@@ -151,6 +151,6 @@ async function run() {
 run()
 
 process.on('SIGINT', () => {
-    console.log("Terminating")
+    console.log('Terminating')
     process.exit(0)
 })

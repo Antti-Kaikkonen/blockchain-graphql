@@ -1,11 +1,11 @@
-import { Block } from "../models/block"
-import { Resolver, FieldResolver, Root, Field, ArgsType, Args } from "type-graphql"
-import { types } from "cassandra-driver"
-import { Inject } from "typedi"
-import { ConfirmedTransaction, ConfirmedTransactionCursor, PaginatedConfirmedTransactionResponse } from "../models/confirmed-transaction"
-import { PaginationArgs } from "./pagination-args"
-import { MempoolBlock, MempoolTx } from "../mempool/mempool"
-import { LimitedCapacityClient } from "../limited-capacity-client"
+import { Block } from '../models/block'
+import { Resolver, FieldResolver, Root, Field, ArgsType, Args } from 'type-graphql'
+import { types } from 'cassandra-driver'
+import { Inject } from 'typedi'
+import { ConfirmedTransaction, ConfirmedTransactionCursor, PaginatedConfirmedTransactionResponse } from '../models/confirmed-transaction'
+import { PaginationArgs } from './pagination-args'
+import { MempoolBlock, MempoolTx } from '../mempool/mempool'
+import { LimitedCapacityClient } from '../limited-capacity-client'
 
 
 @ArgsType()
@@ -20,7 +20,7 @@ class ConfirmedTransactionArgs extends PaginationArgs {
 export class BlockResolver {
 
     constructor(
-        @Inject("cassandra_client") private client: LimitedCapacityClient
+        @Inject('cassandra_client') private client: LimitedCapacityClient
     ) { }
 
     @FieldResolver(returns => PaginatedConfirmedTransactionResponse, { nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity })
@@ -54,12 +54,12 @@ export class BlockResolver {
             }
         }
         let args: any[] = [block.height]
-        let query: string = "SELECT * FROM " + block.coin.keyspace + ".confirmed_transaction WHERE height=?"
+        let query: string = 'SELECT * FROM ' + block.coin.keyspace + '.confirmed_transaction WHERE height=?'
         if (cursor) {
-            query += " AND tx_n > ?"
+            query += ' AND tx_n > ?'
             args = args.concat([cursor.txN])
         }
-        query += " LIMIT ?"
+        query += ' LIMIT ?'
         args.push(limit + 1)
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -72,7 +72,7 @@ export class BlockResolver {
             return <ConfirmedTransaction>{
                 height: row.get('height'),
                 txN: row.get('tx_n'),
-                txid: row.get("txid"),
+                txid: row.get('txid'),
                 coin: block.coin
             }
         })

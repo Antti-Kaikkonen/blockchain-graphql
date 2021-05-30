@@ -1,21 +1,21 @@
-import { Readable } from "stream"
-import { Subscriber } from "zeromq"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { AddressBalance } from "../models/address-balance"
-import { AddressTransaction } from "../models/address-transaction"
-import { Coin } from "../models/coin"
-import { Transaction } from "../models/transaction"
-import { RpcBlock, RpcClient, RpcTx } from "../rpc-client"
-import { BlockFetcher } from "./block-fetcher"
-import { BlockHandler } from "./block-handler"
-import { BlockInputDetailsFetcher } from "./block-input-details-fetcher"
-import { TransactionInputDetailsFetcher, MempoolEvent3 } from "./transaction-input-details-fetcher"
-import { BlockReader } from "./block-reader"
-import { UnconfirmedTransactionFetcher } from "./unconfirmed-transaction-fetcher"
-import { UnconfirmedTransactionWaiter } from "./unconfirmed-transaction-waiter"
-import { UnconfirmedMempool } from "./unconfirmed_mempool"
-import { ZmqParser } from "./zmq-parser"
-import { TransactionInputDetailsWaiter } from "./transaction-input-details-waiter"
+import { Readable } from 'stream'
+import { Subscriber } from 'zeromq'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { AddressBalance } from '../models/address-balance'
+import { AddressTransaction } from '../models/address-transaction'
+import { Coin } from '../models/coin'
+import { Transaction } from '../models/transaction'
+import { RpcBlock, RpcClient, RpcTx } from '../rpc-client'
+import { BlockFetcher } from './block-fetcher'
+import { BlockHandler } from './block-handler'
+import { BlockInputDetailsFetcher } from './block-input-details-fetcher'
+import { TransactionInputDetailsFetcher, MempoolEvent3 } from './transaction-input-details-fetcher'
+import { BlockReader } from './block-reader'
+import { UnconfirmedTransactionFetcher } from './unconfirmed-transaction-fetcher'
+import { UnconfirmedTransactionWaiter } from './unconfirmed-transaction-waiter'
+import { UnconfirmedMempool } from './unconfirmed_mempool'
+import { ZmqParser } from './zmq-parser'
+import { TransactionInputDetailsWaiter } from './transaction-input-details-waiter'
 
 export class Mempool {
     public time: number
@@ -57,7 +57,7 @@ export class Mempool {
     private timeout: NodeJS.Timeout
 
     public async start(): Promise<void> {
-        console.log("Starting mempool")
+        console.log('Starting mempool')
         this.socket = new Subscriber()
         this.zmqParser.pipe(this.unconfirmedTxidFetcher, { end: false })
         this.unconfirmedTxidFetcher.pipe(this.unconfirmedTransactionWaiter, { end: false }).pipe(this.txInputFetcher, { end: false }).pipe(this.txInputWaiter, { end: false }).pipe(this.blockHandler)
@@ -66,10 +66,10 @@ export class Mempool {
         this.blockReader.pipe(this.blockFetcher, { end: false }).pipe(this.blockInputFetcher, { end: false }).pipe(this.blockHandler)
         await new Promise((resolve) => setTimeout(resolve, 10000))
         const txids: string[] = await this.rpcClient.getRawMempool()
-        txids.forEach(txid => this.unconfirmedTxidFetcher.write(<MempoolEvent3>{ type: "hashtx", txid: txid }))
+        txids.forEach(txid => this.unconfirmedTxidFetcher.write(<MempoolEvent3>{ type: 'hashtx', txid: txid }))
         if (this.coin.zmq_addresses && this.coin.zmq_addresses.length > 0) {
             this.socket.connect(this.coin.zmq_addresses[0])
-            this.socket.subscribe("hashtx")
+            this.socket.subscribe('hashtx')
         }
         this.timeout = setInterval(() => {
             console.log(`${this.coin.name} streams
@@ -86,7 +86,7 @@ export class Mempool {
 
     public async stop(): Promise<void> {
         clearInterval(this.timeout)
-        console.log("Stopping " + this.coin.name + " mempool")
+        console.log('Stopping ' + this.coin.name + ' mempool')
         if (this.socket !== undefined) this.socket.close()
         this.blockReader.destroy()
         this.blockFetcher.destroy()

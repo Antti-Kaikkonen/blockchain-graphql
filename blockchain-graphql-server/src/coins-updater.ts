@@ -1,8 +1,8 @@
-import { types } from "cassandra-driver"
-import { LimitedCapacityClient } from "./limited-capacity-client"
-import { Mempool } from "./mempool/mempool"
-import { Coin } from "./models/coin"
-import { RpcClient } from "./rpc-client"
+import { types } from 'cassandra-driver'
+import { LimitedCapacityClient } from './limited-capacity-client'
+import { Mempool } from './mempool/mempool'
+import { Coin } from './models/coin'
+import { RpcClient } from './rpc-client'
 
 function arraysEqual(a, b) {
     if (a === b) return true
@@ -27,17 +27,17 @@ export class CoinsUpdater {
     private timeout: NodeJS.Timeout
 
     private async updateRow(row: types.Row): Promise<void> {
-        const name = row.get("name")
+        const name = row.get('name')
         let coin: Coin = this.nameToCoin.get(name)
         if (coin === undefined) coin = new Coin()
         //let coin: Coin = new Coin();
-        coin.name = row.get("name")
-        coin.bip44_index = row.get("bip44_index")
-        coin.bip44_symbol = row.get("bip44_symbol")
-        coin.keyspace = row.get("key_space")
+        coin.name = row.get('name')
+        coin.bip44_index = row.get('bip44_index')
+        coin.bip44_symbol = row.get('bip44_symbol')
+        coin.keyspace = row.get('key_space')
         this.nameToCoin.set(coin.name, coin)
-        const rpc_urls: string[] = row.get("rpc_urls")
-        const zmq_addresses: string[] = row.get("zmq_addresses")
+        const rpc_urls: string[] = row.get('rpc_urls')
+        const zmq_addresses: string[] = row.get('zmq_addresses')
         if (!arraysEqual(coin.rpcUrls, rpc_urls) || !arraysEqual(coin.zmq_addresses, zmq_addresses)) {
             coin.rpcUrls = rpc_urls
             coin.zmq_addresses = zmq_addresses
@@ -55,7 +55,7 @@ export class CoinsUpdater {
     }
 
     private async update(): Promise<void> {
-        const coins: types.ResultSet = await this.client.execute("SELECT * FROM " + this.coins_keyspace + ".available_coins")
+        const coins: types.ResultSet = await this.client.execute('SELECT * FROM ' + this.coins_keyspace + '.available_coins')
         const promises: Promise<void>[] = []
         coins.rows.forEach(row => {
             promises.push(this.updateRow(row))

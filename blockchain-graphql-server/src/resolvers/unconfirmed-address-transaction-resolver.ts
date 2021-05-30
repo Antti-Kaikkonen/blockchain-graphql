@@ -1,16 +1,16 @@
-import { types } from "cassandra-driver"
-import { FieldResolver, Resolver, Root } from "type-graphql"
-import { Inject } from "typedi"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { MempoolTx } from "../mempool/mempool"
-import { Transaction } from "../models/transaction"
-import { UnconfirmedAddressTransaction } from "../models/unconfirmed-address-transaction"
+import { types } from 'cassandra-driver'
+import { FieldResolver, Resolver, Root } from 'type-graphql'
+import { Inject } from 'typedi'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { MempoolTx } from '../mempool/mempool'
+import { Transaction } from '../models/transaction'
+import { UnconfirmedAddressTransaction } from '../models/unconfirmed-address-transaction'
 
 @Resolver(of => UnconfirmedAddressTransaction)
 export class UnconfirmedAddressTransactionResolver {
 
 
-    constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
+    constructor(@Inject('cassandra_client') private client: LimitedCapacityClient) {
     }
 
     @FieldResolver(returns => Transaction, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
@@ -21,7 +21,7 @@ export class UnconfirmedAddressTransactionResolver {
             return mempoolTransaction.toGraphQL(rootTx.coin)
         }
         const args: any[] = [rootTx.txid]
-        const query: string = "SELECT * FROM " + rootTx.coin.keyspace + ".transaction WHERE txid=?"
+        const query: string = 'SELECT * FROM ' + rootTx.coin.keyspace + '.transaction WHERE txid=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -34,10 +34,10 @@ export class UnconfirmedAddressTransactionResolver {
                 size: row.get('size'),
                 version: row.get('version'),
                 height: row.get('height'),
-                txN: row.get("tx_n"),
-                fee: row.get("fee"),
-                inputCount: row.get("input_count"),
-                outputCount: row.get("output_count"),
+                txN: row.get('tx_n'),
+                fee: row.get('fee'),
+                inputCount: row.get('input_count'),
+                outputCount: row.get('output_count'),
                 coin: rootTx.coin
             }
         })

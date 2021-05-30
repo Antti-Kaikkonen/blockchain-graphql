@@ -1,24 +1,24 @@
-import { types } from "cassandra-driver"
-import { Arg, Args, ArgsType, Field, FieldResolver, Int, Mutation, Query, Resolver, Root } from "type-graphql"
-import { Inject } from "typedi"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { MempoolBlock, MempoolTx } from "../mempool/mempool"
-import { Address } from "../models/address"
-import { AddressCluster } from "../models/address-cluster"
-import { AddressClusterRichlist, AddressClusterRichlistCursor, PaginatedAddressClusterRichlistResponse } from "../models/address-cluster-richlist"
-import { Block } from "../models/block"
-import { BlockHash, BlockHashCursor, PaginatedAddressBlockHashtResponse } from "../models/block_hash"
-import { Coin } from "../models/coin"
-import { ConfirmedTransaction } from "../models/confirmed-transaction"
-import { Date as DateModel } from "../models/date"
-import { MempoolModel } from "../models/mempool-model"
-import { ScriptPubKey } from "../models/scriptpubkey"
-import { SendRawTransactionResult } from "../models/sendrawtransactionresult"
-import { Transaction } from "../models/transaction"
-import { TransactionInput } from "../models/transaction-input"
-import { TransactionOutput } from "../models/transaction-output"
-import { RpcVin, RpcVout } from "../rpc-client"
-import { PaginationArgs } from "./pagination-args"
+import { types } from 'cassandra-driver'
+import { Arg, Args, ArgsType, Field, FieldResolver, Int, Mutation, Query, Resolver, Root } from 'type-graphql'
+import { Inject } from 'typedi'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { MempoolBlock, MempoolTx } from '../mempool/mempool'
+import { Address } from '../models/address'
+import { AddressCluster } from '../models/address-cluster'
+import { AddressClusterRichlist, AddressClusterRichlistCursor, PaginatedAddressClusterRichlistResponse } from '../models/address-cluster-richlist'
+import { Block } from '../models/block'
+import { BlockHash, BlockHashCursor, PaginatedAddressBlockHashtResponse } from '../models/block_hash'
+import { Coin } from '../models/coin'
+import { ConfirmedTransaction } from '../models/confirmed-transaction'
+import { Date as DateModel } from '../models/date'
+import { MempoolModel } from '../models/mempool-model'
+import { ScriptPubKey } from '../models/scriptpubkey'
+import { SendRawTransactionResult } from '../models/sendrawtransactionresult'
+import { Transaction } from '../models/transaction'
+import { TransactionInput } from '../models/transaction-input'
+import { TransactionOutput } from '../models/transaction-output'
+import { RpcVin, RpcVout } from '../rpc-client'
+import { PaginationArgs } from './pagination-args'
 
 @ArgsType()
 class ClusterRichlistArgs extends PaginationArgs {
@@ -40,9 +40,9 @@ class BlockHashArgs extends PaginationArgs {
 export class CoinResolver {
 
     constructor(
-        @Inject("cassandra_client") private client: LimitedCapacityClient,
-        @Inject("coins_keyspace") private coins_keyspace: string,
-        @Inject("coins") private available_coins: Map<string, Coin>
+        @Inject('cassandra_client') private client: LimitedCapacityClient,
+        @Inject('coins_keyspace') private coins_keyspace: string,
+        @Inject('coins') private available_coins: Map<string, Coin>
     ) {
         this.coins()//updates lastCoinCount;
     }
@@ -59,14 +59,14 @@ export class CoinResolver {
     }
 
     @Query(returns => Coin, { nullable: true, complexity: 100 })
-    async coin(@Arg("name") name: string): Promise<Coin> {
+    async coin(@Arg('name') name: string): Promise<Coin> {
         return this.available_coins.get(name)
     }
 
     @FieldResolver(returns => DateModel, { nullable: false, complexity: 1 })
     async date(
         @Root() coin: Coin,
-        @Arg("date") date: string
+        @Arg('date') date: string
     ): Promise<DateModel> {
         return <DateModel>{
             date: date,
@@ -82,19 +82,19 @@ export class CoinResolver {
     }
 
     @FieldResolver(returns => Address, { nullable: false, complexity: 1 })
-    async address(@Root() coin: Coin, @Arg("address") address: string): Promise<Address> {
+    async address(@Root() coin: Coin, @Arg('address') address: string): Promise<Address> {
         const res = new Address({ address: address, coin: coin })
         return res
     }
 
     @FieldResolver(returns => Transaction, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
-    async transaction(@Root() coin: Coin, @Arg("txid") txid: string): Promise<Transaction> {
+    async transaction(@Root() coin: Coin, @Arg('txid') txid: string): Promise<Transaction> {
         const mempoolTransaction = coin.mempool?.txById.get(txid)
         if (mempoolTransaction !== undefined) {
             return mempoolTransaction.toGraphQL(coin)
         }
         const args: any[] = [txid]
-        const query: string = "SELECT * FROM " + coin.keyspace + ".transaction WHERE txid=?"
+        const query: string = 'SELECT * FROM ' + coin.keyspace + '.transaction WHERE txid=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -107,10 +107,10 @@ export class CoinResolver {
                 size: row.get('size'),
                 version: row.get('version'),
                 height: row.get('height'),
-                txN: row.get("tx_n"),
-                fee: row.get("fee"),
-                inputCount: row.get("input_count"),
-                outputCount: row.get("output_count"),
+                txN: row.get('tx_n'),
+                fee: row.get('fee'),
+                inputCount: row.get('input_count'),
+                outputCount: row.get('output_count'),
                 coin: coin
             }
         })
@@ -120,8 +120,8 @@ export class CoinResolver {
 
     @FieldResolver(returns => TransactionInput, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async transactionInput(@Root() coin: Coin,
-        @Arg("spendingTxid", type => String) spendingTxid: string,
-        @Arg("spendingIndex", type => Int) spendingIndex: number
+        @Arg('spendingTxid', type => String) spendingTxid: string,
+        @Arg('spendingIndex', type => Int) spendingIndex: number
     ): Promise<TransactionInput> {
         const mempoolTx: MempoolTx = coin.mempool?.txById.get(spendingTxid)
         if (mempoolTx !== undefined) {
@@ -141,7 +141,7 @@ export class CoinResolver {
         }
 
         const args: any[] = [spendingTxid, spendingIndex]
-        const query: string = "SELECT * FROM " + coin.keyspace + ".transaction_input WHERE spending_txid=? AND spending_index=?"
+        const query: string = 'SELECT * FROM ' + coin.keyspace + '.transaction_input WHERE spending_txid=? AND spending_index=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -149,8 +149,8 @@ export class CoinResolver {
         )
         const res: TransactionInput[] = resultSet.rows.map(row => {
             const vin: TransactionInput = new TransactionInput({
-                coinbase: row.get("coinbase"),
-                scriptSig: row.get("scriptsig"),
+                coinbase: row.get('coinbase'),
+                scriptSig: row.get('scriptsig'),
                 sequence: row.get('sequence'),
                 txid: row.get('txid'),
                 vout: row.get('vout'),
@@ -166,8 +166,8 @@ export class CoinResolver {
 
     @FieldResolver(returns => TransactionOutput, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async transactionOutput(@Root() coin: Coin,
-        @Arg("txid", type => String) txid: string,
-        @Arg("n", type => Int) n: number
+        @Arg('txid', type => String) txid: string,
+        @Arg('n', type => Int) n: number
     ): Promise<TransactionOutput> {
         const mempoolTx = coin.mempool?.txById.get(txid)
         if (mempoolTx !== undefined) {
@@ -196,7 +196,7 @@ export class CoinResolver {
             return vout
         }
         const args: any[] = [txid, n]
-        const query: string = "SELECT * FROM " + coin.keyspace + ".transaction_output WHERE txid=? AND n=?"
+        const query: string = 'SELECT * FROM ' + coin.keyspace + '.transaction_output WHERE txid=? AND n=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -232,8 +232,8 @@ export class CoinResolver {
     @FieldResolver(returns => ConfirmedTransaction, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async confirmedTransaction(
         @Root() coin: Coin,
-        @Arg("height", type => Int) height: number,
-        @Arg("tx_n", type => Int) tx_n: number
+        @Arg('height', type => Int) height: number,
+        @Arg('tx_n', type => Int) tx_n: number
     ): Promise<ConfirmedTransaction> {
         const mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height)
         if (mempoolBlock !== undefined) {
@@ -246,7 +246,7 @@ export class CoinResolver {
             }
         }
         const args: any[] = [height, tx_n]
-        const query: string = "SELECT * FROM " + coin.keyspace + ".confirmed_transaction WHERE height=? AND tx_n=?"
+        const query: string = 'SELECT * FROM ' + coin.keyspace + '.confirmed_transaction WHERE height=? AND tx_n=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -256,7 +256,7 @@ export class CoinResolver {
             return <ConfirmedTransaction>{
                 height: row.get('height'),
                 txN: row.get('tx_n'),
-                txid: row.get("txid"),
+                txid: row.get('txid'),
                 coin: coin
             }
         })
@@ -292,7 +292,7 @@ export class CoinResolver {
     @FieldResolver(returns => BlockHash, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async blockByHeight(
         @Root() coin: Coin,
-        @Arg("height", type => Int) height: number
+        @Arg('height', type => Int) height: number
     ): Promise<BlockHash> {
         const mempoolBlock: MempoolBlock = coin.mempool?.blockByHeight.get(height)
         if (mempoolBlock !== undefined) {
@@ -303,7 +303,7 @@ export class CoinResolver {
             }
         }
         const args: any[] = [height]
-        const query: string = "SELECT * FROM " + coin.keyspace + ".longest_chain WHERE height=?"
+        const query: string = 'SELECT * FROM ' + coin.keyspace + '.longest_chain WHERE height=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -322,7 +322,7 @@ export class CoinResolver {
     @FieldResolver(returns => Block, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async block(
         @Root() coin: Coin,
-        @Arg("hash") hash: string
+        @Arg('hash') hash: string
     ): Promise<Block> {
         const mempooBlock: MempoolBlock = coin.mempool?.blockByHash.get(hash)
         if (mempooBlock !== undefined) {
@@ -345,7 +345,7 @@ export class CoinResolver {
             }
         }
         const args: any[] = [hash]
-        const query: string = "SELECT * FROM " + coin.keyspace + ".block WHERE hash=?"
+        const query: string = 'SELECT * FROM ' + coin.keyspace + '.block WHERE hash=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -355,18 +355,18 @@ export class CoinResolver {
             return <Block>{
                 height: row.get('height'),
                 hash: row.get('hash'),
-                size: row.get("size"),
+                size: row.get('size'),
                 version: row.get('version'),
-                versionHex: row.get("versionhex"),
-                merkleRoot: row.get("merkleroot"),
-                time: row.get("time"),
-                medianTime: row.get("mediantime"),
-                nonce: row.get("nonce"),
-                bits: row.get("bits"),
-                difficulty: row.get("difficulty"),
-                chainWork: row.get("chainwork"),
-                previousBlockHash: row.get("previousblockhash"),
-                txCount: row.get("tx_count"),
+                versionHex: row.get('versionhex'),
+                merkleRoot: row.get('merkleroot'),
+                time: row.get('time'),
+                medianTime: row.get('mediantime'),
+                nonce: row.get('nonce'),
+                bits: row.get('bits'),
+                difficulty: row.get('difficulty'),
+                chainWork: row.get('chainwork'),
+                previousBlockHash: row.get('previousblockhash'),
+                txCount: row.get('tx_count'),
                 coin: coin
             }
         })
@@ -378,13 +378,13 @@ export class CoinResolver {
         @Args() { limit, cursor }: ClusterRichlistArgs
     ): Promise<PaginatedAddressClusterRichlistResponse> {
         let args: any[] = [CoinResolver.CLUSTER_RICHLIST_BINS]
-        let query: string = "SELECT balance, cluster_id FROM " + coin.keyspace + ".cluster_richlist WHERE bin IN ?"
+        let query: string = 'SELECT balance, cluster_id FROM ' + coin.keyspace + '.cluster_richlist WHERE bin IN ?'
         if (cursor) {
-            query += " AND (balance, cluster_id) < (?, ?)"
+            query += ' AND (balance, cluster_id) < (?, ?)'
             args = args.concat([cursor.balance, cursor.clusterId])
         }
         args.push(limit + 1)
-        query += " ORDER BY balance DESC, cluster_id DESC LIMIT ?"
+        query += ' ORDER BY balance DESC, cluster_id DESC LIMIT ?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -394,10 +394,10 @@ export class CoinResolver {
         if (hasMore) resultSet.rows.pop()
         const res: AddressClusterRichlist[] = resultSet.rows.map(row => {
             return <AddressClusterRichlist>{
-                balance: row.get("balance"),
+                balance: row.get('balance'),
                 cluster: <AddressCluster>{
                     coin: coin,
-                    clusterId: row.get("cluster_id")
+                    clusterId: row.get('cluster_id')
                 }
             }
         })
@@ -408,9 +408,9 @@ export class CoinResolver {
     }
 
     @Mutation(returns => SendRawTransactionResult, { nullable: false, complexity: ({ childComplexity, args }) => 20000 + childComplexity })
-    async sendRawTransaction(@Arg("coinName") coinName: string, @Arg("hexString") hexString: string): Promise<SendRawTransactionResult> {
+    async sendRawTransaction(@Arg('coinName') coinName: string, @Arg('hexString') hexString: string): Promise<SendRawTransactionResult> {
         const coin = this.available_coins.get(coinName)
-        if (coin === undefined) throw new Error("Coin " + coinName + " not available.")
+        if (coin === undefined) throw new Error('Coin ' + coinName + ' not available.')
         return { txid: await coin.mempool.rpcClient.sendRawTransaction(hexString) }
     }
 }

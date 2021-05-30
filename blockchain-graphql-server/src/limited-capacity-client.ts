@@ -1,5 +1,5 @@
-import { ArrayOrObject, Client, QueryOptions, types } from "cassandra-driver"
-import { Semaphore } from "./semaphore"
+import { ArrayOrObject, Client, QueryOptions, types } from 'cassandra-driver'
+import { Semaphore } from './semaphore'
 
 export class LimitedCapacityClient {
 

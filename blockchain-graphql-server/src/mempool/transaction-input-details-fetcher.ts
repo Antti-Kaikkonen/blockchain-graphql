@@ -1,11 +1,11 @@
-import { types } from "cassandra-driver"
-import { Transform, TransformCallback } from "stream"
-import { MempoolEvent2 } from "./block-fetcher"
-import { ResolvedMempoolTransaction } from "./unconfirmed-transaction-waiter"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { Coin } from "../models/coin"
-import { RpcClient, RpcTx, RpcVin } from "../rpc-client"
-import { Mempool } from "./mempool"
+import { types } from 'cassandra-driver'
+import { Transform, TransformCallback } from 'stream'
+import { MempoolEvent2 } from './block-fetcher'
+import { ResolvedMempoolTransaction } from './unconfirmed-transaction-waiter'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { Coin } from '../models/coin'
+import { RpcClient, RpcTx, RpcVin } from '../rpc-client'
+import { Mempool } from './mempool'
 
 export interface MempoolEvent3 extends MempoolEvent2 {
     inputDetails: Map<string, Promise<{ address: string, value: number }>>;
@@ -34,7 +34,7 @@ export class TransactionInputDetailsFetcher extends Transform {
         super({
             objectMode: true,
             transform: async (event: ResolvedMempoolTransaction, encoding: BufferEncoding, callback: TransformCallback) => {
-                if (event.type === "hashtx") {
+                if (event.type === 'hashtx') {
                     if (!this.txById.has(event.txid)) {
                         this.txById.set(event.txid, event.rpcTx)
                         const inputDetails: Map<string, Promise<{ address: string, value: number }>> = new Map()
@@ -48,13 +48,13 @@ export class TransactionInputDetailsFetcher extends Transform {
     }
 
     private async getInputDetailsFromDB(vin: RpcVin): Promise<{ address: string, value: number }> {
-        const res: types.ResultSet = await this.client.execute("SELECT value, scriptpubkey.addresses FROM " + this.coin.keyspace + ".transaction_output WHERE txid = ? AND n=?;", [vin.txid, vin.vout], { prepare: true })
+        const res: types.ResultSet = await this.client.execute('SELECT value, scriptpubkey.addresses FROM ' + this.coin.keyspace + '.transaction_output WHERE txid = ? AND n=?;', [vin.txid, vin.vout], { prepare: true })
         if (res.rows.length === 0) {
-            throw new Error(this.coin.name + " output " + vin.txid + "-" + vin.vout + " was not found in db. Make sure your db is synchronized with the blockchain.")
+            throw new Error(this.coin.name + ' output ' + vin.txid + '-' + vin.vout + ' was not found in db. Make sure your db is synchronized with the blockchain.')
         } else {
             for (const row of res.rows) {
-                const value: number = row.get("value")
-                const addresses: string[] = row.get("scriptpubkey.addresses")
+                const value: number = row.get('value')
+                const addresses: string[] = row.get('scriptpubkey.addresses')
                 let address: string
                 if (addresses !== undefined && addresses !== null && addresses.length === 1) {
                     address = addresses[0]
@@ -96,7 +96,7 @@ export class TransactionInputDetailsFetcher extends Transform {
                 }
             } catch (err) {
                 if (++fails > 100) {
-                    console.log("More than 100 getInputDetails attempts. Last error:", err)
+                    console.log('More than 100 getInputDetails attempts. Last error:', err)
                     throw err
                 }
                 await new Promise((resolve, reject) => {

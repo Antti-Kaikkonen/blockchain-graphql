@@ -1,11 +1,11 @@
-import { types } from "cassandra-driver"
-import { Transform, TransformCallback } from "stream"
-import { AddEvent2 } from "./block-fetcher"
-import { DeleteEvent } from "./block-reader"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { Coin } from "../models/coin"
-import { RpcBlock, RpcClient, RpcTx, RpcVin } from "../rpc-client"
-import { Mempool } from "./mempool"
+import { types } from 'cassandra-driver'
+import { Transform, TransformCallback } from 'stream'
+import { AddEvent2 } from './block-fetcher'
+import { DeleteEvent } from './block-reader'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { Coin } from '../models/coin'
+import { RpcBlock, RpcClient, RpcTx, RpcVin } from '../rpc-client'
+import { Mempool } from './mempool'
 
 export interface AddEvent3 extends AddEvent2 {
     inputDetails: Map<string, Promise<{ address: string, value: number }>>;
@@ -36,7 +36,7 @@ export class BlockInputDetailsFetcher extends Transform {
             objectMode: true,
             transform: async (event: DeleteEvent | AddEvent2, encoding: BufferEncoding, callback: TransformCallback) => {
                 let blockToDelete: RpcBlock
-                if (event.type === "add") {
+                if (event.type === 'add') {
                     const rpcBlock = await event.block
                     this.blockByHeight.set(rpcBlock.height, rpcBlock)
                     rpcBlock.tx.forEach(tx => {
@@ -49,7 +49,7 @@ export class BlockInputDetailsFetcher extends Transform {
                     this.push({ ...event, inputDetails: inputDetails })
                     blockToDelete = this.blockByHeight.get(event.height - 10)
 
-                } else if (event.type === "delete") {
+                } else if (event.type === 'delete') {
                     blockToDelete = this.blockByHeight.get(event.height)
                     this.push(event)
                 }
@@ -68,13 +68,13 @@ export class BlockInputDetailsFetcher extends Transform {
     }
 
     private async getInputDetailsFromDB(vin: RpcVin): Promise<{ address: string, value: number }> {
-        const res: types.ResultSet = await this.client.execute("SELECT value, scriptpubkey.addresses FROM " + this.coin.keyspace + ".transaction_output WHERE txid = ? AND n=?;", [vin.txid, vin.vout], { prepare: true })
+        const res: types.ResultSet = await this.client.execute('SELECT value, scriptpubkey.addresses FROM ' + this.coin.keyspace + '.transaction_output WHERE txid = ? AND n=?;', [vin.txid, vin.vout], { prepare: true })
         if (res.rows.length === 0) {
-            throw new Error(this.coin.name + " output " + vin.txid + "-" + vin.vout + " was not found in db. Make sure your db is synchronized with the blockchain.")
+            throw new Error(this.coin.name + ' output ' + vin.txid + '-' + vin.vout + ' was not found in db. Make sure your db is synchronized with the blockchain.')
         } else {
             for (const row of res.rows) {
-                const value: number = row.get("value")
-                const addresses: string[] = row.get("scriptpubkey.addresses")
+                const value: number = row.get('value')
+                const addresses: string[] = row.get('scriptpubkey.addresses')
                 let address: string
                 if (addresses !== undefined && addresses !== null && addresses.length === 1) {
                     address = addresses[0]

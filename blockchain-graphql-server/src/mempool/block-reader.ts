@@ -1,25 +1,25 @@
-import { Readable } from "stream"
-import { Coin } from "../models/coin"
-import { RpcClient } from "../rpc-client"
-import { Mempool } from "./mempool"
+import { Readable } from 'stream'
+import { Coin } from '../models/coin'
+import { RpcClient } from '../rpc-client'
+import { Mempool } from './mempool'
 
 export interface MempoolEvent {
-    type: "hashtx"
+    type: 'hashtx'
     txid: string
 }
 
 export interface ChainEvent {
-    type: "add" | "delete";
+    type: 'add' | 'delete';
     hash: string;
     height: number;
 }
 
 export interface AddEvent extends ChainEvent {
-    type: "add";
+    type: 'add';
 }
 
 export interface DeleteEvent extends ChainEvent {
-    type: "delete";
+    type: 'delete';
 }
 
 
@@ -29,7 +29,7 @@ export class BlockReader extends Readable {
 
     constructor(private rpcClient: RpcClient, private coin: Coin, private maxReorgDepth: number, private mempool: Mempool) {
         super({ objectMode: true })
-        console.log("NEW BLOCKREADER")
+        console.log('NEW BLOCKREADER')
     }
 
     private heightToHash: Map<number, string> = new Map()
@@ -42,16 +42,16 @@ export class BlockReader extends Readable {
             if (oldHash === hash) {//Found common ancestor
                 return
             } else {
-                console.log(this.coin.name + " REWINDING BLOCK " + oldHash + " AT HEIGHT " + height)
-                this.push(<ChainEvent>{ type: "delete", hash: oldHash, height: height })
+                console.log(this.coin.name + ' REWINDING BLOCK ' + oldHash + ' AT HEIGHT ' + height)
+                this.push(<ChainEvent>{ type: 'delete', hash: oldHash, height: height })
                 await this.newBlocksToHeight(height - 1)//Orphaned
             }
         } else if (!this.heightToHash.has(height + this.maxReorgDepth)) {
             await this.newBlocksToHeight(height - 1)
         } else if (this.currentHeight !== undefined) {
-            throw new Error("Deep blockchain reorganization detected (hash: " + hash + ", height: " + height + ", old chain tip height: " + this.currentHeight + ")")
+            throw new Error('Deep blockchain reorganization detected (hash: ' + hash + ', height: ' + height + ', old chain tip height: ' + this.currentHeight + ')')
         }
-        this.push(<ChainEvent>{ type: "add", hash: hash, height: height })
+        this.push(<ChainEvent>{ type: 'add', hash: hash, height: height })
     }
 
     async _read(n: number): Promise<number> {
@@ -60,7 +60,7 @@ export class BlockReader extends Readable {
             if (this.destroyed) return
             height = await this.rpcClient.getBlockCount()
             if (this.currentHeight === undefined || height > this.currentHeight) {
-                console.log(this.coin.name + "\t" + height)
+                console.log(this.coin.name + '\t' + height)
                 break
             }
             await new Promise((resolve) => {

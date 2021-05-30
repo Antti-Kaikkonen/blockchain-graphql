@@ -1,6 +1,6 @@
-import { Field, InputType, ObjectType } from "type-graphql"
-import { Coin } from "./coin"
-import { PaginatedResponse } from "./paginated-response"
+import { Field, InputType, ObjectType } from 'type-graphql'
+import { Coin } from './coin'
+import { PaginatedResponse } from './paginated-response'
 
 @ObjectType()
 export class UnconfirmedTransaction {

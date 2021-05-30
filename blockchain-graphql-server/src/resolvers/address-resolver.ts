@@ -1,14 +1,14 @@
-import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType, Float } from "type-graphql"
-import { types } from "cassandra-driver"
+import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType, Float } from 'type-graphql'
+import { types } from 'cassandra-driver'
 import { Inject } from 'typedi'
-import { Address } from "../models/address"
-import { AddressTransaction, AddressTransactionCursor, PaginatedAddressTransactionResponse } from "../models/address-transaction"
+import { Address } from '../models/address'
+import { AddressTransaction, AddressTransactionCursor, PaginatedAddressTransactionResponse } from '../models/address-transaction'
 import { OHLCCursor, OHLC, PaginatedOHLCResponse } from '../models/ohlc'
-import { AddressBalanceCursor, PaginatedAddressBalanceResponse, AddressBalance } from "../models/address-balance"
-import { AddressCluster } from "../models/address-cluster"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { PaginationArgs } from "./pagination-args"
-import { PaginatedUnconfirmedAddressTransactionResponse, UnconfirmedAddressTransaction, UnconfirmedAddressTransactionCursor } from "../models/unconfirmed-address-transaction"
+import { AddressBalanceCursor, PaginatedAddressBalanceResponse, AddressBalance } from '../models/address-balance'
+import { AddressCluster } from '../models/address-cluster'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { PaginationArgs } from './pagination-args'
+import { PaginatedUnconfirmedAddressTransactionResponse, UnconfirmedAddressTransaction, UnconfirmedAddressTransactionCursor } from '../models/unconfirmed-address-transaction'
 
 @ArgsType()
 class OHLC_Args extends PaginationArgs {
@@ -51,13 +51,13 @@ class UnconfirmedTransactionsArgs extends PaginationArgs {
 export class AddressResolver {
 
     constructor(
-        @Inject("cassandra_client") private client: LimitedCapacityClient,
+        @Inject('cassandra_client') private client: LimitedCapacityClient,
     ) { }
 
 
     @FieldResolver(returns => AddressCluster, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async guestimatedWallet(@Root() address: Address): Promise<AddressCluster> {
-        const query: string = "SELECT parent FROM " + address.coin.keyspace + ".union_find WHERE address=?"
+        const query: string = 'SELECT parent FROM ' + address.coin.keyspace + '.union_find WHERE address=?'
         let currentAddress = address.address
         do {
             const resultSet: types.ResultSet = await this.client.execute(
@@ -66,7 +66,7 @@ export class AddressResolver {
                 { prepare: true }
             )
             if (resultSet.rows.length === 1) {
-                currentAddress = resultSet.rows[0].get("parent")
+                currentAddress = resultSet.rows[0].get('parent')
             } else {
                 const res: AddressCluster = new AddressCluster()
                 res.clusterId = currentAddress
@@ -82,12 +82,12 @@ export class AddressResolver {
         @Args() { limit, cursor, interval }: OHLC_Args
     ): Promise<PaginatedOHLCResponse> {
         let args: any[] = [address.address, interval]
-        let query: string = "SELECT timestamp, open, high, low, close FROM " + address.coin.keyspace + ".ohlc WHERE address=? AND interval=?"
+        let query: string = 'SELECT timestamp, open, high, low, close FROM ' + address.coin.keyspace + '.ohlc WHERE address=? AND interval=?'
         if (cursor) {
-            query += " AND timestamp > ?"
+            query += ' AND timestamp > ?'
             args = args.concat([cursor.timestamp])
         }
-        query += " LIMIT ?"
+        query += ' LIMIT ?'
         args.push(limit + 1)
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -98,11 +98,11 @@ export class AddressResolver {
         if (hasMore) resultSet.rows.pop()
         const res: OHLC[] = resultSet.rows.map(row => {
             return <OHLC>{
-                timestamp: row.get("timestamp"),
-                open: row.get("open"),
-                high: row.get("high"),
-                low: row.get("low"),
-                close: row.get("close")
+                timestamp: row.get('timestamp'),
+                open: row.get('open'),
+                high: row.get('high'),
+                low: row.get('low'),
+                close: row.get('close')
             }
         })
         return {
@@ -199,12 +199,12 @@ export class AddressResolver {
         if (limit + 1 > 0) {
 
             let args: any[] = [address.address]
-            let query: string = "SELECT timestamp, height, tx_n, balance_change FROM " + address.coin.keyspace + ".address_transaction WHERE address=?"
+            let query: string = 'SELECT timestamp, height, tx_n, balance_change FROM ' + address.coin.keyspace + '.address_transaction WHERE address=?'
             if (cursor) {
-                query += " AND (timestamp, height, tx_n) < (?, ?, ?)"
+                query += ' AND (timestamp, height, tx_n) < (?, ?, ?)'
                 args = args.concat([cursor.timestamp, cursor.height, cursor.txN])
             }
-            query += " LIMIT ?"
+            query += ' LIMIT ?'
             args.push(limit + 1)
             const resultSet: types.ResultSet = await this.client.execute(
                 query,
@@ -213,10 +213,10 @@ export class AddressResolver {
             )
             const res2: AddressTransaction[] = resultSet.rows.map(row => {
                 return <AddressTransaction>{
-                    timestamp: row.get("timestamp"),
-                    height: row.get("height"),
-                    txN: row.get("tx_n"),
-                    balanceChange: row.get("balance_change"),
+                    timestamp: row.get('timestamp'),
+                    height: row.get('height'),
+                    txN: row.get('tx_n'),
+                    balanceChange: row.get('balance_change'),
                     coin: address.coin
                 }
             })
@@ -224,7 +224,7 @@ export class AddressResolver {
             if (res2.length > 0) {
                 const start = res2[res2.length - 1].timestamp
                 const end = res2[0].timestamp
-                const query2: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?"
+                const query2: string = 'SELECT timestamp, balance FROM ' + address.coin.keyspace + '.address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?'
                 const args2: any[] = [address.address, start, end]
                 const resultSet2: types.ResultSet = await this.client.execute(
                     query2,
@@ -232,7 +232,7 @@ export class AddressResolver {
                     { prepare: true }
                 )
                 const time2Balance: Map<number, number> = new Map()
-                resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")))
+                resultSet2.rows.forEach(row => time2Balance.set(row.get('timestamp').getTime(), row.get('balance')))
                 res2.forEach(r => r.balanceAfterBlock = time2Balance.get(r.timestamp.getTime()))
                 res = res.concat(res2)
             }
@@ -275,12 +275,12 @@ export class AddressResolver {
         }
         if (limit + 1 > 0) {
             let args: any[] = [address.address]
-            let query: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=?"
+            let query: string = 'SELECT timestamp, balance FROM ' + address.coin.keyspace + '.address_balance WHERE address=?'
             if (cursor) {
-                query += " AND timestamp < ?"
+                query += ' AND timestamp < ?'
                 args = args.concat([cursor.timestamp])
             }
-            query += " LIMIT ?"
+            query += ' LIMIT ?'
             args.push(limit + 1)
             const resultSet: types.ResultSet = await this.client.execute(
                 query,
@@ -289,8 +289,8 @@ export class AddressResolver {
             )
             res = res.concat(resultSet.rows.map(row => {
                 return <AddressBalance>{
-                    timestamp: row.get("timestamp"),
-                    balance: row.get("balance")
+                    timestamp: row.get('timestamp'),
+                    balance: row.get('balance')
                 }
             }))
         }

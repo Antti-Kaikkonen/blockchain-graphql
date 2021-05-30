@@ -1,13 +1,13 @@
-import { Writable } from "stream"
-import { AddEvent3 } from "./block-input-details-fetcher"
-import { MempoolEvent3 } from "./transaction-input-details-fetcher"
-import { DeleteEvent } from "./block-reader"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { MempoolBlock, MempoolTx } from "../mempool/mempool"
-import { AddressBalance } from "../models/address-balance"
-import { AddressTransaction } from "../models/address-transaction"
-import { Coin } from "../models/coin"
-import { Mempool } from "./mempool"
+import { Writable } from 'stream'
+import { AddEvent3 } from './block-input-details-fetcher'
+import { MempoolEvent3 } from './transaction-input-details-fetcher'
+import { DeleteEvent } from './block-reader'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { MempoolBlock, MempoolTx } from '../mempool/mempool'
+import { AddressBalance } from '../models/address-balance'
+import { AddressTransaction } from '../models/address-transaction'
+import { Coin } from '../models/coin'
+import { Mempool } from './mempool'
 
 export interface TxDetails {
     fee: number
@@ -36,7 +36,7 @@ export class BlockHandler extends Writable {
             objectMode: true,
             write: async (event: DeleteEvent | AddEvent3 | MempoolEvent3, encoding: BufferEncoding, callback: (error?: any) => void) => {
                 let blockToDelete: MempoolBlock
-                if (event.type === "hashtx") {
+                if (event.type === 'hashtx') {
                     const rpcTx = await event.rpcTx
                     if (!this.mempool.txById.has(rpcTx.txid)) {
                         const tx = new MempoolTx(rpcTx)
@@ -46,7 +46,7 @@ export class BlockHandler extends Writable {
                         this.mempool.unconfirmedMempool.add(tx, txDetails)
                         this.mempool.txById.set(tx.rpcTx.txid, tx)
                     }
-                } else if (event.type === "add") {
+                } else if (event.type === 'add') {
                     if (this.mempool.time === undefined) {
                         this.mempool.time = await this.getDbBlockTimestamp(event.height - 1)
                     }
@@ -86,7 +86,7 @@ export class BlockHandler extends Writable {
                     this.updateAddressTransactions(mempoolBlock, blockTxDetails, blockAddressDeltas)
                     blockToDelete = this.mempool.blockByHeight.get(event.height - 10)
                     if (blockToDelete !== undefined) this.deleteExpiredAddressTransactions(blockToDelete)
-                } else if (event.type === "delete") {
+                } else if (event.type === 'delete') {
                     this.mempool.height = event.height - 1
                     blockToDelete = this.mempool.blockByHash.get(event.hash)
                     this.deleteOrphanedAddressTransactions(blockToDelete)
@@ -144,26 +144,26 @@ export class BlockHandler extends Writable {
 
 
     private async getDbBlockTimestamp(height: number): Promise<number> {
-        const res = await this.client.execute("SELECT hash FROM " + this.coin.keyspace + ".longest_chain WHERE height = ?;", [height], { prepare: true })
+        const res = await this.client.execute('SELECT hash FROM ' + this.coin.keyspace + '.longest_chain WHERE height = ?;', [height], { prepare: true })
         let hash: string
         res.rows.forEach(row => {
-            hash = row.get("hash")
+            hash = row.get('hash')
         })
-        if (hash === undefined) throw new Error("Failed to get block hash for height " + height)
-        const res2 = await this.client.execute("SELECT time FROM " + this.coin.keyspace + ".block WHERE hash = ?;", [hash], { prepare: true })
+        if (hash === undefined) throw new Error('Failed to get block hash for height ' + height)
+        const res2 = await this.client.execute('SELECT time FROM ' + this.coin.keyspace + '.block WHERE hash = ?;', [hash], { prepare: true })
         let time: number
         res2.rows.forEach(row => {
-            time = row.get("time")
+            time = row.get('time')
         })
-        if (time === undefined) throw new Error("Failed to get time for block " + hash + " at height " + height)
+        if (time === undefined) throw new Error('Failed to get time for block ' + hash + ' at height ' + height)
         return time
     }
 
     private async getDbAddressBalance(address: string, beforeTimestamnp: number): Promise<number> {
-        const res = await this.client.execute("SELECT balance FROM " + this.coin.keyspace + ".address_balance WHERE address = ? AND timestamp < ? LIMIT 1;", [address, beforeTimestamnp], { prepare: true })
+        const res = await this.client.execute('SELECT balance FROM ' + this.coin.keyspace + '.address_balance WHERE address = ? AND timestamp < ? LIMIT 1;', [address, beforeTimestamnp], { prepare: true })
         let balance: number
         res.rows.forEach(row => {
-            balance = row.get("balance")
+            balance = row.get('balance')
         })
         return balance
     }

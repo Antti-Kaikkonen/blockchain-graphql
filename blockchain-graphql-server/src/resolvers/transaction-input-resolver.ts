@@ -1,19 +1,19 @@
-import { Resolver, FieldResolver, Root } from "type-graphql"
-import { types } from "cassandra-driver"
-import { Inject } from "typedi"
-import { Transaction } from "../models/transaction"
-import { TransactionInput } from "../models/transaction-input"
-import { TransactionOutput } from "../models/transaction-output"
-import { Address } from "../models/address"
-import { ScriptPubKey } from "../models/scriptpubkey"
-import { RpcVout } from "../rpc-client"
-import { LimitedCapacityClient } from "../limited-capacity-client"
+import { Resolver, FieldResolver, Root } from 'type-graphql'
+import { types } from 'cassandra-driver'
+import { Inject } from 'typedi'
+import { Transaction } from '../models/transaction'
+import { TransactionInput } from '../models/transaction-input'
+import { TransactionOutput } from '../models/transaction-output'
+import { Address } from '../models/address'
+import { ScriptPubKey } from '../models/scriptpubkey'
+import { RpcVout } from '../rpc-client'
+import { LimitedCapacityClient } from '../limited-capacity-client'
 
 @Resolver(of => TransactionInput)
 export class TransactionInputResolver {
 
     constructor(
-        @Inject("cassandra_client") private client: LimitedCapacityClient
+        @Inject('cassandra_client') private client: LimitedCapacityClient
     ) { }
 
     @FieldResolver(returns => TransactionOutput, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
@@ -47,7 +47,7 @@ export class TransactionInputResolver {
             return vout
         }
         const args: any[] = [transactionInput.txid, transactionInput.vout]
-        const query: string = "SELECT * FROM " + transactionInput.coin.keyspace + ".transaction_output WHERE txid=? AND n=?"
+        const query: string = 'SELECT * FROM ' + transactionInput.coin.keyspace + '.transaction_output WHERE txid=? AND n=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -98,7 +98,7 @@ export class TransactionInputResolver {
             }
         }
         const args: any[] = [transactionInput.spendingTxid]
-        const query: string = "SELECT * FROM " + transactionInput.coin.keyspace + ".transaction WHERE txid=?"
+        const query: string = 'SELECT * FROM ' + transactionInput.coin.keyspace + '.transaction WHERE txid=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -111,10 +111,10 @@ export class TransactionInputResolver {
                 size: row.get('size'),
                 version: row.get('version'),
                 height: row.get('height'),
-                txN: row.get("tx_n"),
-                fee: row.get("fee"),
-                inputCount: row.get("input_count"),
-                outputCount: row.get("output_count"),
+                txN: row.get('tx_n'),
+                fee: row.get('fee'),
+                inputCount: row.get('input_count'),
+                outputCount: row.get('output_count'),
                 coin: transactionInput.coin
             }
         })

@@ -1,5 +1,5 @@
-import http from "http"
-import url from "url"
+import http from 'http'
+import url from 'url'
 
 class RpcResponse<T> {
     result: T
@@ -97,10 +97,10 @@ export class RpcClient {
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
-                auth: this.rpc_username + ":" + this.rpc_password,
-                method: "POST"
+                auth: this.rpc_username + ':' + this.rpc_password,
+                method: 'POST'
             }, (res: http.IncomingMessage) => {
-                let result = ""
+                let result = ''
                 res.on('data', (d) => {
                     result += d
                 })
@@ -117,7 +117,7 @@ export class RpcClient {
             req.on('error', (error: Error) => {
                 reject(error)
             })
-            req.write(JSON.stringify({ method: "getblockcount", params: [] }))
+            req.write(JSON.stringify({ method: 'getblockcount', params: [] }))
             req.end()
         })
     }
@@ -128,10 +128,10 @@ export class RpcClient {
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
-                auth: this.rpc_username + ":" + this.rpc_password,
-                method: "POST"
+                auth: this.rpc_username + ':' + this.rpc_password,
+                method: 'POST'
             }, (res: http.IncomingMessage) => {
-                let result = ""
+                let result = ''
                 res.on('data', (d) => {
                     result += d
                 })
@@ -148,7 +148,7 @@ export class RpcClient {
             req.on('error', (error: Error) => {
                 reject(error)
             })
-            req.write(JSON.stringify({ method: "getblockhash", params: [height] }))
+            req.write(JSON.stringify({ method: 'getblockhash', params: [height] }))
             req.end()
         })
     }
@@ -159,10 +159,10 @@ export class RpcClient {
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
-                auth: this.rpc_username + ":" + this.rpc_password,
-                method: "POST"
+                auth: this.rpc_username + ':' + this.rpc_password,
+                method: 'POST'
             }, (res: http.IncomingMessage) => {
-                let result = ""
+                let result = ''
                 res.on('data', (d) => {
                     result += d
                 })
@@ -179,7 +179,7 @@ export class RpcClient {
             req.on('error', (error: Error) => {
                 reject(error)
             })
-            req.write(JSON.stringify({ method: "getblock", params: [hash, 2] }))
+            req.write(JSON.stringify({ method: 'getblock', params: [hash, 2] }))
             req.end()
         })
     }
@@ -190,10 +190,10 @@ export class RpcClient {
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
-                auth: this.rpc_username + ":" + this.rpc_password,
-                method: "POST"
+                auth: this.rpc_username + ':' + this.rpc_password,
+                method: 'POST'
             }, (res: http.IncomingMessage) => {
-                let result = ""
+                let result = ''
                 res.on('data', (d) => {
                     result += d
                 })
@@ -210,7 +210,7 @@ export class RpcClient {
             req.on('error', (error: Error) => {
                 reject(error)
             })
-            req.write(JSON.stringify({ method: "getrawtransaction", params: [txid, 2] }))
+            req.write(JSON.stringify({ method: 'getrawtransaction', params: [txid, 2] }))
             req.end()
         })
     }
@@ -221,10 +221,10 @@ export class RpcClient {
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
-                auth: this.rpc_username + ":" + this.rpc_password,
-                method: "POST"
+                auth: this.rpc_username + ':' + this.rpc_password,
+                method: 'POST'
             }, (res: http.IncomingMessage) => {
-                let result = ""
+                let result = ''
                 res.on('data', (d) => {
                     result += d
                 })
@@ -241,7 +241,7 @@ export class RpcClient {
             req.on('error', (error: Error) => {
                 reject(error)
             })
-            req.write(JSON.stringify({ method: "getrawmempool", params: [] }))
+            req.write(JSON.stringify({ method: 'getrawmempool', params: [] }))
             req.end()
         })
     }
@@ -252,10 +252,10 @@ export class RpcClient {
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
-                auth: this.rpc_username + ":" + this.rpc_password,
-                method: "POST"
+                auth: this.rpc_username + ':' + this.rpc_password,
+                method: 'POST'
             }, (res: http.IncomingMessage) => {
-                let result = ""
+                let result = ''
                 res.on('data', (d) => {
                     result += d
                 })
@@ -272,7 +272,7 @@ export class RpcClient {
             req.on('error', (error: Error) => {
                 reject(error)
             })
-            req.write(JSON.stringify({ method: "getrawmempool", params: [true] }))
+            req.write(JSON.stringify({ method: 'getrawmempool', params: [true] }))
             req.end()
         })
     }
@@ -283,10 +283,10 @@ export class RpcClient {
                 hostname: this.rpc_url.hostname,
                 port: this.rpc_url.port,
                 protocol: this.rpc_url.protocol,
-                auth: this.rpc_username + ":" + this.rpc_password,
-                method: "POST"
+                auth: this.rpc_username + ':' + this.rpc_password,
+                method: 'POST'
             }, (res: http.IncomingMessage) => {
-                let result = ""
+                let result = ''
                 res.on('data', (d) => {
                     result += d
                 })
@@ -303,7 +303,7 @@ export class RpcClient {
             req.on('error', (error: Error) => {
                 reject(error)
             })
-            req.write(JSON.stringify({ method: "sendrawtransaction", params: [hexstring] }))
+            req.write(JSON.stringify({ method: 'sendrawtransaction', params: [hexstring] }))
             req.end()
         })
     }

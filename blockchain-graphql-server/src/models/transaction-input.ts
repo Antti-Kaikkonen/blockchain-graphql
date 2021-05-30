@@ -1,7 +1,7 @@
-import { ObjectType, Field, InputType, Int } from "type-graphql"
-import { ScriptSig } from "./scriptsig"
-import { PaginatedResponse } from "./paginated-response"
-import { Coin } from "./coin"
+import { ObjectType, Field, InputType, Int } from 'type-graphql'
+import { ScriptSig } from './scriptsig'
+import { PaginatedResponse } from './paginated-response'
+import { Coin } from './coin'
 
 @ObjectType()
 export class TransactionInput {

@@ -1,6 +1,6 @@
-import { ObjectType, Field, Int, InputType } from "type-graphql"
-import { Coin } from "./coin"
-import { PaginatedResponse } from "./paginated-response"
+import { ObjectType, Field, Int, InputType } from 'type-graphql'
+import { Coin } from './coin'
+import { PaginatedResponse } from './paginated-response'
 
 @ObjectType()
 export class BlockHash {

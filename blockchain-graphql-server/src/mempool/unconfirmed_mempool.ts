@@ -1,5 +1,5 @@
-import { TxDetails } from "./block-handler"
-import { MempoolTx } from "./mempool"
+import { TxDetails } from './block-handler'
+import { MempoolTx } from './mempool'
 import { RBTree } from 'bintrees'
 
 interface TX {

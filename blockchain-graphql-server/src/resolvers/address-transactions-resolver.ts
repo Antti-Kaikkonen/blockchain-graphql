@@ -1,16 +1,16 @@
-import { Resolver, FieldResolver, Root } from "type-graphql"
-import { types } from "cassandra-driver"
+import { Resolver, FieldResolver, Root } from 'type-graphql'
+import { types } from 'cassandra-driver'
 import { Inject } from 'typedi'
-import { AddressTransaction } from "../models/address-transaction"
-import { ConfirmedTransaction } from "../models/confirmed-transaction"
-import { LimitedCapacityClient } from "../limited-capacity-client"
-import { MempoolBlock } from "../mempool/mempool"
+import { AddressTransaction } from '../models/address-transaction'
+import { ConfirmedTransaction } from '../models/confirmed-transaction'
+import { LimitedCapacityClient } from '../limited-capacity-client'
+import { MempoolBlock } from '../mempool/mempool'
 
 @Resolver(of => AddressTransaction)
 export class AddressTransactionsResolver {
 
 
-    constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
+    constructor(@Inject('cassandra_client') private client: LimitedCapacityClient) {
     }
 
     @FieldResolver(returns => ConfirmedTransaction, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
@@ -27,7 +27,7 @@ export class AddressTransactionsResolver {
             }
         }
         const args: any[] = [addressTransaction.height, addressTransaction.txN]
-        const query: string = "SELECT * FROM " + addressTransaction.coin.keyspace + ".confirmed_transaction WHERE height=? AND tx_n=?"
+        const query: string = 'SELECT * FROM ' + addressTransaction.coin.keyspace + '.confirmed_transaction WHERE height=? AND tx_n=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -38,9 +38,9 @@ export class AddressTransactionsResolver {
         }
         const res: ConfirmedTransaction[] = resultSet.rows.map(row => {
             return <ConfirmedTransaction>{
-                height: row.get("height"),
-                txN: row.get("tx_n"),
-                txid: row.get("txid"),
+                height: row.get('height'),
+                txN: row.get('tx_n'),
+                txid: row.get('txid'),
                 coin: addressTransaction.coin
             }
         })

@@ -1,7 +1,7 @@
-import { Args, ArgsType, Field, FieldResolver, Float, Int, Resolver, Root } from "type-graphql"
-import { MempoolModel } from "../models/mempool-model"
-import { UnconfirmedTransaction, UnconfirmedTransactionCursor, PaginatedUnconfirmedTransactionResponse } from "../models/unconfirmedl-transaction"
-import { PaginationArgs } from "./pagination-args"
+import { Args, ArgsType, Field, FieldResolver, Float, Int, Resolver, Root } from 'type-graphql'
+import { MempoolModel } from '../models/mempool-model'
+import { UnconfirmedTransaction, UnconfirmedTransactionCursor, PaginatedUnconfirmedTransactionResponse } from '../models/unconfirmedl-transaction'
+import { PaginationArgs } from './pagination-args'
 
 @ArgsType()
 class UnconfirmedTransactionsArgs extends PaginationArgs {

@@ -1,7 +1,7 @@
-import { Transform, TransformCallback } from "stream"
-import { RpcTx } from "../rpc-client"
-import { MempoolEvent3 } from "./transaction-input-details-fetcher"
-import { MempoolEvent } from "./block-reader"
+import { Transform, TransformCallback } from 'stream'
+import { RpcTx } from '../rpc-client'
+import { MempoolEvent3 } from './transaction-input-details-fetcher'
+import { MempoolEvent } from './block-reader'
 
 export interface ResolvedMempoolTransaction extends MempoolEvent {
     rpcTx: RpcTx;

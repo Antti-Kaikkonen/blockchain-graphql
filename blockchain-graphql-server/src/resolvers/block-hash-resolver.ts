@@ -1,15 +1,15 @@
-import { Block } from "../models/block"
-import { Resolver, FieldResolver, Root } from "type-graphql"
-import { types } from "cassandra-driver"
-import { Inject } from "typedi"
-import { BlockHash } from "../models/block_hash"
-import { LimitedCapacityClient } from "../limited-capacity-client"
+import { Block } from '../models/block'
+import { Resolver, FieldResolver, Root } from 'type-graphql'
+import { types } from 'cassandra-driver'
+import { Inject } from 'typedi'
+import { BlockHash } from '../models/block_hash'
+import { LimitedCapacityClient } from '../limited-capacity-client'
 
 @Resolver(of => BlockHash)
 export class BlockHashResolver {
 
     constructor(
-        @Inject("cassandra_client") private client: LimitedCapacityClient
+        @Inject('cassandra_client') private client: LimitedCapacityClient
     ) { }
 
     @FieldResolver(returns => Block, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
@@ -36,7 +36,7 @@ export class BlockHashResolver {
             }
         }
         const args: any[] = [blockHash.hash]
-        const query: string = "SELECT * FROM " + blockHash.coin.keyspace + ".block WHERE hash=?"
+        const query: string = 'SELECT * FROM ' + blockHash.coin.keyspace + '.block WHERE hash=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
@@ -44,20 +44,20 @@ export class BlockHashResolver {
         )
         const res: Block[] = resultSet.rows.map(row => {
             return <Block>{
-                height: row.get("height"),
-                hash: row.get("hash"),
-                size: row.get("size"),
-                version: row.get("version"),
-                versionHex: row.get("versionhex"),
-                merkleRoot: row.get("merkleroot"),
-                time: new Date(row.get("time") * 1000),
-                medianTime: row.get("mediantime"),
-                nonce: row.get("nonce"),
-                bits: row.get("bits"),
-                difficulty: row.get("difficulty"),
-                chainWork: row.get("chainwork"),
-                previousBlockHash: row.get("previousblockhash"),
-                txCount: row.get("tx_count"),
+                height: row.get('height'),
+                hash: row.get('hash'),
+                size: row.get('size'),
+                version: row.get('version'),
+                versionHex: row.get('versionhex'),
+                merkleRoot: row.get('merkleroot'),
+                time: new Date(row.get('time') * 1000),
+                medianTime: row.get('mediantime'),
+                nonce: row.get('nonce'),
+                bits: row.get('bits'),
+                difficulty: row.get('difficulty'),
+                chainWork: row.get('chainwork'),
+                previousBlockHash: row.get('previousblockhash'),
+                txCount: row.get('tx_count'),
                 coin: blockHash.coin
             }
         })

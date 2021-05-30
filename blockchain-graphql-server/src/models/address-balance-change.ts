@@ -1,6 +1,6 @@
-import { ObjectType, Field, InputType } from "type-graphql"
-import { Address } from "./address"
-import { PaginatedResponse } from "./paginated-response"
+import { ObjectType, Field, InputType } from 'type-graphql'
+import { Address } from './address'
+import { PaginatedResponse } from './paginated-response'
 
 @ObjectType()
 export class AddressBalanceChange {

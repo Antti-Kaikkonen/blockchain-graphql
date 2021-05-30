@@ -1,6 +1,6 @@
-import { ObjectType, Field } from "type-graphql"
-import { PaginatedResponse } from "./paginated-response"
-import { Coin } from "./coin"
+import { ObjectType, Field } from 'type-graphql'
+import { PaginatedResponse } from './paginated-response'
+import { Coin } from './coin'
 
 @ObjectType()
 export class Address {
