@@ -6,5 +6,5 @@ export class PaginationArgs {
     @Max(1000)
     @Min(1)
     @Field(type => Int)
-    limit = 100;
+    limit = 100
 }

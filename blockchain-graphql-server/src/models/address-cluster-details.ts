@@ -4,6 +4,6 @@ import { ObjectType, Field } from "type-graphql"
 export class AddressClusterDetails {
 
     @Field({ nullable: false, complexity: 1 })
-    balance: number;
+    balance: number
 
 }

@@ -6,10 +6,10 @@ import { PaginatedResponse } from "./paginated-response"
 export class AddressBalanceChange {
 
     @Field(type => Address, { nullable: false, complexity: 1 })
-    address: Address;
+    address: Address
 
     @Field({ nullable: false, complexity: 1 })
-    balanceChange: number;
+    balanceChange: number
 
 }
 
@@ -17,15 +17,15 @@ export class AddressBalanceChange {
 export class AddressBalanceChangeCursor {
 
     @Field({ nullable: false })
-    balanceChange: number;
+    balanceChange: number
 
     @Field({ nullable: false })
-    address: string;
+    address: string
 
 }
 
 @ObjectType()
 export class PaginatedAddressBalanceChangeResponse extends PaginatedResponse(AddressBalanceChange) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

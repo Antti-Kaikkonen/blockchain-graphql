@@ -12,7 +12,7 @@ import { LimitedCapacityClient } from "../limited-capacity-client"
 class ConfirmedTransactionArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: ConfirmedTransactionCursor;
+    cursor: ConfirmedTransactionCursor
 
 }
 

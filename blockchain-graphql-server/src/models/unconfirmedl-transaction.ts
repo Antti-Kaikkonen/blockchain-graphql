@@ -5,13 +5,13 @@ import { PaginatedResponse } from "./paginated-response"
 @ObjectType()
 export class UnconfirmedTransaction {
     @Field({ nullable: false, complexity: 1 })
-    txid: string;
+    txid: string
 
     @Field({ nullable: false, complexity: 1 })
-    timestamp: Date;
+    timestamp: Date
 
     @Field({ nullable: false, complexity: 1 })
-    coin: Coin;
+    coin: Coin
 
 }
 
@@ -19,15 +19,15 @@ export class UnconfirmedTransaction {
 export class UnconfirmedTransactionCursor {
 
     @Field({ nullable: false })
-    timestamp: Date;
+    timestamp: Date
 
     @Field({ nullable: false })
-    txid: string;
+    txid: string
 
 }
 
 @ObjectType()
 export class PaginatedUnconfirmedTransactionResponse extends PaginatedResponse(UnconfirmedTransaction) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

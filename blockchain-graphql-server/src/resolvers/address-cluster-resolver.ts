@@ -54,7 +54,7 @@ export class AddressClusterResolver {
     constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
     }
 
-    static CLUSTER_DAILY_BALANCES_BIN_COUNT = 20;
+    static CLUSTER_DAILY_BALANCES_BIN_COUNT = 20
 
     @FieldResolver(returns => PaginatedClusterTransactionResponse, { nullable: false, complexity: ({ childComplexity, args }) => 100 + args.limit * childComplexity })
     async transactions(@Root() cluster: AddressCluster,

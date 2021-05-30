@@ -2,8 +2,8 @@ import http from "http"
 import url from "url"
 
 class RpcResponse<T> {
-    result: T;
-    error: { message: string, code: number };
+    result: T
+    error: { message: string, code: number }
 }
 
 export class RpcMempool {
@@ -23,69 +23,69 @@ export class RpcMempool {
 }
 
 export class RpcScriptSig {
-    asm: string;
-    hex: string;
+    asm: string
+    hex: string
 }
 
 export class RpcScriptPubKey {
-    asm: string;
-    hex: string;
-    reqSigs: number;
-    type: string;
-    addresses: string[];
+    asm: string
+    hex: string
+    reqSigs: number
+    type: string
+    addresses: string[]
 }
 
 export class RpcVin {
-    coinbase: string;
-    txid: string;
-    vout: number;
-    scriptSig: RpcScriptSig;
-    sequence: number;
+    coinbase: string
+    txid: string
+    vout: number
+    scriptSig: RpcScriptSig
+    sequence: number
 }
 
 export class RpcVout {
-    value: number;
-    n: number;
-    scriptPubKey: RpcScriptPubKey;
+    value: number
+    n: number
+    scriptPubKey: RpcScriptPubKey
 }
 
 export class RpcTx {
-    txid: string;
-    version: number;
-    type: number;
-    size: number;
-    locktime: number;
-    vin: RpcVin[];
-    vout: RpcVout[];
+    txid: string
+    version: number
+    type: number
+    size: number
+    locktime: number
+    vin: RpcVin[]
+    vout: RpcVout[]
 }
 
 export class RpcBlockNoTx {
-    public hash: string;
-    public confirmations: number;
-    public size: number;
-    public height: number;
-    public version: number;
-    public versionHex: string;
-    public merkleroot: string;
-    public time: number;
-    public mediantime: number;
-    public nonce: number;
-    public bits: string;
-    public difficulty: number;
-    public chainwork: string;
-    public nTx: number;
-    public previousblockhash: string;
-    public nextblockhash: string;
+    public hash: string
+    public confirmations: number
+    public size: number
+    public height: number
+    public version: number
+    public versionHex: string
+    public merkleroot: string
+    public time: number
+    public mediantime: number
+    public nonce: number
+    public bits: string
+    public difficulty: number
+    public chainwork: string
+    public nTx: number
+    public previousblockhash: string
+    public nextblockhash: string
 }
 
 export class RpcBlock extends RpcBlockNoTx {
-    public tx: RpcTx[];
+    public tx: RpcTx[]
 }
 
 
 export class RpcClient {
 
-    private rpc_url: url.UrlWithStringQuery;
+    private rpc_url: url.UrlWithStringQuery
 
     constructor(rpc_urls: string[], private rpc_username: string, private rpc_password: string) {
         this.rpc_url = url.parse(rpc_urls[0])

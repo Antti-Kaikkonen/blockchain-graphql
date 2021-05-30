@@ -6,13 +6,13 @@ import { PaginatedResponse } from "./paginated-response"
 export class BlockHash {
 
     @Field({ nullable: false, complexity: 1 })
-    hash: string;
+    hash: string
 
     @Field(type => Int, { nullable: false, complexity: 1 })
-    height: number;
+    height: number
 
     @Field({ nullable: false, complexity: 1 })
-    readonly coin: Coin;
+    readonly coin: Coin
 
 }
 
@@ -20,12 +20,12 @@ export class BlockHash {
 export class BlockHashCursor {
 
     @Field(type => Int, { nullable: false })
-    height: number;
+    height: number
 
 }
 
 @ObjectType()
 export class PaginatedAddressBlockHashtResponse extends PaginatedResponse(BlockHash) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

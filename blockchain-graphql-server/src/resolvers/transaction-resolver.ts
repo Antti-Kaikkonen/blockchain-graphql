@@ -16,7 +16,7 @@ import { LimitedCapacityClient } from "../limited-capacity-client"
 class TransactionInputArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: TransactionInputCursor;
+    cursor: TransactionInputCursor
 
 }
 
@@ -24,7 +24,7 @@ class TransactionInputArgs extends PaginationArgs {
 class TransactionOutputArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: TransactionOutputCursor;
+    cursor: TransactionOutputCursor
 
 }
 

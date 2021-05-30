@@ -4,20 +4,20 @@ import { Mempool } from "../mempool/mempool"
 @ObjectType()
 export class Coin {
     @Field({ nullable: false, complexity: 1 })
-    name: string;
+    name: string
 
     @Field(type => Int, { nullable: false, complexity: 1 })
-    bip44_index: number;
+    bip44_index: number
 
     @Field({ nullable: false, complexity: 1 })
-    bip44_symbol: string;
+    bip44_symbol: string
 
-    keyspace: string;
+    keyspace: string
 
-    mempool: Mempool;
+    mempool: Mempool
 
-    rpcUrls: string[];
+    rpcUrls: string[]
 
-    zmq_addresses: string[];
+    zmq_addresses: string[]
 
 }

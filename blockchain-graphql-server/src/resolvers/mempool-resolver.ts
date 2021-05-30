@@ -7,7 +7,7 @@ import { PaginationArgs } from "./pagination-args"
 class UnconfirmedTransactionsArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: UnconfirmedTransactionCursor;
+    cursor: UnconfirmedTransactionCursor
 
 }
 

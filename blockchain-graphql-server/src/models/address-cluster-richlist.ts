@@ -6,10 +6,10 @@ import { PaginatedResponse } from "./paginated-response"
 export class AddressClusterRichlist {
 
     @Field({ nullable: false, complexity: 1 })
-    cluster: AddressCluster;
+    cluster: AddressCluster
 
     @Field({ nullable: false, complexity: 1 })
-    balance: number;
+    balance: number
 
 }
 
@@ -17,15 +17,15 @@ export class AddressClusterRichlist {
 export class AddressClusterRichlistCursor {
 
     @Field({ nullable: false })
-    balance: number;
+    balance: number
 
     @Field({ nullable: false })
-    clusterId: string;
+    clusterId: string
 
 }
 
 @ObjectType()
 export class PaginatedAddressClusterRichlistResponse extends PaginatedResponse(AddressClusterRichlist) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

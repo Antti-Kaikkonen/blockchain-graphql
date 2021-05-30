@@ -22,25 +22,25 @@ export class TransactionInput {
     }
 
     @Field({ nullable: false, complexity: 1 })
-    readonly sequence: number;
+    readonly sequence: number
     @Field({ nullable: true, complexity: 1 })
-    readonly txid: string;
+    readonly txid: string
     @Field(type => Int, { nullable: true, complexity: 1 })
-    readonly vout: number;
+    readonly vout: number
     @Field({ nullable: true, complexity: 1 })
-    readonly coinbase: string;
+    readonly coinbase: string
 
     @Field({ nullable: false, complexity: 1 })
-    readonly scriptSig: ScriptSig;
+    readonly scriptSig: ScriptSig
 
     @Field({ nullable: false, complexity: 1 })
-    readonly spendingTxid: string;
+    readonly spendingTxid: string
 
     @Field(type => Int, { nullable: false, complexity: 1 })
-    readonly spendingIndex: number;
+    readonly spendingIndex: number
 
     @Field({ nullable: false, complexity: 1 })
-    readonly coin: Coin;
+    readonly coin: Coin
 
 }
 
@@ -48,12 +48,12 @@ export class TransactionInput {
 export class TransactionInputCursor {
 
     @Field(type => Int, { nullable: false })
-    spendingIndex: number;
+    spendingIndex: number
 
 }
 
 @ObjectType()
 export class PaginatedTransactionInputResponse extends PaginatedResponse(TransactionInput) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

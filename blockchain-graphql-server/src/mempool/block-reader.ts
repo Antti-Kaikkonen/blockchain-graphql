@@ -25,14 +25,14 @@ export interface DeleteEvent extends ChainEvent {
 
 export class BlockReader extends Readable {
 
-    private currentHeight: number;
+    private currentHeight: number
 
     constructor(private rpcClient: RpcClient, private coin: Coin, private maxReorgDepth: number, private mempool: Mempool) {
         super({ objectMode: true })
         console.log("NEW BLOCKREADER")
     }
 
-    private heightToHash: Map<number, string> = new Map();
+    private heightToHash: Map<number, string> = new Map()
 
     private async newBlocksToHeight(height: number) {
         const hash = await this.rpcClient.getBlockHash(height)

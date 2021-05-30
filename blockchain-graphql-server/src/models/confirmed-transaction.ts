@@ -6,16 +6,16 @@ import { Coin } from "./coin"
 export class ConfirmedTransaction {
 
     @Field(type => Int, { nullable: false, complexity: 1 })
-    height: number;
+    height: number
 
     @Field(type => Int, { nullable: false, complexity: 1 })
-    txN: number;
+    txN: number
 
     @Field({ nullable: false, complexity: 1 })
-    txid: string;
+    txid: string
 
     @Field({ nullable: false, complexity: 1 })
-    readonly coin: Coin;
+    readonly coin: Coin
 
 }
 
@@ -23,12 +23,12 @@ export class ConfirmedTransaction {
 export class ConfirmedTransactionCursor {
 
     @Field(type => Int, { nullable: false })
-    txN: number;
+    txN: number
 
 }
 
 @ObjectType()
 export class PaginatedConfirmedTransactionResponse extends PaginatedResponse(ConfirmedTransaction) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

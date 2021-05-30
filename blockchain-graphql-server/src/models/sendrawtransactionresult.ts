@@ -4,6 +4,6 @@ import { Field, ObjectType } from "type-graphql"
 export class SendRawTransactionResult {
 
     @Field({ nullable: false, complexity: 1 })
-    txid: string;
+    txid: string
 
 }

@@ -6,15 +6,15 @@ import { PaginatedResponse } from "./paginated-response"
 export class UnconfirmedAddressTransaction {
 
     @Field({ nullable: false, complexity: 1 })
-    timestamp: Date;
+    timestamp: Date
 
     @Field({ nullable: false, complexity: 1 })
-    txid: string;
+    txid: string
 
     @Field({ nullable: false, complexity: 1 })
-    balanceChange: number;
+    balanceChange: number
 
-    coin: Coin;
+    coin: Coin
 
 }
 
@@ -22,15 +22,15 @@ export class UnconfirmedAddressTransaction {
 export class UnconfirmedAddressTransactionCursor {
 
     @Field({ nullable: false })
-    timestamp: Date;
+    timestamp: Date
 
     @Field({ nullable: false })
-    txid: string;
+    txid: string
 
 }
 
 @ObjectType()
 export class PaginatedUnconfirmedAddressTransactionResponse extends PaginatedResponse(UnconfirmedAddressTransaction) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

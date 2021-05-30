@@ -5,6 +5,6 @@ import { Coin } from "./coin"
 export class MempoolModel {
 
     @Field({ nullable: false, complexity: 1 })
-    readonly coin: Coin;
+    readonly coin: Coin
 
 }

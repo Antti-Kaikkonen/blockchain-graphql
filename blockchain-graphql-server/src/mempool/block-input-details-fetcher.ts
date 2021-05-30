@@ -13,7 +13,7 @@ export interface AddEvent3 extends AddEvent2 {
 
 export class BlockInputDetailsFetcher extends Transform {
 
-    public blockByHeight: Map<number, RpcBlock> = new Map();
+    public blockByHeight: Map<number, RpcBlock> = new Map()
 
     private processTx(tx: RpcTx, inputDetails: Map<string, Promise<{ address: string, value: number }>>) {
         const coinbase: boolean = tx.vin.length === 1 && tx.vin[0].coinbase !== undefined

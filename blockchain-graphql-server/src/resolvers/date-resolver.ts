@@ -14,7 +14,7 @@ import { PaginatedAddressClusterBalanceChangeResponse, AddressClusterBalanceChan
 class RichlistArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: RichListCursor;
+    cursor: RichListCursor
 
 }
 
@@ -22,7 +22,7 @@ class RichlistArgs extends PaginationArgs {
 class AddressBalanceChangeArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: AddressBalanceChangeCursor;
+    cursor: AddressBalanceChangeCursor
 
 }
 
@@ -30,15 +30,15 @@ class AddressBalanceChangeArgs extends PaginationArgs {
 class AddressClusterBalanceChangeArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: AddressClusterBalanceChangeCursor;
+    cursor: AddressClusterBalanceChangeCursor
 
 }
 
 @Resolver(of => Date)
 export class DateResolver {
 
-    static BIN_COUNT = 20;
-    static BINS: number[] = Array.from(new Array(DateResolver.BIN_COUNT).keys());
+    static BIN_COUNT = 20
+    static BINS: number[] = Array.from(new Array(DateResolver.BIN_COUNT).keys())
 
     constructor(@Inject("cassandra_client") private client: LimitedCapacityClient) {
     }

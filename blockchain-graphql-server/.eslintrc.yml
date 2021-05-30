@@ -14,5 +14,6 @@ rules: {
   '@typescript-eslint/no-unused-vars': ['error', { args: 'none' }],
   'no-constant-condition': ['error', { 'checkLoops': false }],
   'no-empty': ['error', { 'allowEmptyCatch': true }],
-  "semi": [ "error", "never"]
+  "semi": "off",
+  "@typescript-eslint/semi": ["error", "never"],
 }

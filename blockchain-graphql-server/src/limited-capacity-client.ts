@@ -3,7 +3,7 @@ import { Semaphore } from "./semaphore"
 
 export class LimitedCapacityClient {
 
-    private sem: Semaphore;
+    private sem: Semaphore
 
     constructor(private client: Client, concurrency: number) {
         this.sem = new Semaphore(concurrency)

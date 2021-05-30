@@ -14,10 +14,10 @@ import { PaginatedUnconfirmedAddressTransactionResponse, UnconfirmedAddressTrans
 class OHLC_Args extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: OHLCCursor;
+    cursor: OHLCCursor
 
     @Field(type => Int, { nullable: true })
-    interval: number = 1000 * 60 * 60 * 24;
+    interval: number = 1000 * 60 * 60 * 24
 
 }
 
@@ -25,7 +25,7 @@ class OHLC_Args extends PaginationArgs {
 class AddressTransactionsArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: AddressTransactionCursor;
+    cursor: AddressTransactionCursor
 
 }
 
@@ -33,7 +33,7 @@ class AddressTransactionsArgs extends PaginationArgs {
 class AddressBalancesArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: AddressBalanceCursor;
+    cursor: AddressBalanceCursor
 
 }
 
@@ -41,7 +41,7 @@ class AddressBalancesArgs extends PaginationArgs {
 class UnconfirmedTransactionsArgs extends PaginationArgs {
 
     @Field({ nullable: true })
-    cursor: UnconfirmedAddressTransactionCursor;
+    cursor: UnconfirmedAddressTransactionCursor
 
 }
 

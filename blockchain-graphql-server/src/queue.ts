@@ -1,6 +1,6 @@
 export class Queue<E> {
-    s1: E[] = [];
-    s2: E[] = [];
+    s1: E[] = []
+    s2: E[] = []
 
     public enqueue(val: E): void {
         this.s1.push(val)

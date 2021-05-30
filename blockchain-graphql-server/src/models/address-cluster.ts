@@ -5,8 +5,8 @@ import { Coin } from "./coin"
 export class AddressCluster {
 
     @Field({ nullable: false, complexity: 1 })
-    clusterId: string;
+    clusterId: string
 
     @Field({ nullable: false, complexity: 1 })
-    coin: Coin;
+    coin: Coin
 }

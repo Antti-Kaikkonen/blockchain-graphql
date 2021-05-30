@@ -10,8 +10,8 @@ import { Coin } from "../models/coin"
 import { Mempool } from "./mempool"
 
 export interface TxDetails {
-    fee: number;
-    addressDeltas: Map<string, number>;
+    fee: number
+    addressDeltas: Map<string, number>
 }
 
 export class BlockHandler extends Writable {

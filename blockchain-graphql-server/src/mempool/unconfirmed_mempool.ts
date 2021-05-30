@@ -24,9 +24,9 @@ export class AddressUnconfirmedMempool {
         } else {
             return 1
         }
-    });
+    })
 
-    public balanceChangeSat = 0;
+    public balanceChangeSat = 0
 
     public add(tx: TX): void {
         this.balanceChangeSat += Math.round(tx.balanceChange * 1e8)
@@ -42,7 +42,7 @@ export class AddressUnconfirmedMempool {
 
 export class UnconfirmedMempool {
 
-    public addressMempools: Map<string, AddressUnconfirmedMempool> = new Map();
+    public addressMempools: Map<string, AddressUnconfirmedMempool> = new Map()
 
     public txids: RBTree<{ timestamp: number, txid: string }> = new RBTree((a, b) => {
         if (a.timestamp === b.timestamp) {
@@ -58,11 +58,11 @@ export class UnconfirmedMempool {
         } else {
             return 1
         }
-    });
+    })
 
-    public txs: Map<string, { tx: MempoolTx, txDetails: TxDetails, timestamp: number }> = new Map();
+    public txs: Map<string, { tx: MempoolTx, txDetails: TxDetails, timestamp: number }> = new Map()
 
-    public totalFeesSat = 0;
+    public totalFeesSat = 0
 
     public add(tx: MempoolTx, txDetails: TxDetails): void {
         const time = new Date().getTime()

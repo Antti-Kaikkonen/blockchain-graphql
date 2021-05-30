@@ -6,10 +6,10 @@ import { PaginatedResponse } from "./paginated-response"
 export class AddressClusterBalanceChange {
 
     @Field(type => AddressCluster, { nullable: false })
-    guestimatedWallet: AddressCluster;
+    guestimatedWallet: AddressCluster
 
     @Field({ nullable: false, complexity: 1 })
-    balanceChange: number;
+    balanceChange: number
 
 }
 
@@ -17,15 +17,15 @@ export class AddressClusterBalanceChange {
 export class AddressClusterBalanceChangeCursor {
 
     @Field({ nullable: false })
-    balanceChange: number;
+    balanceChange: number
 
     @Field({ nullable: false })
-    clusterId: string;
+    clusterId: string
 
 }
 
 @ObjectType()
 export class PaginatedAddressClusterBalanceChangeResponse extends PaginatedResponse(AddressClusterBalanceChange) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

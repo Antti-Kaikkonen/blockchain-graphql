@@ -6,13 +6,13 @@ import { PaginatedResponse } from "./paginated-response"
 export class RichList {
 
     @Field({ nullable: false, complexity: 1 })
-    address: Address;
+    address: Address
 
     @Field({ nullable: false, complexity: 1 })
-    balance: number;
+    balance: number
 
     @Field({ nullable: false, complexity: 1 })
-    balanceChange: number;
+    balanceChange: number
 
 }
 
@@ -20,18 +20,18 @@ export class RichList {
 export class RichListCursor {
 
     @Field({ nullable: true })
-    balanceChange: number;
+    balanceChange: number
 
     @Field({ nullable: false })
-    address: string;
+    address: string
 
     @Field({ nullable: false })
-    balance: number;
+    balance: number
 
 }
 
 @ObjectType()
 export class PaginatedRichlistResponse extends PaginatedResponse(RichList) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

@@ -11,15 +11,15 @@ export class Address {
     }
 
     @Field({ nullable: false, complexity: 1 })
-    readonly coin: Coin;
+    readonly coin: Coin
 
     @Field({ nullable: false, complexity: 1 })
-    readonly address: string;
+    readonly address: string
 
 }
 
 @ObjectType()
 export class PaginatedAddressResponse extends PaginatedResponse(Address) {
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 }

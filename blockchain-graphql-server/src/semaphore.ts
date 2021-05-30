@@ -2,15 +2,15 @@ import { Queue } from "./queue"
 
 export class Semaphore {
 
-    readonly initial_slots: number;
+    readonly initial_slots: number
 
     constructor(public available_slots: number) {
         this.initial_slots = available_slots
     }
 
-    public promiseQueue: Queue<Promise<void>> = new Queue();
-    public releaseQueue: Queue<() => void> = new Queue();
-    public drainPromise: Promise<void>;
+    public promiseQueue: Queue<Promise<void>> = new Queue()
+    public releaseQueue: Queue<() => void> = new Queue()
+    public drainPromise: Promise<void>
     //private queue: Array<()=>void> = [];
 
 

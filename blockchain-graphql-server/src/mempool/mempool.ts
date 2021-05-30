@@ -20,13 +20,13 @@ import { TransactionInputDetailsWaiter } from "./transaction-input-details-waite
 export class Mempool {
     public time: number
     public height: number
-    public txById: Map<string, MempoolTx> = new Map();
-    public blockByHash: Map<string, MempoolBlock> = new Map();
-    public blockByHeight: Map<number, MempoolBlock> = new Map();
-    public outpointToInpoint: Map<string, { spending_txid: string, spending_index: number }> = new Map();
-    public addressBalances: Map<string, AddressBalance[]> = new Map();
-    public addressTransactions: Map<string, AddressTransaction[]> = new Map();
-    public unconfirmedMempool: UnconfirmedMempool = new UnconfirmedMempool();
+    public txById: Map<string, MempoolTx> = new Map()
+    public blockByHash: Map<string, MempoolBlock> = new Map()
+    public blockByHeight: Map<number, MempoolBlock> = new Map()
+    public outpointToInpoint: Map<string, { spending_txid: string, spending_index: number }> = new Map()
+    public addressBalances: Map<string, AddressBalance[]> = new Map()
+    public addressTransactions: Map<string, AddressTransaction[]> = new Map()
+    public unconfirmedMempool: UnconfirmedMempool = new UnconfirmedMempool()
 
     private blockReader: BlockReader
     private blockFetcher: BlockFetcher

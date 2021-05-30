@@ -47,10 +47,10 @@ export class CoinResolver {
         this.coins()//updates lastCoinCount;
     }
 
-    private static lastCoinCount = 1;
+    private static lastCoinCount = 1
 
-    public static CLUSTER_RICHLIST_BIN_COUNT = 100;
-    static CLUSTER_RICHLIST_BINS: number[] = Array.from(new Array(CoinResolver.CLUSTER_RICHLIST_BIN_COUNT).keys());
+    public static CLUSTER_RICHLIST_BIN_COUNT = 100
+    static CLUSTER_RICHLIST_BINS: number[] = Array.from(new Array(CoinResolver.CLUSTER_RICHLIST_BIN_COUNT).keys())
 
     @Query(returns => [Coin], { nullable: false, complexity: ({ childComplexity, args }) => 100 + CoinResolver.lastCoinCount * childComplexity })
     async coins(): Promise<Coin[]> {

@@ -5,9 +5,9 @@ import { Coin } from "./coin"
 export class Date {
 
     @Field({ nullable: false, complexity: 1 })
-    readonly coin: Coin;
+    readonly coin: Coin
 
     @Field({ nullable: false, complexity: 1 })
-    date: string;
+    date: string
 
 }

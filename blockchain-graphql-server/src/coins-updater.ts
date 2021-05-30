@@ -24,7 +24,7 @@ export class CoinsUpdater {
     constructor(private nameToCoin: Map<string, Coin>, private client: LimitedCapacityClient, private coins_keyspace: string) {
     }
 
-    private timeout: NodeJS.Timeout;
+    private timeout: NodeJS.Timeout
 
     private async updateRow(row: types.Row): Promise<void> {
         const name = row.get("name")

@@ -21,27 +21,27 @@ export class TransactionOutput {
     }
 
     @Field({ nullable: false, complexity: 1 })
-    readonly txid: string;
+    readonly txid: string
     @Field(type => Int, { nullable: false, complexity: 1 })
-    readonly n: number;
+    readonly n: number
     @Field({ nullable: false, complexity: 1 })
-    readonly value: number;
+    readonly value: number
     @Field({ nullable: false, complexity: 1 })
-    readonly scriptPubKey: ScriptPubKey;
+    readonly scriptPubKey: ScriptPubKey
     @Field({ nullable: true, complexity: 1 })
-    spendingTxid: string;
+    spendingTxid: string
     @Field(type => Int, { nullable: true, complexity: 1 })
-    spendingIndex: number;
+    spendingIndex: number
 
     @Field({ nullable: false, complexity: 1 })
-    readonly coin: Coin;
+    readonly coin: Coin
 }
 
 @InputType()
 export class TransactionOutputCursor {
 
     @Field(type => Int, { nullable: false })
-    n: number;
+    n: number
 
 }
 
@@ -49,6 +49,6 @@ export class TransactionOutputCursor {
 export class PaginatedTransactionOutputResponse extends PaginatedResponse(TransactionOutput) {
 
     @Field({ nullable: false, complexity: 0 })
-    hasMore: boolean;
+    hasMore: boolean
 
 }
