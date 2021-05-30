@@ -1,7 +1,7 @@
-import { ObjectType, Field, InputType, Int } from "type-graphql";
-import { ScriptPubKey } from "./scriptpubkey";
-import { PaginatedResponse } from "./paginated-response";
-import { Coin } from "./coin";
+import { ObjectType, Field, InputType, Int } from "type-graphql"
+import { ScriptPubKey } from "./scriptpubkey"
+import { PaginatedResponse } from "./paginated-response"
+import { Coin } from "./coin"
 
 @ObjectType()
 export class TransactionOutput {
@@ -11,13 +11,13 @@ export class TransactionOutput {
             {
                 txid: string, n: number, value: number, scriptPubKey: ScriptPubKey, spendingTxid?: string, spendingIndex?: number, coin: Coin
             }) {
-        this.txid = txid;
-        this.n = n;
-        this.value = value;
-        this.scriptPubKey = scriptPubKey;
-        this.spendingTxid = spendingTxid;
-        this.spendingIndex = spendingIndex;
-        this.coin = coin;
+        this.txid = txid
+        this.n = n
+        this.value = value
+        this.scriptPubKey = scriptPubKey
+        this.spendingTxid = spendingTxid
+        this.spendingIndex = spendingIndex
+        this.coin = coin
     }
 
     @Field({ nullable: false, complexity: 1 })

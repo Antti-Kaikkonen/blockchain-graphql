@@ -1,5 +1,5 @@
-import http from "http";
-import url from "url";
+import http from "http"
+import url from "url"
 
 class RpcResponse<T> {
     result: T;
@@ -88,7 +88,7 @@ export class RpcClient {
     private rpc_url: url.UrlWithStringQuery;
 
     constructor(rpc_urls: string[], private rpc_username: string, private rpc_password: string) {
-        this.rpc_url = url.parse(rpc_urls[0]);
+        this.rpc_url = url.parse(rpc_urls[0])
     }
 
     public getBlockCount(): Promise<number> {
@@ -100,26 +100,26 @@ export class RpcClient {
                 auth: this.rpc_username + ":" + this.rpc_password,
                 method: "POST"
             }, (res: http.IncomingMessage) => {
-                let result = "";
+                let result = ""
                 res.on('data', (d) => {
-                    result += d;
+                    result += d
                 })
                 res.on('end', () => {
-                    const obj: RpcResponse<number> = JSON.parse(result);
+                    const obj: RpcResponse<number> = JSON.parse(result)
                     if (obj.error) {
-                        reject(obj.error.message);
+                        reject(obj.error.message)
                     } else {
-                        resolve(obj.result);
+                        resolve(obj.result)
                     }
-                });
-            });
+                })
+            })
 
             req.on('error', (error: Error) => {
-                reject(error);
-            });
-            req.write(JSON.stringify({ method: "getblockcount", params: [] }));
-            req.end();
-        });
+                reject(error)
+            })
+            req.write(JSON.stringify({ method: "getblockcount", params: [] }))
+            req.end()
+        })
     }
 
     public getBlockHash(height: number): Promise<string> {
@@ -131,26 +131,26 @@ export class RpcClient {
                 auth: this.rpc_username + ":" + this.rpc_password,
                 method: "POST"
             }, (res: http.IncomingMessage) => {
-                let result = "";
+                let result = ""
                 res.on('data', (d) => {
-                    result += d;
+                    result += d
                 })
                 res.on('end', () => {
-                    const obj: RpcResponse<string> = JSON.parse(result);
+                    const obj: RpcResponse<string> = JSON.parse(result)
                     if (obj.error) {
-                        reject(obj.error.message);
+                        reject(obj.error.message)
                     } else {
-                        resolve(obj.result);
+                        resolve(obj.result)
                     }
-                });
-            });
+                })
+            })
 
             req.on('error', (error: Error) => {
-                reject(error);
-            });
-            req.write(JSON.stringify({ method: "getblockhash", params: [height] }));
-            req.end();
-        });
+                reject(error)
+            })
+            req.write(JSON.stringify({ method: "getblockhash", params: [height] }))
+            req.end()
+        })
     }
 
     public getBlock(hash: string): Promise<RpcBlock> {
@@ -162,26 +162,26 @@ export class RpcClient {
                 auth: this.rpc_username + ":" + this.rpc_password,
                 method: "POST"
             }, (res: http.IncomingMessage) => {
-                let result = "";
+                let result = ""
                 res.on('data', (d) => {
-                    result += d;
+                    result += d
                 })
                 res.on('end', () => {
-                    const obj: RpcResponse<RpcBlock> = JSON.parse(result);
+                    const obj: RpcResponse<RpcBlock> = JSON.parse(result)
                     if (obj.error) {
-                        reject(obj.error.message);
+                        reject(obj.error.message)
                     } else {
-                        resolve(obj.result);
+                        resolve(obj.result)
                     }
-                });
-            });
+                })
+            })
 
             req.on('error', (error: Error) => {
-                reject(error);
-            });
-            req.write(JSON.stringify({ method: "getblock", params: [hash, 2] }));
-            req.end();
-        });
+                reject(error)
+            })
+            req.write(JSON.stringify({ method: "getblock", params: [hash, 2] }))
+            req.end()
+        })
     }
 
     public getRawTransaction(txid: string): Promise<RpcTx> {
@@ -193,26 +193,26 @@ export class RpcClient {
                 auth: this.rpc_username + ":" + this.rpc_password,
                 method: "POST"
             }, (res: http.IncomingMessage) => {
-                let result = "";
+                let result = ""
                 res.on('data', (d) => {
-                    result += d;
+                    result += d
                 })
                 res.on('end', () => {
-                    const obj: RpcResponse<RpcTx> = JSON.parse(result);
+                    const obj: RpcResponse<RpcTx> = JSON.parse(result)
                     if (obj.error) {
-                        reject(obj.error.message);
+                        reject(obj.error.message)
                     } else {
-                        resolve(obj.result);
+                        resolve(obj.result)
                     }
-                });
-            });
+                })
+            })
 
             req.on('error', (error: Error) => {
-                reject(error);
-            });
-            req.write(JSON.stringify({ method: "getrawtransaction", params: [txid, 2] }));
-            req.end();
-        });
+                reject(error)
+            })
+            req.write(JSON.stringify({ method: "getrawtransaction", params: [txid, 2] }))
+            req.end()
+        })
     }
 
     public getRawMempool(): Promise<string[]> {
@@ -224,26 +224,26 @@ export class RpcClient {
                 auth: this.rpc_username + ":" + this.rpc_password,
                 method: "POST"
             }, (res: http.IncomingMessage) => {
-                let result = "";
+                let result = ""
                 res.on('data', (d) => {
-                    result += d;
+                    result += d
                 })
                 res.on('end', () => {
-                    const obj: RpcResponse<string[]> = JSON.parse(result);
+                    const obj: RpcResponse<string[]> = JSON.parse(result)
                     if (obj.error) {
-                        reject(obj.error.message);
+                        reject(obj.error.message)
                     } else {
-                        resolve(obj.result);
+                        resolve(obj.result)
                     }
-                });
-            });
+                })
+            })
 
             req.on('error', (error: Error) => {
-                reject(error);
-            });
-            req.write(JSON.stringify({ method: "getrawmempool", params: [] }));
-            req.end();
-        });
+                reject(error)
+            })
+            req.write(JSON.stringify({ method: "getrawmempool", params: [] }))
+            req.end()
+        })
     }
 
     public getMempool(): Promise<RpcMempool> {
@@ -255,26 +255,26 @@ export class RpcClient {
                 auth: this.rpc_username + ":" + this.rpc_password,
                 method: "POST"
             }, (res: http.IncomingMessage) => {
-                let result = "";
+                let result = ""
                 res.on('data', (d) => {
-                    result += d;
+                    result += d
                 })
                 res.on('end', () => {
-                    const obj: RpcResponse<RpcMempool> = JSON.parse(result);
+                    const obj: RpcResponse<RpcMempool> = JSON.parse(result)
                     if (obj.error) {
-                        reject(obj.error.message);
+                        reject(obj.error.message)
                     } else {
-                        resolve(obj.result);
+                        resolve(obj.result)
                     }
-                });
-            });
+                })
+            })
 
             req.on('error', (error: Error) => {
-                reject(error);
-            });
-            req.write(JSON.stringify({ method: "getrawmempool", params: [true] }));
-            req.end();
-        });
+                reject(error)
+            })
+            req.write(JSON.stringify({ method: "getrawmempool", params: [true] }))
+            req.end()
+        })
     }
 
     public sendRawTransaction(hexstring: string): Promise<string> {
@@ -286,26 +286,26 @@ export class RpcClient {
                 auth: this.rpc_username + ":" + this.rpc_password,
                 method: "POST"
             }, (res: http.IncomingMessage) => {
-                let result = "";
+                let result = ""
                 res.on('data', (d) => {
-                    result += d;
+                    result += d
                 })
                 res.on('end', () => {
-                    const obj: RpcResponse<string> = JSON.parse(result);
+                    const obj: RpcResponse<string> = JSON.parse(result)
                     if (obj.error) {
-                        reject(obj.error.message);
+                        reject(obj.error.message)
                     } else {
-                        resolve(obj.result);
+                        resolve(obj.result)
                     }
-                });
-            });
+                })
+            })
 
             req.on('error', (error: Error) => {
-                reject(error);
-            });
-            req.write(JSON.stringify({ method: "sendrawtransaction", params: [hexstring] }));
-            req.end();
-        });
+                reject(error)
+            })
+            req.write(JSON.stringify({ method: "sendrawtransaction", params: [hexstring] }))
+            req.end()
+        })
     }
 
 

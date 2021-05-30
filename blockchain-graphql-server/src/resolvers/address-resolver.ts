@@ -1,14 +1,14 @@
-import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType, Float } from "type-graphql";
-import { types } from "cassandra-driver";
-import { Inject } from 'typedi';
-import { Address } from "../models/address";
-import { AddressTransaction, AddressTransactionCursor, PaginatedAddressTransactionResponse } from "../models/address-transaction";
-import { OHLCCursor, OHLC, PaginatedOHLCResponse } from '../models/ohlc';
-import { AddressBalanceCursor, PaginatedAddressBalanceResponse, AddressBalance } from "../models/address-balance";
-import { AddressCluster } from "../models/address-cluster";
-import { LimitedCapacityClient } from "../limited-capacity-client";
-import { PaginationArgs } from "./pagination-args";
-import { PaginatedUnconfirmedAddressTransactionResponse, UnconfirmedAddressTransaction, UnconfirmedAddressTransactionCursor } from "../models/unconfirmed-address-transaction";
+import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType, Float } from "type-graphql"
+import { types } from "cassandra-driver"
+import { Inject } from 'typedi'
+import { Address } from "../models/address"
+import { AddressTransaction, AddressTransactionCursor, PaginatedAddressTransactionResponse } from "../models/address-transaction"
+import { OHLCCursor, OHLC, PaginatedOHLCResponse } from '../models/ohlc'
+import { AddressBalanceCursor, PaginatedAddressBalanceResponse, AddressBalance } from "../models/address-balance"
+import { AddressCluster } from "../models/address-cluster"
+import { LimitedCapacityClient } from "../limited-capacity-client"
+import { PaginationArgs } from "./pagination-args"
+import { PaginatedUnconfirmedAddressTransactionResponse, UnconfirmedAddressTransaction, UnconfirmedAddressTransactionCursor } from "../models/unconfirmed-address-transaction"
 
 @ArgsType()
 class OHLC_Args extends PaginationArgs {
@@ -57,23 +57,23 @@ export class AddressResolver {
 
     @FieldResolver(returns => AddressCluster, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async guestimatedWallet(@Root() address: Address): Promise<AddressCluster> {
-        const query: string = "SELECT parent FROM " + address.coin.keyspace + ".union_find WHERE address=?";
-        let currentAddress = address.address;
+        const query: string = "SELECT parent FROM " + address.coin.keyspace + ".union_find WHERE address=?"
+        let currentAddress = address.address
         do {
             const resultSet: types.ResultSet = await this.client.execute(
                 query,
                 [currentAddress],
                 { prepare: true }
-            );
+            )
             if (resultSet.rows.length === 1) {
-                currentAddress = resultSet.rows[0].get("parent");
+                currentAddress = resultSet.rows[0].get("parent")
             } else {
-                const res: AddressCluster = new AddressCluster();
-                res.clusterId = currentAddress;
-                res.coin = address.coin;
-                return res;
+                const res: AddressCluster = new AddressCluster()
+                res.clusterId = currentAddress
+                res.coin = address.coin
+                return res
             }
-        } while (true);
+        } while (true)
     }
 
 
@@ -81,21 +81,21 @@ export class AddressResolver {
     async ohlc(@Root() address: Address,
         @Args() { limit, cursor, interval }: OHLC_Args
     ): Promise<PaginatedOHLCResponse> {
-        let args: any[] = [address.address, interval];
-        let query: string = "SELECT timestamp, open, high, low, close FROM " + address.coin.keyspace + ".ohlc WHERE address=? AND interval=?";
+        let args: any[] = [address.address, interval]
+        let query: string = "SELECT timestamp, open, high, low, close FROM " + address.coin.keyspace + ".ohlc WHERE address=? AND interval=?"
         if (cursor) {
-            query += " AND timestamp > ?";
-            args = args.concat([cursor.timestamp]);
+            query += " AND timestamp > ?"
+            args = args.concat([cursor.timestamp])
         }
         query += " LIMIT ?"
-        args.push(limit + 1);
+        args.push(limit + 1)
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
-        );
-        const hasMore: boolean = resultSet.rows.length > limit;
-        if (hasMore) resultSet.rows.pop();
+        )
+        const hasMore: boolean = resultSet.rows.length > limit
+        if (hasMore) resultSet.rows.pop()
         const res: OHLC[] = resultSet.rows.map(row => {
             return <OHLC>{
                 timestamp: row.get("timestamp"),
@@ -104,7 +104,7 @@ export class AddressResolver {
                 low: row.get("low"),
                 close: row.get("close")
             }
-        });
+        })
         return {
             hasMore: hasMore,
             items: res,
@@ -113,51 +113,51 @@ export class AddressResolver {
 
     @FieldResolver(returns => PaginatedUnconfirmedAddressTransactionResponse, { nullable: false, complexity: ({ childComplexity, args }) => args.limit * childComplexity })
     async unconfirmedTransactions(@Root() address: Address, @Args() { cursor, limit }: UnconfirmedTransactionsArgs): Promise<PaginatedUnconfirmedAddressTransactionResponse> {
-        let it;
-        const addressMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+        let it
+        const addressMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address)
         if (addressMempool === undefined) {
-            return { items: [], hasMore: false };
+            return { items: [], hasMore: false }
         }
         if (cursor) {
-            it = addressMempool.transactions.upperBound({ timestamp: cursor.timestamp.getTime(), txid: cursor.txid, balanceChange: null });
+            it = addressMempool.transactions.upperBound({ timestamp: cursor.timestamp.getTime(), txid: cursor.txid, balanceChange: null })
         } else {
-            it = addressMempool.transactions.iterator();
-            it.next();
+            it = addressMempool.transactions.iterator()
+            it.next()
         }
         if (it === undefined) {
-            return { items: [], hasMore: false };
+            return { items: [], hasMore: false }
         }
-        let item: { txid: string, timestamp: number, balanceChange: number } = it.data();
-        const res: UnconfirmedAddressTransaction[] = [];
-        let hasMore = false;
+        let item: { txid: string, timestamp: number, balanceChange: number } = it.data()
+        const res: UnconfirmedAddressTransaction[] = []
+        let hasMore = false
         while (item !== null) {
             if (res.length === limit) {
-                hasMore = true;
-                break;
+                hasMore = true
+                break
             }
-            res.push(<UnconfirmedAddressTransaction>{ coin: address.coin, timestamp: new Date(item.timestamp), txid: item.txid, balanceChange: item.balanceChange });
-            item = it.next();
+            res.push(<UnconfirmedAddressTransaction>{ coin: address.coin, timestamp: new Date(item.timestamp), txid: item.txid, balanceChange: item.balanceChange })
+            item = it.next()
         }
-        return { items: res, hasMore: hasMore };
+        return { items: res, hasMore: hasMore }
     }
 
     @FieldResolver(returns => Int, { nullable: false, complexity: ({ childComplexity, args }) => 1 })
     async unconfirmedTxCount(@Root() address: Address): Promise<number> {
-        const addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+        const addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address)
         if (addressUnconfirmedMempool === undefined) {
-            return 0;
+            return 0
         } else {
-            return addressUnconfirmedMempool.transactions.size;
+            return addressUnconfirmedMempool.transactions.size
         }
     }
 
     @FieldResolver(returns => Float, { nullable: false, complexity: ({ childComplexity, args }) => 1 })
     async unconfirmedBalanceChange(@Root() address: Address): Promise<number> {
-        const addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address);
+        const addressUnconfirmedMempool = address.coin.mempool.unconfirmedMempool.addressMempools.get(address.address)
         if (addressUnconfirmedMempool === undefined) {
-            return 0;
+            return 0
         } else {
-            return addressUnconfirmedMempool.balanceChangeSat / 1e8;
+            return addressUnconfirmedMempool.balanceChangeSat / 1e8
         }
     }
 
@@ -166,51 +166,51 @@ export class AddressResolver {
     async confirmedTransactions(@Root() address: Address,
         @Args() { limit, cursor }: AddressTransactionsArgs
     ): Promise<PaginatedAddressTransactionResponse> {
-        const originalLimit: number = limit;
+        const originalLimit: number = limit
         let res: AddressTransaction[] = address.coin.mempool?.addressTransactions.get(address.address)
         if (res !== undefined) {
             if (cursor) {
                 const lastIndex = res.findIndex((e) => {
                     if (e.timestamp.getTime() === cursor.timestamp.getTime()) {
                         if (e.height === cursor.height) {
-                            return e.txN >= cursor.txN;
+                            return e.txN >= cursor.txN
                         }
-                        return e.height > cursor.height;
+                        return e.height > cursor.height
                     }
-                    return e.timestamp.getTime() > cursor.timestamp.getTime();
-                });//TODO: use binary search instead
+                    return e.timestamp.getTime() > cursor.timestamp.getTime()
+                })//TODO: use binary search instead
                 if (lastIndex !== -1) {
-                    res = res.slice(0, lastIndex);
-                    if (res.length > limit + 1) res = res.slice(res.length - (limit + 1));
+                    res = res.slice(0, lastIndex)
+                    if (res.length > limit + 1) res = res.slice(res.length - (limit + 1))
                 }
             }
-            res.reverse();
+            res.reverse()
             if (res.length > 0) {
                 cursor = {
                     timestamp: res[res.length - 1].timestamp,
                     height: res[res.length - 1].height,
                     txN: res[res.length - 1].txN
                 }
-                limit = limit - res.length;
+                limit = limit - res.length
             }
         } else {
-            res = [];
+            res = []
         }
         if (limit + 1 > 0) {
 
-            let args: any[] = [address.address];
-            let query: string = "SELECT timestamp, height, tx_n, balance_change FROM " + address.coin.keyspace + ".address_transaction WHERE address=?";
+            let args: any[] = [address.address]
+            let query: string = "SELECT timestamp, height, tx_n, balance_change FROM " + address.coin.keyspace + ".address_transaction WHERE address=?"
             if (cursor) {
-                query += " AND (timestamp, height, tx_n) < (?, ?, ?)";
-                args = args.concat([cursor.timestamp, cursor.height, cursor.txN]);
+                query += " AND (timestamp, height, tx_n) < (?, ?, ?)"
+                args = args.concat([cursor.timestamp, cursor.height, cursor.txN])
             }
             query += " LIMIT ?"
-            args.push(limit + 1);
+            args.push(limit + 1)
             const resultSet: types.ResultSet = await this.client.execute(
                 query,
                 args,
                 { prepare: true, fetchSize: null }
-            );
+            )
             const res2: AddressTransaction[] = resultSet.rows.map(row => {
                 return <AddressTransaction>{
                     timestamp: row.get("timestamp"),
@@ -219,22 +219,22 @@ export class AddressResolver {
                     balanceChange: row.get("balance_change"),
                     coin: address.coin
                 }
-            });
+            })
 
             if (res2.length > 0) {
-                const start = res2[res2.length - 1].timestamp;
-                const end = res2[0].timestamp;
-                const query2: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?";
-                const args2: any[] = [address.address, start, end];
+                const start = res2[res2.length - 1].timestamp
+                const end = res2[0].timestamp
+                const query2: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?"
+                const args2: any[] = [address.address, start, end]
                 const resultSet2: types.ResultSet = await this.client.execute(
                     query2,
                     args2,
                     { prepare: true }
-                );
-                const time2Balance: Map<number, number> = new Map();
-                resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")));
-                res2.forEach(r => r.balanceAfterBlock = time2Balance.get(r.timestamp.getTime()));
-                res = res.concat(res2);
+                )
+                const time2Balance: Map<number, number> = new Map()
+                resultSet2.rows.forEach(row => time2Balance.set(row.get("timestamp").getTime(), row.get("balance")))
+                res2.forEach(r => r.balanceAfterBlock = time2Balance.get(r.timestamp.getTime()))
+                res = res.concat(res2)
             }
 
         }
@@ -255,44 +255,44 @@ export class AddressResolver {
     async balances(@Root() address: Address,
         @Args() { limit, cursor }: AddressBalancesArgs
     ): Promise<PaginatedAddressBalanceResponse> {
-        const originalLimit: number = limit;
-        let res: AddressBalance[] = address.coin.mempool?.addressBalances.get(address.address);
+        const originalLimit: number = limit
+        let res: AddressBalance[] = address.coin.mempool?.addressBalances.get(address.address)
         if (res !== undefined) {
             if (cursor) {
-                const lastIndex = res.findIndex((e) => e.timestamp >= cursor.timestamp);//TODO: use binary search instead
+                const lastIndex = res.findIndex((e) => e.timestamp >= cursor.timestamp)//TODO: use binary search instead
                 if (lastIndex !== -1) {
-                    res = res.slice(0, lastIndex);
+                    res = res.slice(0, lastIndex)
                 }
             }
-            if (res.length > limit + 1) res = res.slice(res.length - (limit + 1));
-            res.reverse();
+            if (res.length > limit + 1) res = res.slice(res.length - (limit + 1))
+            res.reverse()
             if (res.length > 0) {
                 cursor = { timestamp: res[res.length - 1].timestamp }
-                limit = limit - res.length;
+                limit = limit - res.length
             }
         } else {
-            res = [];
+            res = []
         }
         if (limit + 1 > 0) {
-            let args: any[] = [address.address];
-            let query: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=?";
+            let args: any[] = [address.address]
+            let query: string = "SELECT timestamp, balance FROM " + address.coin.keyspace + ".address_balance WHERE address=?"
             if (cursor) {
-                query += " AND timestamp < ?";
-                args = args.concat([cursor.timestamp]);
+                query += " AND timestamp < ?"
+                args = args.concat([cursor.timestamp])
             }
             query += " LIMIT ?"
-            args.push(limit + 1);
+            args.push(limit + 1)
             const resultSet: types.ResultSet = await this.client.execute(
                 query,
                 args,
                 { prepare: true, fetchSize: null }
-            );
+            )
             res = res.concat(resultSet.rows.map(row => {
                 return <AddressBalance>{
                     timestamp: row.get("timestamp"),
                     balance: row.get("balance")
                 }
-            }));
+            }))
         }
         if (res.length > originalLimit) {
             return {

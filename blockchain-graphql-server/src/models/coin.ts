@@ -1,5 +1,5 @@
-import { Field, Int, ObjectType } from "type-graphql";
-import { Mempool } from "../mempool/mempool";
+import { Field, Int, ObjectType } from "type-graphql"
+import { Mempool } from "../mempool/mempool"
 
 @ObjectType()
 export class Coin {

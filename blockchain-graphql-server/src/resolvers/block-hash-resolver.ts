@@ -1,9 +1,9 @@
-import { Block } from "../models/block";
-import { Resolver, FieldResolver, Root } from "type-graphql";
-import { types } from "cassandra-driver";
-import { Inject } from "typedi";
-import { BlockHash } from "../models/block_hash";
-import { LimitedCapacityClient } from "../limited-capacity-client";
+import { Block } from "../models/block"
+import { Resolver, FieldResolver, Root } from "type-graphql"
+import { types } from "cassandra-driver"
+import { Inject } from "typedi"
+import { BlockHash } from "../models/block_hash"
+import { LimitedCapacityClient } from "../limited-capacity-client"
 
 @Resolver(of => BlockHash)
 export class BlockHashResolver {
@@ -15,7 +15,7 @@ export class BlockHashResolver {
     @FieldResolver(returns => Block, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async block(@Root() blockHash: BlockHash,
     ): Promise<Block> {
-        const mempooBlock = blockHash.coin.mempool?.blockByHash.get(blockHash.hash);
+        const mempooBlock = blockHash.coin.mempool?.blockByHash.get(blockHash.hash)
         if (mempooBlock !== undefined) {
             return <Block>{
                 height: mempooBlock.rpcBlock.height,
@@ -35,13 +35,13 @@ export class BlockHashResolver {
                 coin: blockHash.coin
             }
         }
-        const args: any[] = [blockHash.hash];
-        const query: string = "SELECT * FROM " + blockHash.coin.keyspace + ".block WHERE hash=?";
+        const args: any[] = [blockHash.hash]
+        const query: string = "SELECT * FROM " + blockHash.coin.keyspace + ".block WHERE hash=?"
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
-        );
+        )
         const res: Block[] = resultSet.rows.map(row => {
             return <Block>{
                 height: row.get("height"),
@@ -59,9 +59,9 @@ export class BlockHashResolver {
                 previousBlockHash: row.get("previousblockhash"),
                 txCount: row.get("tx_count"),
                 coin: blockHash.coin
-            };
-        });
-        return res[0];
+            }
+        })
+        return res[0]
     }
 
 }

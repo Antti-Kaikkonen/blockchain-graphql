@@ -20,7 +20,9 @@
         "start": "ts-node src/index.ts",
         "start2": "node --max_old_space_size=4000 -r ts-node/register ./src/index.ts",
         "build": "tsc",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "lint": "eslint src",
+        "lint-fix": "eslint src --fix"
     },
     "author": "Antti Kaikkonen",
     "license": "MIT",

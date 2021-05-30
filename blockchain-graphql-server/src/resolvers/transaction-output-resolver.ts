@@ -1,12 +1,12 @@
-import { Resolver, FieldResolver, Root } from "type-graphql";
-import { types } from "cassandra-driver";
-import { Inject } from "typedi";
-import { TransactionInput } from "../models/transaction-input";
-import { TransactionOutput } from "../models/transaction-output";
-import { Transaction } from "../models/transaction";
-import { MempoolTx } from "../mempool/mempool";
-import { RpcVin } from "../rpc-client";
-import { LimitedCapacityClient } from "../limited-capacity-client";
+import { Resolver, FieldResolver, Root } from "type-graphql"
+import { types } from "cassandra-driver"
+import { Inject } from "typedi"
+import { TransactionInput } from "../models/transaction-input"
+import { TransactionOutput } from "../models/transaction-output"
+import { Transaction } from "../models/transaction"
+import { MempoolTx } from "../mempool/mempool"
+import { RpcVin } from "../rpc-client"
+import { LimitedCapacityClient } from "../limited-capacity-client"
 
 @Resolver(of => TransactionOutput)
 export class TransactionOutputResolver {
@@ -18,10 +18,10 @@ export class TransactionOutputResolver {
     @FieldResolver(returns => TransactionInput, { nullable: true, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async spendingInput(@Root() transactionOutput: TransactionOutput,
     ): Promise<TransactionInput> {
-        if (transactionOutput.spendingTxid === null || transactionOutput.spendingTxid === undefined) return null;
-        const mempoolTx: MempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.spendingTxid);
+        if (transactionOutput.spendingTxid === null || transactionOutput.spendingTxid === undefined) return null
+        const mempoolTx: MempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.spendingTxid)
         if (mempoolTx !== undefined) {
-            const spending_input: RpcVin = mempoolTx.rpcTx.vin[transactionOutput.spendingIndex];
+            const spending_input: RpcVin = mempoolTx.rpcTx.vin[transactionOutput.spendingIndex]
             const vin: TransactionInput = new TransactionInput({
                 coinbase: spending_input.coinbase,
                 scriptSig: spending_input.scriptSig,
@@ -31,17 +31,17 @@ export class TransactionOutputResolver {
                 spendingTxid: transactionOutput.spendingTxid,
                 spendingIndex: transactionOutput.spendingIndex,
                 coin: transactionOutput.coin
-            });
-            return vin;
+            })
+            return vin
         }
 
-        const args: any[] = [transactionOutput.spendingTxid, transactionOutput.spendingIndex];
-        const query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction_input WHERE spending_txid=? AND spending_index=?";
+        const args: any[] = [transactionOutput.spendingTxid, transactionOutput.spendingIndex]
+        const query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction_input WHERE spending_txid=? AND spending_index=?"
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
-        );
+        )
         const res: TransactionInput[] = resultSet.rows.map(row => {
             const vin: TransactionInput = new TransactionInput({
                 coinbase: row.get("coinbase"),
@@ -52,17 +52,17 @@ export class TransactionOutputResolver {
                 spendingTxid: row.get('spending_txid'),
                 spendingIndex: row.get('spending_index'),
                 coin: transactionOutput.coin
-            });
-            return vin;
-        });
-        return res[0];
+            })
+            return vin
+        })
+        return res[0]
     }
 
     @FieldResolver(returns => Transaction, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async transaction(@Root() transactionOutput: TransactionOutput,
     ): Promise<Transaction> {
-        if (transactionOutput.txid === null || transactionOutput.txid === undefined) return null;
-        const mempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.txid);
+        if (transactionOutput.txid === null || transactionOutput.txid === undefined) return null
+        const mempoolTx = transactionOutput.coin.mempool?.txById.get(transactionOutput.txid)
         if (mempoolTx !== undefined) {
             return <Transaction>{
                 txid: mempoolTx.rpcTx.txid,
@@ -73,15 +73,15 @@ export class TransactionOutputResolver {
                 txN: mempoolTx.txN,
                 fee: mempoolTx.fee,
                 coin: transactionOutput.coin
-            };
+            }
         }
-        const args: any[] = [transactionOutput.txid];
-        const query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction WHERE txid=?";
+        const args: any[] = [transactionOutput.txid]
+        const query: string = "SELECT * FROM " + transactionOutput.coin.keyspace + ".transaction WHERE txid=?"
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
-        );
+        )
         const res: Transaction[] = resultSet.rows.map(row => {
             return <Transaction>{
                 txid: row.get('txid'),
@@ -94,9 +94,9 @@ export class TransactionOutputResolver {
                 inputCount: row.get("input_count"),
                 outputCount: row.get("output_count"),
                 coin: transactionOutput.coin
-            };
-        });
-        return res[0];
+            }
+        })
+        return res[0]
     }
 
 }

@@ -1,10 +1,10 @@
-import { types } from "cassandra-driver";
-import { FieldResolver, Resolver, Root } from "type-graphql";
-import { Inject } from "typedi";
-import { LimitedCapacityClient } from "../limited-capacity-client";
-import { MempoolTx } from "../mempool/mempool";
-import { UnconfirmedTransaction } from "../models/unconfirmedl-transaction";
-import { Transaction } from "../models/transaction";
+import { types } from "cassandra-driver"
+import { FieldResolver, Resolver, Root } from "type-graphql"
+import { Inject } from "typedi"
+import { LimitedCapacityClient } from "../limited-capacity-client"
+import { MempoolTx } from "../mempool/mempool"
+import { UnconfirmedTransaction } from "../models/unconfirmedl-transaction"
+import { Transaction } from "../models/transaction"
 
 @Resolver(of => UnconfirmedTransaction)
 export class MempoolTransactionsResolver {
@@ -16,17 +16,17 @@ export class MempoolTransactionsResolver {
     @FieldResolver(returns => Transaction, { nullable: false, complexity: ({ childComplexity, args }) => 100 + childComplexity })
     async transaction(@Root() rootTx: UnconfirmedTransaction,
     ): Promise<Transaction> {
-        const mempoolTransaction: MempoolTx = rootTx.coin.mempool?.txById.get(rootTx.txid);
+        const mempoolTransaction: MempoolTx = rootTx.coin.mempool?.txById.get(rootTx.txid)
         if (mempoolTransaction !== undefined) {
-            return mempoolTransaction.toGraphQL(rootTx.coin);
+            return mempoolTransaction.toGraphQL(rootTx.coin)
         }
-        const args: any[] = [rootTx.txid];
-        const query: string = "SELECT * FROM " + rootTx.coin.keyspace + ".transaction WHERE txid=?";
+        const args: any[] = [rootTx.txid]
+        const query: string = "SELECT * FROM " + rootTx.coin.keyspace + ".transaction WHERE txid=?"
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true }
-        );
+        )
         const res: Transaction[] = resultSet.rows.map(row => {
             return <Transaction>{
                 txid: row.get('txid'),
@@ -40,8 +40,8 @@ export class MempoolTransactionsResolver {
                 outputCount: row.get("output_count"),
                 coin: rootTx.coin
             }
-        });
-        return res[0];
+        })
+        return res[0]
     }
 
 }

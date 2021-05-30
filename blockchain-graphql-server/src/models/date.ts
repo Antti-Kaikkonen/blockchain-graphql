@@ -1,5 +1,5 @@
-import { ObjectType, Field } from "type-graphql";
-import { Coin } from "./coin";
+import { ObjectType, Field } from "type-graphql"
+import { Coin } from "./coin"
 
 @ObjectType()
 export class Date {

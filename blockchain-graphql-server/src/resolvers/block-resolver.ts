@@ -1,11 +1,11 @@
-import { Block } from "../models/block";
-import { Resolver, FieldResolver, Root, Field, ArgsType, Args } from "type-graphql";
-import { types } from "cassandra-driver";
-import { Inject } from "typedi";
-import { ConfirmedTransaction, ConfirmedTransactionCursor, PaginatedConfirmedTransactionResponse } from "../models/confirmed-transaction";
-import { PaginationArgs } from "./pagination-args";
-import { MempoolBlock, MempoolTx } from "../mempool/mempool";
-import { LimitedCapacityClient } from "../limited-capacity-client";
+import { Block } from "../models/block"
+import { Resolver, FieldResolver, Root, Field, ArgsType, Args } from "type-graphql"
+import { types } from "cassandra-driver"
+import { Inject } from "typedi"
+import { ConfirmedTransaction, ConfirmedTransactionCursor, PaginatedConfirmedTransactionResponse } from "../models/confirmed-transaction"
+import { PaginationArgs } from "./pagination-args"
+import { MempoolBlock, MempoolTx } from "../mempool/mempool"
+import { LimitedCapacityClient } from "../limited-capacity-client"
 
 
 @ArgsType()
@@ -29,45 +29,45 @@ export class BlockResolver {
         @Args() { cursor, limit }: ConfirmedTransactionArgs
 
     ): Promise<PaginatedConfirmedTransactionResponse> {
-        const mempoolBlock: MempoolBlock = block.coin.mempool?.blockByHeight.get(block.height);
+        const mempoolBlock: MempoolBlock = block.coin.mempool?.blockByHeight.get(block.height)
         if (mempoolBlock !== undefined) {
-            const res: ConfirmedTransaction[] = [];
-            const fromIndex = cursor === undefined ? 0 : cursor.txN + 1;
+            const res: ConfirmedTransaction[] = []
+            const fromIndex = cursor === undefined ? 0 : cursor.txN + 1
             for (let tx_n = fromIndex; tx_n < mempoolBlock.tx.length; tx_n++) {
                 if (res.length == limit) {
                     return {
                         hasMore: true,
                         items: res
-                    };
+                    }
                 }
-                const mempoolTx: MempoolTx = mempoolBlock.tx[tx_n];
+                const mempoolTx: MempoolTx = mempoolBlock.tx[tx_n]
                 res.push(<ConfirmedTransaction>{
                     height: mempoolTx.height,
                     txN: mempoolTx.txN,
                     txid: mempoolTx.rpcTx.txid,
                     coin: block.coin
-                });
+                })
             }
             return {
                 hasMore: false,
                 items: res
-            };
+            }
         }
-        let args: any[] = [block.height];
-        let query: string = "SELECT * FROM " + block.coin.keyspace + ".confirmed_transaction WHERE height=?";
+        let args: any[] = [block.height]
+        let query: string = "SELECT * FROM " + block.coin.keyspace + ".confirmed_transaction WHERE height=?"
         if (cursor) {
-            query += " AND tx_n > ?";
-            args = args.concat([cursor.txN]);
+            query += " AND tx_n > ?"
+            args = args.concat([cursor.txN])
         }
         query += " LIMIT ?"
-        args.push(limit + 1);
+        args.push(limit + 1)
         const resultSet: types.ResultSet = await this.client.execute(
             query,
             args,
             { prepare: true, fetchSize: null }
-        );
-        const hasMore: boolean = resultSet.rows.length > limit;
-        if (hasMore) resultSet.rows.pop();
+        )
+        const hasMore: boolean = resultSet.rows.length > limit
+        if (hasMore) resultSet.rows.pop()
         const res: ConfirmedTransaction[] = resultSet.rows.map(row => {
             return <ConfirmedTransaction>{
                 height: row.get('height'),
@@ -75,11 +75,11 @@ export class BlockResolver {
                 txid: row.get("txid"),
                 coin: block.coin
             }
-        });
+        })
         return {
             hasMore: hasMore,
             items: res
-        };
+        }
     }
 
 }

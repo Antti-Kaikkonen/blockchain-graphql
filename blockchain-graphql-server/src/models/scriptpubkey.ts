@@ -1,5 +1,5 @@
-import { ObjectType, Field, Int } from "type-graphql";
-import { Address } from "./address";
+import { ObjectType, Field, Int } from "type-graphql"
+import { Address } from "./address"
 
 @ObjectType()
 export class ScriptPubKey {

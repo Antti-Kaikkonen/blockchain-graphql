@@ -1,7 +1,7 @@
-import { ObjectType, Field, InputType, Int } from "type-graphql";
-import { ScriptSig } from "./scriptsig";
-import { PaginatedResponse } from "./paginated-response";
-import { Coin } from "./coin";
+import { ObjectType, Field, InputType, Int } from "type-graphql"
+import { ScriptSig } from "./scriptsig"
+import { PaginatedResponse } from "./paginated-response"
+import { Coin } from "./coin"
 
 @ObjectType()
 export class TransactionInput {
@@ -11,14 +11,14 @@ export class TransactionInput {
     }: {
         sequence: number, txid: string, vout: number, coinbase: string, scriptSig: ScriptSig, spendingTxid: string, spendingIndex: number, coin: Coin
     }) {
-        this.sequence = sequence;
-        this.txid = txid;
-        this.vout = vout;
-        this.coinbase = coinbase;
-        this.scriptSig = scriptSig;
-        this.spendingTxid = spendingTxid;
-        this.spendingIndex = spendingIndex;
-        this.coin = coin;
+        this.sequence = sequence
+        this.txid = txid
+        this.vout = vout
+        this.coinbase = coinbase
+        this.scriptSig = scriptSig
+        this.spendingTxid = spendingTxid
+        this.spendingIndex = spendingIndex
+        this.coin = coin
     }
 
     @Field({ nullable: false, complexity: 1 })

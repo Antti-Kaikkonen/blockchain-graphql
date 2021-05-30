@@ -1,5 +1,5 @@
-import { ObjectType, Field, InputType } from "type-graphql";
-import { PaginatedResponse } from "./paginated-response";
+import { ObjectType, Field, InputType } from "type-graphql"
+import { PaginatedResponse } from "./paginated-response"
 
 @ObjectType()
 export class AddressClusterDailyBalanceChange {

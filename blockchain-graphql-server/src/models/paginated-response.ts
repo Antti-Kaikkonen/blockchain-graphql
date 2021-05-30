@@ -1,4 +1,4 @@
-import { ObjectType, ClassType, Field } from "type-graphql";
+import { ObjectType, ClassType, Field } from "type-graphql"
 
 export function PaginatedResponse<TItem>(TItemClass: ClassType<TItem>) {
     // `isAbstract` decorator option is mandatory to prevent registering in schema
@@ -12,5 +12,5 @@ export function PaginatedResponse<TItem>(TItemClass: ClassType<TItem>) {
         //@Field({complexity: 0}) //Specifying complexity here does not work so we force to implement this field in the subclass where complexity works
         abstract hasMore: boolean;
     }
-    return PaginatedResponseClass;
+    return PaginatedResponseClass
 }
