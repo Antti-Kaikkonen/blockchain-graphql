@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TransactionInputWithOutput {
-    
+
     public TransactionInputWithOutput(TransactionInput input, TransactionOutput spentOutput) {
         this.coinbase = input.getCoinbase();
         this.sequence = input.getSequence();
@@ -17,7 +17,7 @@ public class TransactionInputWithOutput {
         this.scriptSig = input.getScriptSig();
         this.spentOutput = spentOutput;
     }
-    
+
     private String coinbase;
     private long sequence;
     private String txid;

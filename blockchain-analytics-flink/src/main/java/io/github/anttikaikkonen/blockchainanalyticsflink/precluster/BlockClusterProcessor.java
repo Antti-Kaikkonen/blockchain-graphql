@@ -19,12 +19,11 @@ import org.apache.flink.statefun.sdk.Address;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
-public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>, RoutableMessage>  {
+public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>, RoutableMessage> {
 
     private ListState<SimpleAddAddressesAndTransactionsOperation> persistedOps;
     private ValueState<Long> persistedTime;
-    
-    
+
     @Override
     public void open(Configuration parameters) throws Exception {
         this.persistedOps = getRuntimeContext().getListState(new ListStateDescriptor<>("ops", SimpleAddAddressesAndTransactionsOperation.class));
@@ -43,7 +42,7 @@ public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<
         this.persistedOps.clear();
         this.persistedTime.clear();
     }
-    
+
     private static List<String> descendants(String root, Map<String, List<String>> parentToChildren) {
         List<String> children = parentToChildren.get(root);
         ArrayList<String> all = new ArrayList<>();
@@ -55,10 +54,10 @@ public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<
         }
         return all;
     }
-    
+
     @Override
     public void processElement(Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]> blockCluster, Context ctx, Collector<RoutableMessage> out) throws Exception {
-        
+
         for (SimpleAddAddressesAndTransactionsOperation op : blockCluster.f1) {
             this.persistedOps.add(op);
             if (op.addresses.length > 1) {
@@ -119,18 +118,17 @@ public class BlockClusterProcessor extends KeyedProcessFunction<Integer, Tuple2<
                 out.collect(rm);
             }
         }
-        */
-        
+         */
+
         persistedTime.update(ctx.timestamp());
         long currentTime = System.currentTimeMillis();
-        long ago = currentTime-ctx.timestamp();
-        long processTime = ctx.timestamp()+Math.round(ago*0.5);
-        if (currentTime-processTime < Duration.ofDays(1).toMillis()) {//Process the last 24 hours in real-time
-            ctx.timerService().registerEventTimeTimer(Math.max(ctx.timestamp(), currentTime-Duration.ofDays(1).toMillis()));
+        long ago = currentTime - ctx.timestamp();
+        long processTime = ctx.timestamp() + Math.round(ago * 0.5);
+        if (currentTime - processTime < Duration.ofDays(1).toMillis()) {//Process the last 24 hours in real-time
+            ctx.timerService().registerEventTimeTimer(Math.max(ctx.timestamp(), currentTime - Duration.ofDays(1).toMillis()));
         } else {
             ctx.timerService().registerEventTimeTimer(processTime);
         }
     }
-
 
 }

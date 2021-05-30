@@ -23,42 +23,42 @@ import java.time.Instant;
 import java.util.Date;
 
 public class AddressSink extends CassandraSaverFunction<Object> {
-    
+
     public static final int CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT = 20;
     public static final int CLUSTER_BALANCE_BIN_COUNT = 100;
-    
+
     private transient Mapper<OHLC> ohlcMapper;
     private transient Mapper<TopGainers> gainersMapper;
     private transient Mapper<TopLosers> losersMapper;
     private transient Mapper<RichList> richListMapper;
     private transient Mapper<AddressBalance> addressBalanceMapper;
-    
+
     private transient PreparedStatement addTransactionStatement;
-    
+
     private transient PreparedStatement setParentStatement;
-    
+
     private transient PreparedStatement makesetStatement;
-    
+
     private transient PreparedStatement addAddressStatement;
-    
+
     private transient PreparedStatement deleteAddressesStatement;
-    
+
     private transient PreparedStatement deleteTransactionsStatement;
-    
+
     private transient PreparedStatement setBalanceStatement;
-    
+
     private transient PreparedStatement deleteBalanceStatement;
-    
+
     private transient PreparedStatement deleteDailyBalanceChangesStatement;
-    
+
     private transient PreparedStatement setDailyBalanceChangeStatement;
-    
+
     private transient Session session;
-    
+
     public AddressSink(CassandraSessionBuilder sessionBuilder) {
         super(sessionBuilder);
     }
-    
+
     @Override
     public ListenableFuture saveAsync(Object input) {
         if (input instanceof AddressOperation) {
@@ -77,14 +77,14 @@ public class AddressSink extends CassandraSaverFunction<Object> {
                 return this.session.executeAsync(this.addAddressStatement.bind(address, addAddress.getAddress()));
             } else if (op instanceof AddTransactionOperation) {
                 AddTransactionOperation addTransaction = (AddTransactionOperation) op;
-                return this.session.executeAsync(this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), (double) addTransaction.getDelta()/1e8));
+                return this.session.executeAsync(this.addTransactionStatement.bind(address, Date.from(Instant.ofEpochMilli(addTransaction.getTime())), addTransaction.getHeight(), addTransaction.getTx_n(), (double) addTransaction.getDelta() / 1e8));
             } else if (op instanceof SetDailyBalanceChange) {
-                byte cluster_balance_change_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT);
+                byte cluster_balance_change_bin = (byte) (Math.abs(address.hashCode()) % CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT);
                 SetDailyBalanceChange setDailyBalanceChange = (SetDailyBalanceChange) op;
-                return this.session.executeAsync(this.setDailyBalanceChangeStatement.bind(address, cluster_balance_change_bin, LocalDate.fromDaysSinceEpoch((int)setDailyBalanceChange.getEpochDate()), (double) setDailyBalanceChange.getBalanceChange()/1e8));
+                return this.session.executeAsync(this.setDailyBalanceChangeStatement.bind(address, cluster_balance_change_bin, LocalDate.fromDaysSinceEpoch((int) setDailyBalanceChange.getEpochDate()), (double) setDailyBalanceChange.getBalanceChange() / 1e8));
             } else if (op instanceof DeleteCluster) {
-                byte cluster_balance_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_BALANCE_BIN_COUNT);
-                byte cluster_balance_change_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT);
+                byte cluster_balance_bin = (byte) (Math.abs(address.hashCode()) % CLUSTER_BALANCE_BIN_COUNT);
+                byte cluster_balance_change_bin = (byte) (Math.abs(address.hashCode()) % CLUSTER_DAILY_BALANCE_CHANGE_BIN_COUNT);
                 return Futures.allAsList(
                         this.session.executeAsync(this.deleteAddressesStatement.bind(address)),
                         this.session.executeAsync(this.deleteTransactionsStatement.bind(address)),
@@ -92,9 +92,9 @@ public class AddressSink extends CassandraSaverFunction<Object> {
                         this.session.executeAsync(this.deleteBalanceStatement.bind(address, cluster_balance_bin))
                 );
             } else if (op instanceof SetBalanceOperation) {
-                byte cluster_balance_bin = (byte) (Math.abs(address.hashCode())%CLUSTER_BALANCE_BIN_COUNT);
+                byte cluster_balance_bin = (byte) (Math.abs(address.hashCode()) % CLUSTER_BALANCE_BIN_COUNT);
                 SetBalanceOperation setBalance = (SetBalanceOperation) op;
-                return this.session.executeAsync(setBalanceStatement.bind(address, cluster_balance_bin, (double)setBalance.getBalance()/1e8));
+                return this.session.executeAsync(setBalanceStatement.bind(address, cluster_balance_bin, (double) setBalance.getBalance() / 1e8));
             } else {
                 op.getClass();
                 throw new RuntimeException("Unsupported AddressOperation type");
@@ -129,13 +129,11 @@ public class AddressSink extends CassandraSaverFunction<Object> {
 
         deleteAddressesStatement = session.prepare("DELETE FROM cluster_address WHERE cluster_id = ?");
         deleteTransactionsStatement = session.prepare("DELETE FROM cluster_transaction WHERE cluster_id = ?");
-        
+
         setBalanceStatement = session.prepare("INSERT INTO cluster_details (cluster_id, bin, balance) VALUES (?, ?, ?)");
         setDailyBalanceChangeStatement = session.prepare("INSERT INTO cluster_daily_balance_change (cluster_id, bin, date, balance_change) VALUES (?, ?, ?, ?)");
         deleteBalanceStatement = session.prepare("DELETE FROM cluster_details WHERE cluster_id = ? AND bin = ?");
         deleteDailyBalanceChangesStatement = session.prepare("DELETE FROM cluster_daily_balance_change WHERE cluster_id = ? AND bin = ?");
     }
-
-
 
 }

@@ -10,12 +10,11 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 
-
 public class AsyncBlockFetcher extends RichAsyncFunction<String, Block> {
 
     private transient RpcClient client = null;
     private final Supplier<RpcClient> rpcClientSupplier;
-    
+
     public AsyncBlockFetcher(Supplier<RpcClient> rpcClientSupplier) {
         this.rpcClientSupplier = rpcClientSupplier;
     }
@@ -24,8 +23,7 @@ public class AsyncBlockFetcher extends RichAsyncFunction<String, Block> {
     public void open(Configuration parameters) throws Exception {
         this.client = this.rpcClientSupplier.get();
     }
-    
-    
+
     @Override
     public void close() throws Exception {
         this.client.close();
@@ -46,6 +44,5 @@ public class AsyncBlockFetcher extends RichAsyncFunction<String, Block> {
             }
         }, org.apache.flink.runtime.concurrent.Executors.directExecutor());
     }
-   
-    
+
 }

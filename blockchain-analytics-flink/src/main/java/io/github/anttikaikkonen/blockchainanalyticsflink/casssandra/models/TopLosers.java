@@ -9,32 +9,32 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Table(name="daily_top_losers")
+@Table(name = "daily_top_losers")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class TopLosers {
-    
+
     public static final int BIN_COUNT = 20;
-    
+
     public TopLosers(LocalDate date, String address, double balanceChange) {
-        this.bin = (byte) (Math.abs(address.hashCode())%BIN_COUNT);
+        this.bin = (byte) (Math.abs(address.hashCode()) % BIN_COUNT);
         this.date = date;
         this.address = address;
         this.balanceChange = balanceChange;
     }
-    
+
     @PartitionKey(0)
     private LocalDate date;
-    
+
     @PartitionKey(1)
     private byte bin;
-   
+
     @ClusteringColumn(1)
     private String address;
-    
+
     @ClusteringColumn(0)
-    @Column(name="balance_change")
+    @Column(name = "balance_change")
     private double balanceChange;
-    
+
 }

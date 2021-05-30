@@ -8,12 +8,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@UDT(name="scriptpubkey")
+@UDT(name = "scriptpubkey")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ScriptPubKey {
-    
+
     public ScriptPubKey(io.github.anttikaikkonen.bitcoinrpcclientjava.models.ScriptPubKey rpcPubkey) {
         this.asm = rpcPubkey.getAsm();
         this.hex = rpcPubkey.getHex();
@@ -23,12 +23,12 @@ public class ScriptPubKey {
             this.addresses = Arrays.asList(rpcPubkey.getAddresses());
         }
     }
-    
+
     String asm;
     String hex;
     int reqSigs;
     String type;
     @Frozen
     List<String> addresses;
-    
+
 }

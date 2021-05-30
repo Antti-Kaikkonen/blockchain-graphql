@@ -9,16 +9,15 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 
-
-public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Void>{
+public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Void> {
 
     private transient MappingManager manager;
     private final CassandraSessionBuilder sessionBuilder;
-    
+
     public CassandraSaverFunction(CassandraSessionBuilder sessionBuilder) {
         this.sessionBuilder = sessionBuilder;
     }
-    
+
     @Override
     public void asyncInvoke(E input, ResultFuture<Void> resultFuture) throws Exception {
         ListenableFuture future = saveAsync(input);
@@ -34,20 +33,22 @@ public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Voi
                     //timeout(input, resultFuture);
                 } else if (ex instanceof com.datastax.driver.core.exceptions.ConnectionException) {
                 } else {
-                    
+
                 }
-                System.out.println("OnFailure "+ex.getMessage());
+                System.out.println("OnFailure " + ex.getMessage());
                 resultFuture.completeExceptionally(ex);
             }
         });
-        
+
     }
-    
+
     public abstract ListenableFuture saveAsync(E input);
 
     @Override
     public void close() throws Exception {
-        if (this.manager == null) return;
+        if (this.manager == null) {
+            return;
+        }
         try {
             if (this.manager.getSession() != null) {
                 this.manager.getSession().close();
@@ -66,15 +67,13 @@ public abstract class CassandraSaverFunction<E> extends RichAsyncFunction<E, Voi
         }
         this.manager = null;
     }
-    
-    
+
     @Override
     public void open(Configuration parameters) throws Exception {
         this.manager = new MappingManager(sessionBuilder.build());
         initMappers(manager);
     }
-    
+
     public abstract void initMappers(MappingManager manager);
 
-    
 }

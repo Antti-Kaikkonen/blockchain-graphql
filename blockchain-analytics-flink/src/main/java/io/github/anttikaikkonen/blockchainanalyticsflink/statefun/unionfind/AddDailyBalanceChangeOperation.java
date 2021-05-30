@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AddDailyBalanceChangeOperation {
+
     private int epochDate;
     private long balanceChange;
 }

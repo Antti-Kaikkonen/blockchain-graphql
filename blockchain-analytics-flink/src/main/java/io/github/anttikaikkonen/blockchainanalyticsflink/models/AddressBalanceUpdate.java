@@ -6,14 +6,14 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class AddressBalanceUpdate extends AddressBalance {
-    
+
     public AddressBalanceUpdate(String address, double balance, long previousBalance, Date timestamp) {
         this.setAddress(address);
         this.setBalance(balance);
         this.setTimestamp(timestamp);
         this.previousBalance = previousBalance;
     }
-    
+
     private long previousBalance;
 
     public long getPreviousBalance() {
@@ -23,7 +23,5 @@ public class AddressBalanceUpdate extends AddressBalance {
     public void setPreviousBalance(long previousBalance) {
         this.previousBalance = previousBalance;
     }
-    
-    
-    
+
 }

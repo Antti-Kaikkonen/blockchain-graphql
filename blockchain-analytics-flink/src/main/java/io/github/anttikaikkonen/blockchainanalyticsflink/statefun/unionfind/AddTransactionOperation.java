@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class AddTransactionOperation {
+
     long time;
     int height;
     int tx_n;

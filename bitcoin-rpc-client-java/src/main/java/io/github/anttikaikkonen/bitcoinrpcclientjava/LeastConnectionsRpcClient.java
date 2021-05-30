@@ -16,13 +16,13 @@ import java.util.function.Supplier;
 public class LeastConnectionsRpcClient implements RpcClient {
 
     private final RpcClient[] clients;
-    
+
     private final PriorityBlockingQueue<RpcClientWithConnections> queue;
-    
+
     private long currentAge = 0;
-    
+
     private transient ScheduledExecutorService bannedNodeChecker = Executors.newSingleThreadScheduledExecutor();
-    
+
     public LeastConnectionsRpcClient(RpcClient[] clients) {
         this.clients = clients;
         this.queue = new PriorityBlockingQueue<>(clients.length);
@@ -31,7 +31,7 @@ public class LeastConnectionsRpcClient implements RpcClient {
             this.currentAge++;
         }
     }
-    
+
     @Override
     public CompletionStage<Integer> getBlockCount() {
         return new TryAllAvailableHosts<>((RpcClient client) -> client.getBlockCount()).get();
@@ -60,19 +60,21 @@ public class LeastConnectionsRpcClient implements RpcClient {
         queue.add(take);
         return take;
     }
-    
+
     private synchronized void removeAndDecrement(RpcClientWithConnections take) {
         boolean removed = queue.remove(take);
         take.connections--;
-        if (!removed) return;//banned by other concurrent request.
+        if (!removed) {
+            return;//banned by other concurrent request.
+        }
         queue.add(take);
     }
-    
+
     private void scheduleBannedNodeCheck(RpcClientWithConnections take) {
         bannedNodeChecker.schedule(() -> {
             take.client.getBlockCount().whenCompleteAsync((result, error) -> {
                 if (result != null) {
-                    System.out.println("Unbanning "+take.client);
+                    System.out.println("Unbanning " + take.client);
                     take.age = currentAge;
                     this.currentAge++;
                     queue.add(take);//Node back online. Make available for requests.
@@ -82,12 +84,14 @@ public class LeastConnectionsRpcClient implements RpcClient {
             });
         }, 10, TimeUnit.SECONDS);
     }
-    
+
     private synchronized void banClient(RpcClientWithConnections take) {
         boolean removed = queue.remove(take);
         take.connections--;
-        if (!removed) return;//already banned by other concurrent request
-        System.out.println("Banning "+take.client);
+        if (!removed) {
+            return;//already banned by other concurrent request
+        }
+        System.out.println("Banning " + take.client);
         scheduleBannedNodeCheck(take);
     }
 
@@ -98,12 +102,11 @@ public class LeastConnectionsRpcClient implements RpcClient {
             client.close();
         }
     }
-    
-    
+
     private class TryAllAvailableHosts<E> implements Supplier<CompletionStage<E>> {
 
         private Function<RpcClient, CompletionStage<E>> clientAction;
-        
+
         public TryAllAvailableHosts(Function<RpcClient, CompletionStage<E>> clientAction) {
             this.clientAction = clientAction;
         }
@@ -118,7 +121,7 @@ public class LeastConnectionsRpcClient implements RpcClient {
                     public E apply(E result, Throwable error) {
                         if (result == null) {
                             banClient(take);
-                            System.out.println("client error "+error);
+                            System.out.println("client error " + error);
                             if (queue.isEmpty()) {
                                 throw new RuntimeException("No host available", error);
                             }
@@ -142,17 +145,15 @@ public class LeastConnectionsRpcClient implements RpcClient {
                 throw new RuntimeException(ex);
             }
         }
-        
-        
+
     }
-    
-    
+
     private class RpcClientWithConnections implements Comparable<RpcClientWithConnections>, Serializable {
-        
+
         private final RpcClient client;
         private Integer connections;
         private Long age;
-        
+
         public RpcClientWithConnections(RpcClient client, long age) {
             this.client = client;
             this.connections = 0;
@@ -162,9 +163,11 @@ public class LeastConnectionsRpcClient implements RpcClient {
         @Override
         public int compareTo(RpcClientWithConnections o) {
             int res = this.connections.compareTo(o.connections);
-            if (res != 0) return res;
+            if (res != 0) {
+                return res;
+            }
             return this.age.compareTo(o.age);//break ties by choosing least recently used first
         }
-    }   
+    }
 
 }

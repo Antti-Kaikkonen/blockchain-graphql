@@ -17,7 +17,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.co.KeyedCoProcessFunction;
 import org.apache.flink.util.Collector;
 
-
 public class TransactionAttacher extends KeyedCoProcessFunction<String, SpentOutput, ConfirmedTransaction, ConfirmedTransactionWithInputs> {
 
     //We store transaction by time because multiple blocks can have a coinbase transaction with the same txid. Exaxmple: BTC block 91722 and 91880
@@ -56,7 +55,7 @@ public class TransactionAttacher extends KeyedCoProcessFunction<String, SpentOut
         inputState.clear();
         out.collect(new ConfirmedTransactionWithInputs(transaction, inputsWithOutputs, timestamp));
     }
-    
+
     @Override
     public void processElement1(SpentOutput value, Context ctx, Collector<ConfirmedTransactionWithInputs> out) throws Exception {
         inputState.add(value);
@@ -73,5 +72,5 @@ public class TransactionAttacher extends KeyedCoProcessFunction<String, SpentOut
             ctx.timerService().registerEventTimeTimer(ctx.timestamp());
         }
     }
-    
+
 }

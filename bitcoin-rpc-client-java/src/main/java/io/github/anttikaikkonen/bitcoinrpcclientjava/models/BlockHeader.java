@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BlockHeader {
-    
+
     private String hash;
     private int height;
     private int confirmations;
@@ -24,5 +24,5 @@ public class BlockHeader {
     private String chainwork;
     private String previousblockhash;
     private String nextblockhash;
-    
+
 }

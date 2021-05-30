@@ -18,15 +18,15 @@ public class TransactionClustering extends ProcessFunction<ConfirmedTransactionW
         for (TransactionInputWithOutput vin : tx.getInputsWithOutputs()) {
             try {
                 String address = vin.getSpentOutput().getScriptPubKey().getAddresses()[0];
-                unionFind.addTx(address, tx.getTxN(), Math.round(-vin.getSpentOutput().getValue()*1e8));
-            } catch(Exception ex) {
+                unionFind.addTx(address, tx.getTxN(), Math.round(-vin.getSpentOutput().getValue() * 1e8));
+            } catch (Exception ex) {
             }
         }
         for (TransactionOutput vout : tx.getVout()) {
             try {
                 String address = vout.getScriptPubKey().getAddresses()[0];
-                unionFind.addTx(address, tx.getTxN(), Math.round(vout.getValue()*1e8));
-            } catch(Exception ex) {
+                unionFind.addTx(address, tx.getTxN(), Math.round(vout.getValue() * 1e8));
+            } catch (Exception ex) {
             }
         }
         if (!tx.possiblyCoinJoin()) {
@@ -37,7 +37,7 @@ public class TransactionClustering extends ProcessFunction<ConfirmedTransactionW
                     if (address != null) {
                         inputAddresses.add(address);
                     }
-                } catch(Exception ex) {
+                } catch (Exception ex) {
                 }
             }
             String firstAddress = null;
@@ -52,5 +52,5 @@ public class TransactionClustering extends ProcessFunction<ConfirmedTransactionW
         }
         out.collect(Tuple2.of(tx.getHeight(), unionFind.toAddOps()));
     }
-    
+
 }

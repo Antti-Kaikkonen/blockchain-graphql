@@ -19,8 +19,8 @@ import org.apache.flink.util.Collector;
 
 public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2<String, Long>, Object> {
 
-    private static final long MILLIS_IN_DAY = 1000*60*60*24;
-    
+    private static final long MILLIS_IN_DAY = 1000 * 60 * 60 * 24;
+
     ValueState<Long> balanceState;
     MapState<Long, Long> timeToBlockDelta;
     MapState<Long, OHLC> dateToOHLC;
@@ -31,25 +31,29 @@ public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2
         this.balanceState = getRuntimeContext().getState(new ValueStateDescriptor<>("balance", Long.class));
         this.dateToOHLC = getRuntimeContext().getMapState(new MapStateDescriptor<>("date_to_ohlc", Long.class, OHLC.class));
     }
-    
+
     @Override
     public void onTimer(long timestamp, OnTimerContext ctx, Collector<Object> out) throws Exception {
         Long blockDelta = timeToBlockDelta.get(timestamp);
         Long oldBalance = balanceState.value();
-        if (oldBalance == null) oldBalance = 0l;
+        if (oldBalance == null) {
+            oldBalance = 0l;
+        }
         long epochDate = timestampToEpochDate(timestamp);
         OHLC ohlc = dateToOHLC.get(epochDate);
-        if (ohlc == null) ohlc = new OHLC();
+        if (ohlc == null) {
+            ohlc = new OHLC();
+        }
         long balance;
         if (blockDelta != null) {
             balance = oldBalance + blockDelta;
             balanceState.update(balance);
-            AddressBalance addressBalance = new AddressBalance(ctx.getCurrentKey(), Date.from(Instant.ofEpochMilli(ctx.timestamp())), (double) balance/1e8);
+            AddressBalance addressBalance = new AddressBalance(ctx.getCurrentKey(), Date.from(Instant.ofEpochMilli(ctx.timestamp())), (double) balance / 1e8);
             out.collect(addressBalance);
             if (ohlc.getOpen() == null) {
                 ohlc.setAddress(ctx.getCurrentKey());
                 ohlc.setTimestamp(Date.from(Instant.ofEpochMilli(startOfDay(timestamp))));
-                ohlc.setInterval((int)MILLIS_IN_DAY);
+                ohlc.setInterval((int) MILLIS_IN_DAY);
                 //long previousBalance = value.getBalance()-value.getBalanceChange();
                 ohlc.setOpen((double) oldBalance / 1e8);
                 ohlc.setHigh((double) Math.max(balance, oldBalance) / 1e8);
@@ -81,49 +85,49 @@ public class AddressBalanceProcessor extends KeyedProcessFunction<String, Tuple2
                 /*Integer.valueOf(x).
                 int r = x%256;
                 if (r < 0) {
-                    r -= 256; 
+                    r -= 256;
                 }*/
                 //int bin = ctx.getCurrentKey().hashCode()%256;
                 //if (bin)
-                TopGainers gainer = new TopGainers(LocalDate.fromDaysSinceEpoch((int)epochDate), ctx.getCurrentKey(), (double)dailyDelta/1e8);
+                TopGainers gainer = new TopGainers(LocalDate.fromDaysSinceEpoch((int) epochDate), ctx.getCurrentKey(), (double) dailyDelta / 1e8);
                 out.collect(gainer);
             } else if (dailyDelta < 0) {
-                TopLosers loser = new TopLosers(LocalDate.fromDaysSinceEpoch((int)epochDate), ctx.getCurrentKey(), (double)dailyDelta/1e8);
+                TopLosers loser = new TopLosers(LocalDate.fromDaysSinceEpoch((int) epochDate), ctx.getCurrentKey(), (double) dailyDelta / 1e8);
                 out.collect(loser);
             }
             if (balance > 100e8) {
-                RichList rich = new RichList(ctx.getCurrentKey(), (double)balance/1e8, (double)(balance-dailyDelta)/1e8, timestamp);
+                RichList rich = new RichList(ctx.getCurrentKey(), (double) balance / 1e8, (double) (balance - dailyDelta) / 1e8, timestamp);
                 out.collect(rich);
-                ctx.timerService().registerEventTimeTimer(timestamp+MILLIS_IN_DAY);//Process rich addresses every 24 hours
+                ctx.timerService().registerEventTimeTimer(timestamp + MILLIS_IN_DAY);//Process rich addresses every 24 hours
             }
             //emit OHLC etc
         }
     }
-    
+
     private long timestampToEpochDate(long timestamp) {
-        return timestamp/MILLIS_IN_DAY;
+        return timestamp / MILLIS_IN_DAY;
     }
-    
+
     private long epochDateToTimeStamp(long epochDate) {
-        return epochDate*MILLIS_IN_DAY;
+        return epochDate * MILLIS_IN_DAY;
     }
-    
+
     private long endOfDay(long timestamp) {
         long day = timestampToEpochDate(timestamp);
-        return epochDateToTimeStamp(day+1)-1;
+        return epochDateToTimeStamp(day + 1) - 1;
     }
-    
-     private long startOfDay(long timestamp) {
+
+    private long startOfDay(long timestamp) {
         long day = timestampToEpochDate(timestamp);
         return epochDateToTimeStamp(day);
     }
-    
+
     @Override
     public void processElement(Tuple2<String, Long> balanceChange, Context ctx, Collector<Object> arg2) throws Exception {
         Long oldDelta = timeToBlockDelta.get(ctx.timestamp());
         timeToBlockDelta.put(ctx.timestamp(), oldDelta == null ? balanceChange.f1 : oldDelta + balanceChange.f1);
         ctx.timerService().registerEventTimeTimer(endOfDay(ctx.timestamp()));
-        
+
         ctx.timerService().registerEventTimeTimer(ctx.timestamp());
     }
 

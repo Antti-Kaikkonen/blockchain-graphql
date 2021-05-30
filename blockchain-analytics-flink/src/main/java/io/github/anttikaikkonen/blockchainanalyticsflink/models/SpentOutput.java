@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SpentOutput {
+
     String spending_txid;
     //String txid;
     Integer input_index;

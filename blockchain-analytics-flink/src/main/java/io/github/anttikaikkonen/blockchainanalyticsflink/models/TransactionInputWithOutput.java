@@ -12,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TransactionInputWithOutput extends TransactionInput {
-    
+
     public TransactionInputWithOutput(TransactionInput input, TransactionOutput spentOutput) {
         setCoinbase(input.getCoinbase());
         setSequence(input.getSequence());

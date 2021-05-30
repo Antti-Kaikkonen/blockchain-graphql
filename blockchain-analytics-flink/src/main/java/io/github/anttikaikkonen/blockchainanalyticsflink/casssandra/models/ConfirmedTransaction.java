@@ -13,16 +13,16 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name="confirmed_transaction")
+@Table(name = "confirmed_transaction")
 public class ConfirmedTransaction {
-    
+
     @PartitionKey
     int height;
-    
+
     //@CqlName("tx_n")
     @ClusteringColumn(0)
-    @Column(name="tx_n")
+    @Column(name = "tx_n")
     int txN;
-    
+
     String txid;
 }

@@ -6,15 +6,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Table(name="longest_chain")
+@Table(name = "longest_chain")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class LongestChain {
-    
+
     @PartitionKey
     int height;
-    
+
     String hash;
-    
+
 }

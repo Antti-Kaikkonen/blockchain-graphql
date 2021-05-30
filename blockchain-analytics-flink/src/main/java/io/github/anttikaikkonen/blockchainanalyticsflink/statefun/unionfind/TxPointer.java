@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode
 public class TxPointer {
+
     long time;
     int height;
     int tx_n;

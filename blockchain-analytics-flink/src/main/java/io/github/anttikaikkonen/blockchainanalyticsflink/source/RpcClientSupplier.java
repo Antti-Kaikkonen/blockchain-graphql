@@ -18,13 +18,12 @@ import org.apache.http.impl.nio.reactor.IOReactorConfig;
 @AllArgsConstructor
 @Getter
 public class RpcClientSupplier implements Supplier<RpcClient>, Serializable {
-    
+
     private final String blockchainUsername;
     private final String blockchainPassword;
     private final String[] blockchainRpcURLS;
     private final int maxConnectionsPerRoute;
     private final int maxConnectionsTotal;
-
 
     @Override
     public RpcClient get() {
@@ -33,7 +32,6 @@ public class RpcClientSupplier implements Supplier<RpcClient>, Serializable {
                 AuthScope.ANY,
                 new UsernamePasswordCredentials(blockchainUsername, blockchainPassword)
         );
-
 
         IOReactorConfig ioReactorConfig = IOReactorConfig.custom()
                 .setIoThreadCount(1)
@@ -47,11 +45,11 @@ public class RpcClientSupplier implements Supplier<RpcClient>, Serializable {
                 .build();
         httpClient.start();
 
-        RpcClient[] clients =  new RpcClient[blockchainRpcURLS.length];
+        RpcClient[] clients = new RpcClient[blockchainRpcURLS.length];
         for (int i = 0; i < clients.length; i++) {
             clients[i] = new RpcClientImpl(httpClient, blockchainRpcURLS[i].trim());//new LimitedCapacityRpcClient(httpClient, blockchainRpcURLS[i].trim(), parallelism);
         }
         return new LeastConnectionsRpcClient(clients);
     }
-    
+
 }

@@ -10,14 +10,13 @@ import java.util.List;
 
 public class BlockSink extends CassandraSaverFunction<Block> {
 
-    
     private transient Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block> blockMapper;
     private transient Mapper<LongestChain> heightMapper;
-    
+
     public BlockSink(CassandraSessionBuilder sessionBuilder) {
         super(sessionBuilder);
     }
-    
+
     @Override
     public ListenableFuture saveAsync(Block block) {
         io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block block2 = new io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block(block);
@@ -32,7 +31,7 @@ public class BlockSink extends CassandraSaverFunction<Block> {
     public void initMappers(MappingManager manager) {
         this.heightMapper = manager.mapper(LongestChain.class);
         this.blockMapper = manager.mapper(io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Block.class);
-        
+
     }
-    
+
 }

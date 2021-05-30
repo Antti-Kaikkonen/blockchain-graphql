@@ -11,19 +11,19 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name="transaction_input")
+@Table(name = "transaction_input")
 public class TransactionInput {
-    
+
     @PartitionKey
     String spending_txid;
     @ClusteringColumn(0)
     int spending_index;
-    
+
     String txid;
     int vout;
     String coinbase;
     long sequence;
-    @Column(name="scriptsig")
+    @Column(name = "scriptsig")
     ScriptSig scriptSig;
-    
+
 }

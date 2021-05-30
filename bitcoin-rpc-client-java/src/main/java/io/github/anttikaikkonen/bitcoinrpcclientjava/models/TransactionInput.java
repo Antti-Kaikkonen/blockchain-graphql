@@ -8,11 +8,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TransactionInput {
-    
+
     private String coinbase;
     private long sequence;
     private String txid;
     private int vout;
     private ScriptSig scriptSig;
-    
+
 }

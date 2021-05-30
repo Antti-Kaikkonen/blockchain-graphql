@@ -7,14 +7,14 @@ import java.util.concurrent.Semaphore;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 
 public class LimitedCapacityRpcClient extends RpcClientImpl {
-    
+
     private final Semaphore semaphore;
-    
+
     public LimitedCapacityRpcClient(CloseableHttpAsyncClient client, String url, int capacity) {
         super(client, url);
         this.semaphore = new Semaphore(capacity, true);
     }
-    
+
     private void acquire() {
         try {
             semaphore.acquire();
@@ -23,11 +23,11 @@ public class LimitedCapacityRpcClient extends RpcClientImpl {
             throw new RuntimeException(ex);
         }
     }
-    
+
     private void release() {
         semaphore.release();
     }
-    
+
     @Override
     public CompletionStage<Integer> getBlockCount() {
         acquire();
@@ -39,7 +39,7 @@ public class LimitedCapacityRpcClient extends RpcClientImpl {
         acquire();
         return super.getBlockHash(height).whenComplete((v, err) -> release());
     }
-    
+
     @Override
     public CompletionStage<Block> getBlock(String hash) {
         acquire();
@@ -51,5 +51,5 @@ public class LimitedCapacityRpcClient extends RpcClientImpl {
         acquire();
         return super.getBlockHeader(fromHash).whenComplete((v, err) -> release());
     }
-    
+
 }

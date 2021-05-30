@@ -11,12 +11,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class ConfirmedTransactionWithInputs extends ConfirmedTransaction {
-    
+
     private long timestamp;
-    
+
     private TransactionInputWithOutput[] inputsWithOutputs;
     //private TransactionInputWithOutput[] vin;
-    
+
     public ConfirmedTransactionWithInputs(ConfirmedTransaction confirmedTransaction, TransactionInputWithOutput[] vin, long timestamp) {
         this.setHeight(confirmedTransaction.getHeight());
         this.setTxN(confirmedTransaction.getTxN());
@@ -29,7 +29,7 @@ public class ConfirmedTransactionWithInputs extends ConfirmedTransaction {
         this.setVout(confirmedTransaction.getVout());
         this.timestamp = timestamp;
     }
-    
+
     public boolean possiblyCoinJoin() {
         Set<String> inputAddresses = new HashSet<>();
         for (TransactionInputWithOutput vin : getInputsWithOutputs()) {
@@ -38,20 +38,24 @@ public class ConfirmedTransactionWithInputs extends ConfirmedTransaction {
                 if (address != null) {
                     inputAddresses.add(address);
                 }
-            } catch(Exception ex) {
+            } catch (Exception ex) {
             }
         }
-        if (inputAddresses.size() < 2) return false;
+        if (inputAddresses.size() < 2) {
+            return false;
+        }
         Map<Long, String> outputAmount2Address = new HashMap<>();
         for (TransactionOutput vout : getVout()) {
             String address;
             try {
                 address = vout.getScriptPubKey().getAddresses()[0];
-                if (address == null) continue;
-            } catch(Exception ex) {
+                if (address == null) {
+                    continue;
+                }
+            } catch (Exception ex) {
                 continue;
             }
-            long value = Math.round(vout.getValue()*1e8);
+            long value = Math.round(vout.getValue() * 1e8);
             String equalAmountAddress = outputAmount2Address.get(value);
             if (equalAmountAddress != null && !equalAmountAddress.equals(address)) {
                 return true;
@@ -61,6 +65,5 @@ public class ConfirmedTransactionWithInputs extends ConfirmedTransaction {
         }
         return false;
     }
-   
 
 }

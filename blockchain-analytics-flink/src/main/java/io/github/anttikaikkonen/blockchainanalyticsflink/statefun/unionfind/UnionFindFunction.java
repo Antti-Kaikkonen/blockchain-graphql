@@ -1,6 +1,5 @@
 package io.github.anttikaikkonen.blockchainanalyticsflink.statefun.unionfind;
 
-
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.AddressOperation;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.DeleteCluster;
 import io.github.anttikaikkonen.blockchainanalyticsflink.statefun.cassandraexecutor.SetBalanceOperation;
@@ -18,37 +17,37 @@ import org.apache.flink.statefun.sdk.state.PersistedTable;
 import org.apache.flink.statefun.sdk.state.PersistedValue;
 
 public class UnionFindFunction implements StatefulFunction {
-    
+
     public static final EgressIdentifier<AddressOperation> EGRESS = new EgressIdentifier<>("address_clustering", "union_find_sink", AddressOperation.class);
 
     public static final FunctionType TYPE = new FunctionType("address_clustering", "union_find");
-    
+
     @Persisted
     private final PersistedValue<Object> persistedParentOrSize = PersistedValue.of("parent", Object.class);//Parent address (String) or size (Long) if in the root node
-    
+
     @Persisted
     private final PersistedTable<String, String> persistedAddresses = PersistedTable.of("addresses", String.class, String.class);
 
     @Persisted
     private final PersistedTable<TxPointer, Long> persistedTransactions = PersistedTable.of("transactions", TxPointer.class, Long.class);
-    
+
     @Persisted
     private final PersistedTable<Integer, Long> persistedDailyBalanceChanges = PersistedTable.of("dailyBalanceChanges", Integer.class, Long.class);//Day -> balance_change
-    
+
     @Persisted
     private final PersistedValue<Long> persistedClusterTransactionCount = PersistedValue.of("clusterTransactionCount", Long.class);
-    
+
     @Persisted
     private final PersistedValue<Long> persistedBalance = PersistedValue.of("balance", Long.class);
-    
+
     public UnionFindFunction() {
     }
-    
+
     private void sendToCassandra(Context context, Object output) {
         AddressOperation op = new AddressOperation(context.self().id(), output);
         context.send(EGRESS, op);
     }
-    
+
     public void handleAddAddressesAndTransactionsOperation(AddAddressesAndTransactionsOperation op, Context context) {
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
 
@@ -59,7 +58,7 @@ public class UnionFindFunction implements StatefulFunction {
             }
             context.send(new Address(TYPE, parent), op);
         } else {
-            int day = (int) (op.getTimestamp()/1000/60/60/24);
+            int day = (int) (op.getTimestamp() / 1000 / 60 / 60 / 24);
             long oldTxCount = this.persistedClusterTransactionCount.getOrDefault(0l);
             long balanceChange = 0l;
             int newTransactions = 0;
@@ -67,12 +66,16 @@ public class UnionFindFunction implements StatefulFunction {
                 balanceChange += tx.getDelta();
                 TxPointer key = new TxPointer(op.getTimestamp(), op.getHeight(), tx.getTxN());
                 Long oldDelta = (oldTxCount == 0) ? null : persistedTransactions.get(key);
-                if (oldDelta == null) newTransactions++;
-                long newDelta = oldDelta == null ? tx.getDelta() : tx.getDelta()+oldDelta;
+                if (oldDelta == null) {
+                    newTransactions++;
+                }
+                long newDelta = oldDelta == null ? tx.getDelta() : tx.getDelta() + oldDelta;
                 persistedTransactions.set(key, newDelta);
                 sendToCassandra(context, new AddTransactionOperation(op.getTimestamp(), op.getHeight(), tx.getTxN(), newDelta));
             }
-            if (newTransactions > 0) this.persistedClusterTransactionCount.set(oldTxCount+newTransactions);
+            if (newTransactions > 0) {
+                this.persistedClusterTransactionCount.set(oldTxCount + newTransactions);
+            }
             final long totalBalanceChange = balanceChange;
             final long newBalance;
             if (oldTxCount == 0) {
@@ -84,10 +87,10 @@ public class UnionFindFunction implements StatefulFunction {
             sendToCassandra(context, new SetBalanceOperation(newBalance));
 
             Long oldDayBalanceChange = oldTxCount == 0 ? null : this.persistedDailyBalanceChanges.get(day);
-            long newDayBalanceChange = oldDayBalanceChange == null ? totalBalanceChange : oldDayBalanceChange + totalBalanceChange; 
+            long newDayBalanceChange = oldDayBalanceChange == null ? totalBalanceChange : oldDayBalanceChange + totalBalanceChange;
             this.persistedDailyBalanceChanges.set(day, newDayBalanceChange);
             sendToCassandra(context, new SetDailyBalanceChange(day, newDayBalanceChange));
-            
+
             String address = context.self().id();
             for (String addr : op.getAddresses()) {
                 if (addr.equals(address)) {
@@ -99,7 +102,7 @@ public class UnionFindFunction implements StatefulFunction {
             }
         }
     }
-    
+
     @Override
     public void invoke(Context context, Object input) {
         if (input instanceof MergeOperation) {
@@ -130,10 +133,10 @@ public class UnionFindFunction implements StatefulFunction {
             AddDailyBalanceChangeOperation e = (AddDailyBalanceChangeOperation) input;
             addDailyBalanceChange(context, e);
         } else {
-            throw new RuntimeException("Unkown type!"+input.getClass().getName());
+            throw new RuntimeException("Unkown type!" + input.getClass().getName());
         }
     }
-    
+
     private void merge(Context context, MergeOperation merge) {
         final String callerAddress;
         if (context.caller() != null && context.caller().type().equals(TYPE)) {
@@ -143,7 +146,7 @@ public class UnionFindFunction implements StatefulFunction {
         }
         String address = context.self().id();
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
-        
+
         if (parentOrSize instanceof Long) {
             long size = (long) parentOrSize;
             //long size = persistentAddressCount.get();
@@ -161,14 +164,14 @@ public class UnionFindFunction implements StatefulFunction {
                 String from = fromAddresses.next();
                 if (parent.equals(from)) {//Already in the same set
                     fromAddresses.remove();
-                } 
+                }
             }
             if (merge.getFromAddresses().size() > 0) {
                 context.send(new Address(TYPE, parent), merge);
             }
         }
     }
-    
+
     private void mergeRoot(Context context, MergeRootOperation mergeRoot) {
         String address = context.self().id();
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
@@ -177,7 +180,7 @@ public class UnionFindFunction implements StatefulFunction {
             if (mergeRoot.getRootSize() > size || (mergeRoot.getRootSize() == size && address.compareTo(mergeRoot.getRoot()) > 0)) {
                 setParent(context, mergeRoot.getRoot());
                 context.send(new Address(TYPE, mergeRoot.getRoot()), new SetSize(size, false));
-                
+
                 Long balanceToMerge = this.persistedBalance.get();
                 if (balanceToMerge != null) {
                     context.send(new Address(TYPE, mergeRoot.getRoot()), new AddBalanceOperation(balanceToMerge));
@@ -201,7 +204,7 @@ public class UnionFindFunction implements StatefulFunction {
                         context.send(new Address(TYPE, mergeRoot.getRoot()), addTx);
                     }
                     deleteCluster(context);
-                    
+
                 }
             } else {
                 context.send(new Address(TYPE, mergeRoot.getRoot()), new MergeRootOperation(address, size, false));//Merge from mergeRoot.getRoot() to this address
@@ -212,7 +215,7 @@ public class UnionFindFunction implements StatefulFunction {
                 if (mergeRoot.isCalledFromChild()) {
                     context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
                 }
-            } else  {
+            } else {
                 if (mergeRoot.isCalledFromChild()) {
                     context.send(new Address(TYPE, context.caller().id()), new Compress(parent));
                 }
@@ -221,24 +224,23 @@ public class UnionFindFunction implements StatefulFunction {
             }
         }
     }
-    
-    
+
     private void compress(Context context, Compress compress) {
         context.caller();
         String parent = (String) persistedParentOrSize.get();
-        
+
         if (parent.equals(compress.getTo())) {
         } else if (parent.equals(context.caller().id())) {
             setParent(context, compress.getTo());
         } else {
         }
     }
-    
+
     private void setSize(Context context, SetSize setSize) {
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
         if (parentOrSize instanceof Long) {
             long oldSize = (long) parentOrSize;
-            persistedParentOrSize.set(oldSize+setSize.getAdd());
+            persistedParentOrSize.set(oldSize + setSize.getAdd());
         } else {
             String parent = (String) parentOrSize;
             if (setSize.isCalledFromChild()) {
@@ -248,8 +250,7 @@ public class UnionFindFunction implements StatefulFunction {
             context.send(new Address(TYPE, parent), setSize);
         }
     }
-    
-    
+
     public void addTransaction(Context context, AddTransactionOperation addTransactionOperation) {
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
 
@@ -257,17 +258,19 @@ public class UnionFindFunction implements StatefulFunction {
             long oldTxCount = persistedClusterTransactionCount.getOrDefault(0l);
             TxPointer key = new TxPointer(addTransactionOperation.getTime(), addTransactionOperation.getHeight(), addTransactionOperation.getTx_n());
             Long oldDelta = (oldTxCount == 0) ? null : persistedTransactions.get(key);
-            long newDelta = oldDelta == null ? addTransactionOperation.getDelta() : addTransactionOperation.getDelta()+oldDelta;
+            long newDelta = oldDelta == null ? addTransactionOperation.getDelta() : addTransactionOperation.getDelta() + oldDelta;
             addTransactionOperation.setDelta(newDelta);
             persistedTransactions.set(key, newDelta);
-            if (oldDelta == null) persistedClusterTransactionCount.set(oldTxCount+1);
+            if (oldDelta == null) {
+                persistedClusterTransactionCount.set(oldTxCount + 1);
+            }
             sendToCassandra(context, addTransactionOperation);
         } else {
             String parent = (String) parentOrSize;
             context.send(new Address(TYPE, parent), addTransactionOperation);
         }
     }
-    
+
     private void setParent(Context context, String parent) {
         persistedParentOrSize.set(parent);
         String address = context.self().id();
@@ -277,7 +280,7 @@ public class UnionFindFunction implements StatefulFunction {
             sendToCassandra(context, new SetParent(parent));
         }
     }
-    
+
     private void addAddress(Context context, AddAddressOperation addAddressOp) {
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
         String address = context.self().id();
@@ -291,21 +294,21 @@ public class UnionFindFunction implements StatefulFunction {
             //hasClusterAddresses.set(true);
         } else {
             String parent = (String) parentOrSize;
-            context.send(new Address(TYPE, ""+parent), addAddressOp);
+            context.send(new Address(TYPE, "" + parent), addAddressOp);
         }
     }
-    
+
     private void deleteCluster(Context context) {
         persistedAddresses.clear();
         //hasClusterAddresses.clear();
         persistedTransactions.clear();
         persistedClusterTransactionCount.clear();
         persistedBalance.clear();
-        
+
         persistedDailyBalanceChanges.clear();
         sendToCassandra(context, new DeleteCluster());
     }
-    
+
     private void addBalance(Context context, AddBalanceOperation addBalanceOp) {
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
         if (parentOrSize instanceof Long) {
@@ -313,10 +316,10 @@ public class UnionFindFunction implements StatefulFunction {
             sendToCassandra(context, new SetBalanceOperation(newBalance));
         } else {
             String parent = (String) parentOrSize;
-            context.send(new Address(TYPE, ""+parent), addBalanceOp);
+            context.send(new Address(TYPE, "" + parent), addBalanceOp);
         }
     }
-    
+
     private void addDailyBalanceChange(Context context, AddDailyBalanceChangeOperation addDailyBalanceChangeOp) {
         Object parentOrSize = persistedParentOrSize.getOrDefault(1l);
         if (parentOrSize instanceof Long) {
@@ -326,9 +329,8 @@ public class UnionFindFunction implements StatefulFunction {
             sendToCassandra(context, new SetDailyBalanceChange(addDailyBalanceChangeOp.getEpochDate(), newBalanceChange));
         } else {
             String parent = (String) parentOrSize;
-            context.send(new Address(TYPE, ""+parent), addDailyBalanceChangeOp);
+            context.send(new Address(TYPE, "" + parent), addDailyBalanceChangeOp);
         }
     }
-
 
 }

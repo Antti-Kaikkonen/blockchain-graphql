@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 public class DisjointSetForest {
+
     public Map<String, String> parent = new HashMap();
     public Map<String, Integer> size = new HashMap();
     public Map<String, Map<Integer, Long>> transactions = new HashMap();//Address -> TxN -> BalanceChange
@@ -44,7 +45,7 @@ public class DisjointSetForest {
                 if (oldValue == null) {
                     oldValue = new HashMap();
                 }
-                oldValue.merge(txN, balanceChange, (a, b) -> a+b);
+                oldValue.merge(txN, balanceChange, (a, b) -> a + b);
                 return oldValue;
             }
         });
@@ -63,7 +64,6 @@ public class DisjointSetForest {
             return x;
         }
     }
-
 
     public void union(String x, String y) {
         x = find(x);
@@ -86,17 +86,17 @@ public class DisjointSetForest {
                         oldValue = yTxs;
                     } else {
                         for (Map.Entry<Integer, Long> tx : yTxs.entrySet()) {
-                            oldValue.merge(tx.getKey(), tx.getValue(), (a, b) -> a+b);
+                            oldValue.merge(tx.getKey(), tx.getValue(), (a, b) -> a + b);
                         }
                     }
                     return oldValue;
                 });
             }
 
-            size.put(x, xSize+ySize);
+            size.put(x, xSize + ySize);
         }
     }
-    
+
     private static List<String> descendants(String root, Map<String, List<String>> parentToChildren) {
         List<String> children = parentToChildren.get(root);
         ArrayList<String> all = new ArrayList<>();
@@ -108,7 +108,7 @@ public class DisjointSetForest {
         }
         return all;
     }
-    
+
     public SimpleAddAddressesAndTransactionsOperation[] toAddOps() {
         List<String> roots = new ArrayList();
         Map<String, List<String>> parentToChildren = new HashMap<>();
@@ -151,5 +151,5 @@ public class DisjointSetForest {
         }
         return res;
     }
-    
+
 }

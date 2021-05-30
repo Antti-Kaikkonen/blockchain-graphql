@@ -8,20 +8,18 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
-
 @Table(name = "address_balance")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddressBalance {
-    
+
     @PartitionKey
     private String address;
-    
+
     @ClusteringColumn(0)
     private Date timestamp;
-    
+
     private double balance;
-    
+
 }

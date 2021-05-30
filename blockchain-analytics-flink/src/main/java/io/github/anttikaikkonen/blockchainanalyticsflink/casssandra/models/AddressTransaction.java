@@ -9,29 +9,27 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Table(name="address_transaction")
+@Table(name = "address_transaction")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddressTransaction {
-    
-    
+
     @PartitionKey
     private String address;
 
     @ClusteringColumn(0)
     private Date timestamp;
-    
+
     @ClusteringColumn(1)
     private int height;
-    
+
     @ClusteringColumn(2)
     //@CqlName("tx_n")
-    @Column(name="tx_n")
+    @Column(name = "tx_n")
     private int txN;
-    
+
     private double balance_change;
-   
+
     //private String txid;
-    
 }

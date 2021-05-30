@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InputPointer {
+
     String spending_txid;
     String txid;
     Integer vout;

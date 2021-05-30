@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AddAddressesAndTransactionsOperation {
+
     String[] addresses;
     int height;
     long timestamp;

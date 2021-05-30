@@ -32,7 +32,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
     private transient Mapper<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput> vinMapper;
     private transient Mapper<AddressTransaction> addressTransactionMapper;
     private transient Semaphore semaphore;
-    
+
     public TransactionSink(CassandraSessionBuilder sessionBuilder) {
         super(sessionBuilder);
     }
@@ -42,7 +42,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
         super.open(parameters);
         this.semaphore = new Semaphore(Main.CASSANDRA_CONCURRENT_REQUESTS, true);
     }
-    
+
     @Override
     public ListenableFuture saveAsync(ConfirmedTransactionWithInputs transaction) {
         FutureCallback<Void> releaseSemaphore = new FutureCallback<Void>() {
@@ -56,11 +56,11 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
                 semaphore.release();
             }
         };
-        
+
         ArrayList<ListenableFuture<Void>> futures = new ArrayList<>();
-        
+
         List<io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput> inputs = new ArrayList<>();
-        
+
         io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Transaction tx = new io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.Transaction();
         tx.setHeight(transaction.getHeight());
         tx.setLocktime(transaction.getLocktime());
@@ -83,7 +83,7 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
                 this.semaphore.acquireUninterruptibly();
                 ListenableFuture<Void> future = voutMapper.saveAsync(vout, Mapper.Option.saveNullFields(false));//Update query
                 Futures.addCallback(future, releaseSemaphore);
-                fee += Math.round(vin.getSpentOutput().getValue()*1e8);
+                fee += Math.round(vin.getSpentOutput().getValue() * 1e8);
             }
 
             io.github.anttikaikkonen.blockchainanalyticsflink.casssandra.models.TransactionInput vin2 = new TransactionInput();
@@ -115,12 +115,12 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
             Futures.addCallback(future, releaseSemaphore);
             futures.add(future);
 
-            fee -= Math.round(vout.getValue()*1e8);
+            fee -= Math.round(vout.getValue() * 1e8);
         }
         if (transaction.getTxN() == 0) {
             tx.setFee(0);
         } else {
-            tx.setFee((double)fee/1e8);
+            tx.setFee((double) fee / 1e8);
         }
         this.semaphore.acquireUninterruptibly();
         ListenableFuture<Void> future = txMapper.saveAsync(tx);
@@ -131,38 +131,45 @@ public class TransactionSink extends CassandraSaverFunction<ConfirmedTransaction
         future = ctMapper.saveAsync(ct);
         Futures.addCallback(future, releaseSemaphore);
         futures.add(future);
-        
-        
+
         Map<String, Long> addressDeltas = new HashMap<>();
         for (TransactionOutput vout : transaction.getVout()) {
-            if (vout.getScriptPubKey().getAddresses() == null) continue;
-            if (vout.getScriptPubKey().getAddresses().length != 1) continue;
+            if (vout.getScriptPubKey().getAddresses() == null) {
+                continue;
+            }
+            if (vout.getScriptPubKey().getAddresses().length != 1) {
+                continue;
+            }
             String address = vout.getScriptPubKey().getAddresses()[0];
-            long value = Math.round(vout.getValue()*1e8);
+            long value = Math.round(vout.getValue() * 1e8);
             addressDeltas.compute(address, (key, oldDelta) -> oldDelta == null ? value : oldDelta + value);
         }
         for (TransactionInputWithOutput vin : transaction.getInputsWithOutputs()) {
-            if (vin.getSpentOutput() == null) continue;
-            if (vin.getSpentOutput().getScriptPubKey().getAddresses() == null) continue;
-            if (vin.getSpentOutput().getScriptPubKey().getAddresses().length != 1) continue;
+            if (vin.getSpentOutput() == null) {
+                continue;
+            }
+            if (vin.getSpentOutput().getScriptPubKey().getAddresses() == null) {
+                continue;
+            }
+            if (vin.getSpentOutput().getScriptPubKey().getAddresses().length != 1) {
+                continue;
+            }
             String address = vin.getSpentOutput().getScriptPubKey().getAddresses()[0];
-            long value = Math.round(vin.getSpentOutput().getValue()*1e8);
+            long value = Math.round(vin.getSpentOutput().getValue() * 1e8);
             addressDeltas.compute(address, (key, oldDelta) -> oldDelta == null ? -value : oldDelta - value);
         }
         for (String address : addressDeltas.keySet()) {
             long delta = addressDeltas.get(address);
-            AddressTransaction addressTransaction = new AddressTransaction(address, null, transaction.getHeight(), transaction.getTxN(), (double)delta/1e8);
+            AddressTransaction addressTransaction = new AddressTransaction(address, null, transaction.getHeight(), transaction.getTxN(), (double) delta / 1e8);
             addressTransaction.setTimestamp(Date.from(Instant.ofEpochMilli(transaction.getTimestamp())));
             this.semaphore.acquireUninterruptibly();
             future = addressTransactionMapper.saveAsync(addressTransaction);
             Futures.addCallback(future, releaseSemaphore);
             futures.add(future);
         }
-        
-        
+
         return Futures.allAsList(futures);
     }
-    
 
     @Override
     public void initMappers(MappingManager manager) {

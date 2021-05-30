@@ -8,12 +8,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Transaction {
-    
+
     private String txid;
     private int size;
     private long version;
     private long locktime;
     private TransactionInput[] vin;
     private TransactionOutput[] vout;
-    
+
 }

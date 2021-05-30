@@ -17,38 +17,37 @@ import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
 public class BlockClustering extends KeyedProcessFunction<Integer, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>, Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> {
-    
+
     private MapState<String, String> persistedParent;
     private MapState<String, Integer> persistedSize;
-    private MapState<String, HashMap<Integer, Long>> persistedTransactions;//Address -> TxN -> BalanceChange    
+    private MapState<String, HashMap<Integer, Long>> persistedTransactions;//Address -> TxN -> BalanceChange
 
     @Override
     public void open(Configuration parameters) throws Exception {
         this.persistedParent = getRuntimeContext().getMapState(new MapStateDescriptor<>("parent", String.class, String.class));
         this.persistedSize = getRuntimeContext().getMapState(new MapStateDescriptor<>("size", String.class, Integer.class));
-        this.persistedTransactions = getRuntimeContext().getMapState(new MapStateDescriptor("transactions", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<HashMap<Integer, Long>>() {})));
+        this.persistedTransactions = getRuntimeContext().getMapState(new MapStateDescriptor("transactions", TypeInformation.of(String.class), TypeInformation.of(new TypeHint<HashMap<Integer, Long>>() {
+        })));
     }
-    
-    
+
     public void makeSet(String x) throws Exception {
         if (persistedParent.get(x) == null) {
             persistedParent.put(x, x);
             persistedSize.put(x, 1);
         }
     }
-    
+
     public void addTx(String address, Integer txN, Long balanceChange) throws Exception {
         String root = this.find(address);
-        
+
         HashMap<Integer, Long> oldValue = this.persistedTransactions.get(root);
         if (oldValue == null) {
             oldValue = new HashMap();
         }
-        oldValue.merge(txN, balanceChange, (a, b) -> a+b);
+        oldValue.merge(txN, balanceChange, (a, b) -> a + b);
         this.persistedTransactions.put(root, oldValue);
     }
 
-    
     public void merge(SimpleAddAddressesAndTransactionsOperation[] b) throws Exception {
         for (SimpleAddAddressesAndTransactionsOperation op : b) {
             for (int i = 1; i < op.addresses.length; i++) {
@@ -59,7 +58,7 @@ public class BlockClustering extends KeyedProcessFunction<Integer, Tuple2<Intege
             }
         }
     }
-    
+
     public String find(String x) throws Exception {
         String p = this.persistedParent.get(x);
         if (p == null) {
@@ -73,7 +72,6 @@ public class BlockClustering extends KeyedProcessFunction<Integer, Tuple2<Intege
             return x;
         }
     }
-
 
     public void union(String x, String y) throws Exception {
         x = find(x);
@@ -97,16 +95,16 @@ public class BlockClustering extends KeyedProcessFunction<Integer, Tuple2<Intege
                     oldValue = yTxs;
                 } else {
                     for (Map.Entry<Integer, Long> tx : yTxs.entrySet()) {
-                        oldValue.merge(tx.getKey(), tx.getValue(), (a, b) -> a+b);
+                        oldValue.merge(tx.getKey(), tx.getValue(), (a, b) -> a + b);
                     }
                 }
                 persistedTransactions.put(x, oldValue);
             }
 
-            this.persistedSize.put(x, xSize+ySize);
+            this.persistedSize.put(x, xSize + ySize);
         }
     }
-    
+
     private static List<String> descendants(String root, Map<String, List<String>> parentToChildren) {
         List<String> children = parentToChildren.get(root);
         ArrayList<String> all = new ArrayList<>();
@@ -118,8 +116,7 @@ public class BlockClustering extends KeyedProcessFunction<Integer, Tuple2<Intege
         }
         return all;
     }
-    
-    
+
     public SimpleAddAddressesAndTransactionsOperation[] toAddOps() throws Exception {
         List<String> roots = new ArrayList();
         Map<String, List<String>> parentToChildren = new HashMap<>();
@@ -170,7 +167,7 @@ public class BlockClustering extends KeyedProcessFunction<Integer, Tuple2<Intege
         this.persistedTransactions.clear();
         this.persistedParent.clear();
     }
-    
+
     @Override
     public void processElement(Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]> input, Context ctx, Collector<Tuple2<Integer, SimpleAddAddressesAndTransactionsOperation[]>> out) throws Exception {
         this.merge(input.f1);

@@ -18,7 +18,7 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class CassandraSessionBuilderImpl extends CassandraSessionBuilder implements Serializable {
-    
+
     private final String[] cassandraHosts;
     private final String cassandraKeyspace;
 
@@ -39,10 +39,10 @@ public class CassandraSessionBuilderImpl extends CassandraSessionBuilder impleme
                 ).withRetryPolicy(new RetryPolicy() {
                     @Override
                     public RetryPolicy.RetryDecision onReadTimeout(Statement statement, ConsistencyLevel cl, int requiredResponses, int receivedResponses, boolean dataRetrieved, int nbRetry) {
-                        System.out.println("onReadTimeout "+nbRetry);
+                        System.out.println("onReadTimeout " + nbRetry);
                         if (nbRetry < 5) {
                             try {
-                                Thread.sleep((nbRetry+1)*1000);
+                                Thread.sleep((nbRetry + 1) * 1000);
                             } catch (InterruptedException ex) {
                                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                             }
@@ -54,10 +54,10 @@ public class CassandraSessionBuilderImpl extends CassandraSessionBuilder impleme
 
                     @Override
                     public RetryPolicy.RetryDecision onWriteTimeout(Statement statement, ConsistencyLevel cl, WriteType arg2, int requiredAcks, int receivedAcks, int nbRetry) {
-                        System.out.println("onWriteTimeout "+nbRetry);
+                        System.out.println("onWriteTimeout " + nbRetry);
                         if (nbRetry < 5) {
                             try {
-                                Thread.sleep((nbRetry+1)*1000);
+                                Thread.sleep((nbRetry + 1) * 1000);
                             } catch (InterruptedException ex) {
                                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                             }
@@ -69,10 +69,10 @@ public class CassandraSessionBuilderImpl extends CassandraSessionBuilder impleme
 
                     @Override
                     public RetryPolicy.RetryDecision onUnavailable(Statement statement, ConsistencyLevel cl, int requiredReplica, int aliveReplica, int nbRetry) {
-                        System.out.println("onUnavailable "+nbRetry);
+                        System.out.println("onUnavailable " + nbRetry);
                         if (nbRetry < 5) {
                             try {
-                                Thread.sleep((nbRetry+1)*1000);
+                                Thread.sleep((nbRetry + 1) * 1000);
                             } catch (InterruptedException ex) {
                                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                             }
@@ -84,10 +84,10 @@ public class CassandraSessionBuilderImpl extends CassandraSessionBuilder impleme
 
                     @Override
                     public RetryPolicy.RetryDecision onRequestError(Statement statement, ConsistencyLevel cl, DriverException driverException, int nbRetry) {
-                        System.out.println("onRequestError "+nbRetry+", ex:"+driverException);
+                        System.out.println("onRequestError " + nbRetry + ", ex:" + driverException);
                         if (nbRetry < 5) {
                             try {
-                                Thread.sleep((nbRetry+1)*1000);
+                                Thread.sleep((nbRetry + 1) * 1000);
                             } catch (InterruptedException ex) {
                                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                             }
@@ -108,5 +108,5 @@ public class CassandraSessionBuilderImpl extends CassandraSessionBuilder impleme
         Session session = cluster.connect(cassandraKeyspace);
         return session;
     }
-    
+
 }

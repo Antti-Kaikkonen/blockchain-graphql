@@ -13,18 +13,18 @@ public class StrictlyIncreasingHeaderTimeAssigner extends ProcessFunction<BlockH
 
     private transient ListState<Long> checkpointedTime;
     private long time = 0;
-    
+
     @Override
     public void processElement(BlockHeader header, Context ctx, Collector<BlockHeader> collector) throws Exception {
-        if (header.getTime()*1000 > time) {
-            time = header.getTime()*1000;
+        if (header.getTime() * 1000 > time) {
+            time = header.getTime() * 1000;
         } else {
-            time = time+1;
+            time = time + 1;
         }
         header.setTime(time);
         collector.collect(header);
     }
-    
+
     @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
         this.checkpointedTime.clear();
@@ -40,7 +40,7 @@ public class StrictlyIncreasingHeaderTimeAssigner extends ProcessFunction<BlockH
                 this.time = time;
             }
         }
-        System.out.println("HeaderTimeProcessor initializeState. Time = "+this.time);
+        System.out.println("HeaderTimeProcessor initializeState. Time = " + this.time);
     }
 
 }

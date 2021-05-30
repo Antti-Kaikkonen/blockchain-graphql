@@ -13,7 +13,7 @@ public class AsyncBlockHashFetcher extends RichAsyncFunction<Integer, String> {
 
     private transient RpcClient client = null;
     private final Supplier<RpcClient> rpcClientSupplier;
-    
+
     public AsyncBlockHashFetcher(Supplier<RpcClient> rpcClientSupplier) {
         this.rpcClientSupplier = rpcClientSupplier;
     }
@@ -22,15 +22,13 @@ public class AsyncBlockHashFetcher extends RichAsyncFunction<Integer, String> {
     public void open(Configuration parameters) throws Exception {
         this.client = this.rpcClientSupplier.get();
     }
-    
-    
+
     @Override
     public void close() throws Exception {
         this.client.close();
         this.client = null;
     }
 
-    
     @Override
     public void asyncInvoke(Integer input, ResultFuture<String> resultFuture) throws Exception {
         CompletionStage<String> rpcHash = client.getBlockHash(input);

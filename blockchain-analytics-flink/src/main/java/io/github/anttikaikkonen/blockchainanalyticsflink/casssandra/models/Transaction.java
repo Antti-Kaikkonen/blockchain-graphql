@@ -10,20 +10,21 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name="transaction")
+@Table(name = "transaction")
 public class Transaction {
+
     @PartitionKey
     String txid;
-    
+
     int height;
-    
-    @Column(name="tx_n")
+
+    @Column(name = "tx_n")
     int txN;
-    
+
     int size;
     long version;
     long locktime;
-    
+
     int input_count;
     int output_count;
     double fee;

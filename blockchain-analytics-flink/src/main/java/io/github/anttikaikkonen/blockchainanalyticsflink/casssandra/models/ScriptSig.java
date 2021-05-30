@@ -10,12 +10,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ScriptSig {
-    
+
     public ScriptSig(io.github.anttikaikkonen.bitcoinrpcclientjava.models.ScriptSig rpcScriptSig) {
         this.asm = rpcScriptSig.getAsm();
         this.hex = rpcScriptSig.getHex();
     }
-    
+
     String asm;
     String hex;
 }

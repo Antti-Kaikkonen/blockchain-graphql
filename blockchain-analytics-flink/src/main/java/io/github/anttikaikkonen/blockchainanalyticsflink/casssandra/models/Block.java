@@ -9,12 +9,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Table(name="block")
+@Table(name = "block")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Block {
-    
+
     public Block(io.github.anttikaikkonen.bitcoinrpcclientjava.models.Block block) {
         setBits(block.getBits());
         setChainwork(block.getChainwork());
@@ -31,7 +31,7 @@ public class Block {
         setSize(block.getSize());
         setTx_count(block.getTx().length);
     }
-    
+
     public Block(BlockHeader header, int size, int tx_count) {
         setBits(header.getBits());
         setChainwork(header.getChainwork());
@@ -48,19 +48,18 @@ public class Block {
         setSize(size);
         setTx_count(tx_count);
     }
-    
+
     @PartitionKey
     String hash;
-    
-    @Column(name="versionhex")
+
+    @Column(name = "versionhex")
     String versionHex;
-    
+
     int size;
-    
-    @Column(name="tx_count")
+
+    @Column(name = "tx_count")
     int tx_count;
-    
-    
+
     int height;
     int version;
     String merkleroot;
@@ -71,5 +70,5 @@ public class Block {
     BigDecimal difficulty;
     String chainwork;
     String previousblockhash;
-    
+
 }

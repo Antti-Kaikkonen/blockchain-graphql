@@ -5,9 +5,9 @@ import com.datastax.driver.mapping.annotations.PartitionKey;
 import com.datastax.driver.mapping.annotations.Table;
 import java.util.Date;
 
-@Table(name="ohlc")
+@Table(name = "ohlc")
 public class OHLC {
-    
+
     @PartitionKey(0)
     String address;
 
@@ -19,9 +19,9 @@ public class OHLC {
     Date timestamp;
     @PartitionKey(1)
     Integer interval;
-    
+
     public OHLC() {
-        
+
     }
 
     public String getAddress() {
@@ -79,9 +79,9 @@ public class OHLC {
     public void setInterval(Integer interval) {
         this.interval = interval;
     }
-    
+
     @Override
     public String toString() {
-        return address+" O "+open+"\tH "+high+"\tL "+low+"\tC "+close+"\t"+timestamp;
+        return address + " O " + open + "\tH " + high + "\tL " + low + "\tC " + close + "\t" + timestamp;
     }
 }

@@ -11,19 +11,19 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name="transaction_output")
+@Table(name = "transaction_output")
 public class TransactionOutput {
-    
+
     @PartitionKey
     String txid;
     @ClusteringColumn(0)
     int n;
     Double value;
     //@CqlName("scriptpubkey")
-    @Column(name="scriptpubkey")
+    @Column(name = "scriptpubkey")
     ScriptPubKey scriptPubKey;
     //Extra input properties
     String spending_txid;
     Integer spending_index;
-    
+
 }

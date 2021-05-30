@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SimpleAddAddressesAndTransactionsOperation {
+
     String[] addresses;
     BlockTx[] blockTxs;
 }

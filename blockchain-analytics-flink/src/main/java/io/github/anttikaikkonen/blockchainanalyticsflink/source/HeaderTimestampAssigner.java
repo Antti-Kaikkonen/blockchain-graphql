@@ -10,10 +10,10 @@ import org.apache.flink.api.common.eventtime.WatermarkOutput;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 
 public class HeaderTimestampAssigner implements WatermarkStrategy<BlockHeader> {
-    
+
     public HeaderTimestampAssigner() {
     }
-    
+
     @Override
     public WatermarkGenerator<BlockHeader> createWatermarkGenerator(WatermarkGeneratorSupplier.Context ctx) {
         return new WatermarkGenerator<BlockHeader>() {
@@ -38,8 +38,4 @@ public class HeaderTimestampAssigner implements WatermarkStrategy<BlockHeader> {
         };
     }
 
-    
-    
-    
-    
 }

@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Block {
-    
+
     private String hash;
     private int size;
     private int height;
@@ -24,5 +24,5 @@ public class Block {
     private BigDecimal difficulty;
     private String chainwork;
     private String previousblockhash;
-    
+
 }

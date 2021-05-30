@@ -4,11 +4,10 @@ import io.github.anttikaikkonen.bitcoinrpcclientjava.models.Transaction;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Data
 @NoArgsConstructor
 public class ConfirmedTransaction extends Transaction {
-    
+
     private int height;
     private int txN;
 

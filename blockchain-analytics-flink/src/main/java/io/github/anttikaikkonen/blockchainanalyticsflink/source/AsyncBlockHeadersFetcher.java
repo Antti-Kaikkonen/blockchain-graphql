@@ -14,7 +14,7 @@ public class AsyncBlockHeadersFetcher extends RichAsyncFunction<String, BlockHea
 
     private transient RpcClient client = null;
     private final Supplier<RpcClient> rpcClientSupplier;
-    
+
     public AsyncBlockHeadersFetcher(Supplier<RpcClient> rpcClientSupplier) {
         this.rpcClientSupplier = rpcClientSupplier;
     }
@@ -23,15 +23,13 @@ public class AsyncBlockHeadersFetcher extends RichAsyncFunction<String, BlockHea
     public void open(Configuration parameters) throws Exception {
         this.client = this.rpcClientSupplier.get();
     }
-    
-    
+
     @Override
     public void close() throws Exception {
         this.client.close();
         this.client = null;
     }
 
-    
     @Override
     public void asyncInvoke(String input, ResultFuture<BlockHeader> resultFuture) throws Exception {
         CompletionStage<BlockHeader> rpcHeader = client.getBlockHeader(input);

@@ -17,22 +17,22 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 
 public class BlockHeightSource extends RichSourceFunction<Integer> implements CheckpointedFunction {
-    
+
     private volatile boolean isRunning = true;
-    
+
     private transient ListState<Integer> checkpointedHeight;
     private int height = 0;
-    
+
     private final int minConfirmations;
     private final long pollingInterval;
     private final int concurrentBlocks;
-    
+
     private final Supplier<RpcClient> rpcClientSupplier;
     private final CassandraSessionBuilder sessionBuilder;
     private transient RpcClient rpcClient;
     private transient Session session;
     private transient PreparedStatement heightStatement;
-    
+
     @Builder()
     public BlockHeightSource(Integer minConfirmations, Long pollingInterval, Supplier<RpcClient> rpcClientSupplier, CassandraSessionBuilder sessionBuilder, Integer concurrentBlocks) {
         this.minConfirmations = minConfirmations == null ? 5 : minConfirmations;
@@ -41,20 +41,20 @@ public class BlockHeightSource extends RichSourceFunction<Integer> implements Ch
         this.sessionBuilder = sessionBuilder;
         this.concurrentBlocks = concurrentBlocks == null ? 200 : concurrentBlocks;
     }
-    
+
     @Override
     public void run(SourceContext<Integer> ctx) throws Exception {
-        System.out.println("Starting block height source from height "+this.height);
+        System.out.println("Starting block height source from height " + this.height);
         while (this.isRunning) {
             long blockCount = this.rpcClient.getBlockCount().toCompletableFuture().get();
-            long targetHeight = blockCount-this.minConfirmations;
+            long targetHeight = blockCount - this.minConfirmations;
             if (this.height <= targetHeight) {
                 while (this.height <= targetHeight && this.isRunning) {
-                    if (this.height%5 == 0 && this.height-this.concurrentBlocks >= 0) {
+                    if (this.height % 5 == 0 && this.height - this.concurrentBlocks >= 0) {
                         if (this.session == null) {
                             Thread.sleep(1);
                         } else {
-                            ResultSet res = this.session.execute(this.heightStatement.bind(this.height-this.concurrentBlocks));
+                            ResultSet res = this.session.execute(this.heightStatement.bind(this.height - this.concurrentBlocks));
                             if (res.one() == null) {
                                 Thread.sleep(10);
                                 continue;

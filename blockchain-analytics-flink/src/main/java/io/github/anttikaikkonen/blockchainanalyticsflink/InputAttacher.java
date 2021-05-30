@@ -14,7 +14,7 @@ public class InputAttacher extends KeyedCoProcessFunction<String, InputPointer, 
 
     private ValueState<InputPointer> inputState;
     private ValueState<TransactionOutput> outputState;
-    
+
     @Override
     public void open(Configuration parameters) throws Exception {
         this.outputState = getRuntimeContext().getState(new ValueStateDescriptor("output", TransactionOutput.class));
@@ -29,7 +29,7 @@ public class InputAttacher extends KeyedCoProcessFunction<String, InputPointer, 
         outputState.clear();
         out.collect(spentOutput);
     }
-    
+
     @Override
     public void processElement1(InputPointer inputPointer, Context ctx, Collector<SpentOutput> out) throws Exception {
         TransactionOutput output = outputState.value();

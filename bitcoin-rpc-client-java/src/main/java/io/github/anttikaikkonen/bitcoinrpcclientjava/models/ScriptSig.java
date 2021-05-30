@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ScriptSig {
-    
+
     private String asm;
     private String hex;
-    
+
 }

@@ -16,23 +16,33 @@ public class TransactionsToAddressBalanceChanges implements FlatMapFunction<Conf
 
         Map<String, Long> addressDeltas = new HashMap<>();
         for (TransactionOutput vout : transaction.getVout()) {
-            if (vout.getScriptPubKey().getAddresses() == null) continue;
-            if (vout.getScriptPubKey().getAddresses().length != 1) continue;
+            if (vout.getScriptPubKey().getAddresses() == null) {
+                continue;
+            }
+            if (vout.getScriptPubKey().getAddresses().length != 1) {
+                continue;
+            }
             String address = vout.getScriptPubKey().getAddresses()[0];
-            long value = Math.round(vout.getValue()*1e8);
+            long value = Math.round(vout.getValue() * 1e8);
             addressDeltas.compute(address, (key, oldDelta) -> oldDelta == null ? value : oldDelta + value);
         }
         for (TransactionInputWithOutput vin : transaction.getInputsWithOutputs()) {
-            if (vin.getSpentOutput() == null) continue;
-            if (vin.getSpentOutput().getScriptPubKey().getAddresses() == null) continue;
-            if (vin.getSpentOutput().getScriptPubKey().getAddresses().length != 1) continue;
+            if (vin.getSpentOutput() == null) {
+                continue;
+            }
+            if (vin.getSpentOutput().getScriptPubKey().getAddresses() == null) {
+                continue;
+            }
+            if (vin.getSpentOutput().getScriptPubKey().getAddresses().length != 1) {
+                continue;
+            }
             String address = vin.getSpentOutput().getScriptPubKey().getAddresses()[0];
-            long value = Math.round(vin.getSpentOutput().getValue()*1e8);
+            long value = Math.round(vin.getSpentOutput().getValue() * 1e8);
             addressDeltas.compute(address, (key, oldDelta) -> oldDelta == null ? -value : oldDelta - value);
         }
         for (Map.Entry<String, Long> e : addressDeltas.entrySet()) {
             out.collect(new Tuple2<String, Long>(e.getKey(), e.getValue()));
         }
     }
-    
+
 }
