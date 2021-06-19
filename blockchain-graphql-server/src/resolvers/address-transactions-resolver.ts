@@ -26,7 +26,7 @@ export class AddressTransactionsResolver {
                 coin: addressTransaction.coin
             }
         }
-        const args: any[] = [addressTransaction.height, addressTransaction.txN]
+        const args: unknown[] = [addressTransaction.height, addressTransaction.txN]
         const query: string = 'SELECT * FROM ' + addressTransaction.coin.keyspace + '.confirmed_transaction WHERE height=? AND tx_n=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,

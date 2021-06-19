@@ -47,7 +47,7 @@ export class TransactionResolver {
                 coin: transaction.coin
             }
         }
-        const args: any[] = [transaction.height]
+        const args: unknown[] = [transaction.height]
         const query: string = 'SELECT * FROM ' + transaction.coin.keyspace + '.longest_chain WHERE height=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -98,7 +98,7 @@ export class TransactionResolver {
                 items: res
             }
         }
-        let args: any[] = [transaction.txid]
+        let args: unknown[] = [transaction.txid]
         let query: string = 'SELECT * FROM ' + transaction.coin.keyspace + '.transaction_input WHERE spending_txid=?'
         if (cursor) {
             query += ' AND spending_index > ?'
@@ -181,7 +181,7 @@ export class TransactionResolver {
             }
         }
 
-        let args: any[] = [transaction.txid]
+        let args: unknown[] = [transaction.txid]
         let query: string = 'SELECT * FROM ' + transaction.coin.keyspace + '.transaction_output WHERE txid=?'
         if (cursor) {
             query += ' AND n > ?'

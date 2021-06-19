@@ -20,7 +20,7 @@ export class MempoolTransactionsResolver {
         if (mempoolTransaction !== undefined) {
             return mempoolTransaction.toGraphQL(rootTx.coin)
         }
-        const args: any[] = [rootTx.txid]
+        const args: unknown[] = [rootTx.txid]
         const query: string = 'SELECT * FROM ' + rootTx.coin.keyspace + '.transaction WHERE txid=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,

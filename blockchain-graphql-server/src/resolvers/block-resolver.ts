@@ -53,7 +53,7 @@ export class BlockResolver {
                 items: res
             }
         }
-        let args: any[] = [block.height]
+        let args: unknown[] = [block.height]
         let query: string = 'SELECT * FROM ' + block.coin.keyspace + '.confirmed_transaction WHERE height=?'
         if (cursor) {
             query += ' AND tx_n > ?'

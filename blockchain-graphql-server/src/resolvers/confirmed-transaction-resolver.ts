@@ -25,7 +25,7 @@ export class ConfirmedTransactionResolver {
                 coin: transaction.coin
             }
         }
-        const args: any[] = [transaction.height]
+        const args: unknown[] = [transaction.height]
         const query: string = 'SELECT * FROM ' + transaction.coin.keyspace + '.longest_chain WHERE height=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -49,7 +49,7 @@ export class ConfirmedTransactionResolver {
         if (mempoolTransaction !== undefined) {
             return mempoolTransaction.toGraphQL(transaction.coin)
         }
-        const args: any[] = [transaction.txid]
+        const args: unknown[] = [transaction.txid]
         const query: string = 'SELECT * FROM ' + transaction.coin.keyspace + '.transaction WHERE txid=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,

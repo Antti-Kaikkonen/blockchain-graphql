@@ -35,7 +35,7 @@ export class TransactionOutputResolver {
             return vin
         }
 
-        const args: any[] = [transactionOutput.spendingTxid, transactionOutput.spendingIndex]
+        const args: unknown[] = [transactionOutput.spendingTxid, transactionOutput.spendingIndex]
         const query: string = 'SELECT * FROM ' + transactionOutput.coin.keyspace + '.transaction_input WHERE spending_txid=? AND spending_index=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -75,7 +75,7 @@ export class TransactionOutputResolver {
                 coin: transactionOutput.coin
             }
         }
-        const args: any[] = [transactionOutput.txid]
+        const args: unknown[] = [transactionOutput.txid]
         const query: string = 'SELECT * FROM ' + transactionOutput.coin.keyspace + '.transaction WHERE txid=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,

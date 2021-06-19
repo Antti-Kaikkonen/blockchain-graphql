@@ -34,7 +34,7 @@ export class BlockHandler extends Writable {
     constructor(private client: LimitedCapacityClient, private coin: Coin, private mempool: Mempool) {
         super({
             objectMode: true,
-            write: async (event: DeleteEvent | AddEvent3 | MempoolEvent3, encoding: BufferEncoding, callback: (error?: any) => void) => {
+            write: async (event: DeleteEvent | AddEvent3 | MempoolEvent3, encoding: BufferEncoding, callback: (error?: Error) => void) => {
                 let blockToDelete: MempoolBlock
                 if (event.type === 'hashtx') {
                     const rpcTx = await event.rpcTx

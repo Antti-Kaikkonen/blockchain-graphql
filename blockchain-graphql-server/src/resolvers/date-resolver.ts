@@ -48,7 +48,7 @@ export class DateResolver {
         @Root() date: Date,
         @Args() { cursor, limit }: RichlistArgs
     ): Promise<PaginatedRichlistResponse> {
-        let args: any[] = [date.date, DateResolver.BINS]
+        let args: unknown[] = [date.date, DateResolver.BINS]
         let query: string = 'SELECT balance, balance_change, address FROM ' + date.coin.keyspace + '.daily_richlist WHERE date=? AND bin IN ?'
         if (cursor) {
             query += ' AND (balance, balance_change, address) < (?, ?, ?)'
@@ -81,7 +81,7 @@ export class DateResolver {
         @Args() { cursor, limit }: AddressBalanceChangeArgs
     ): Promise<PaginatedAddressBalanceChangeResponse> {
         const reverse = false
-        let args: any[] = [date.date, DateResolver.BINS]
+        let args: unknown[] = [date.date, DateResolver.BINS]
         let query: string = 'SELECT address, balance_change FROM ' + date.coin.keyspace + '.daily_top_gainers WHERE date=? AND bin IN ?'
         if (cursor) {
             query += ' AND (balance_change, address) ' + (reverse ? '>' : '<') + ' (?, ?)'
@@ -117,7 +117,7 @@ export class DateResolver {
         @Args() { cursor, limit }: AddressBalanceChangeArgs
     ): Promise<PaginatedAddressBalanceChangeResponse> {
         const reverse = false
-        let args: any[] = [date.date, DateResolver.BINS]
+        let args: unknown[] = [date.date, DateResolver.BINS]
         let query: string = 'SELECT address, balance_change FROM ' + date.coin.keyspace + '.daily_top_losers WHERE date=? AND bin IN ?'
         if (cursor) {
             query += ' AND (balance_change, address) ' + (reverse ? '<' : '>') + ' (?, ?)'
@@ -152,7 +152,7 @@ export class DateResolver {
     async topClusterGainers(@Root() date: Date,
         @Args() { cursor, limit }: AddressClusterBalanceChangeArgs
     ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
-        let args: any[] = [date.date, DateResolver.BINS]
+        let args: unknown[] = [date.date, DateResolver.BINS]
         let query: string = 'SELECT balance_change, cluster_id FROM ' + date.coin.keyspace + '.daily_top_cluster_gainers WHERE date=? AND bin IN ?'
         if (cursor) {
             query += ' AND (balance_change, cluster_id) < ' + ' (?, ?)'
@@ -186,7 +186,7 @@ export class DateResolver {
     async topClusterLosers(@Root() date: Date,
         @Args() { cursor, limit }: AddressClusterBalanceChangeArgs
     ): Promise<PaginatedAddressClusterBalanceChangeResponse> {
-        let args: any[] = [date.date, DateResolver.BINS]
+        let args: unknown[] = [date.date, DateResolver.BINS]
         let query: string = 'SELECT balance_change, cluster_id FROM ' + date.coin.keyspace + '.daily_top_cluster_losers WHERE date=? AND bin IN ?'
         if (cursor) {
             query += ' AND (balance_change, cluster_id) > ' + ' (?, ?)'

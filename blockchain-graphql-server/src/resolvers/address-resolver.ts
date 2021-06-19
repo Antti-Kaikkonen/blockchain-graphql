@@ -81,7 +81,7 @@ export class AddressResolver {
     async ohlc(@Root() address: Address,
         @Args() { limit, cursor, interval }: OHLC_Args
     ): Promise<PaginatedOHLCResponse> {
-        let args: any[] = [address.address, interval]
+        let args: unknown[] = [address.address, interval]
         let query: string = 'SELECT timestamp, open, high, low, close FROM ' + address.coin.keyspace + '.ohlc WHERE address=? AND interval=?'
         if (cursor) {
             query += ' AND timestamp > ?'
@@ -198,7 +198,7 @@ export class AddressResolver {
         }
         if (limit + 1 > 0) {
 
-            let args: any[] = [address.address]
+            let args: unknown[] = [address.address]
             let query: string = 'SELECT timestamp, height, tx_n, balance_change FROM ' + address.coin.keyspace + '.address_transaction WHERE address=?'
             if (cursor) {
                 query += ' AND (timestamp, height, tx_n) < (?, ?, ?)'
@@ -225,7 +225,7 @@ export class AddressResolver {
                 const start = res2[res2.length - 1].timestamp
                 const end = res2[0].timestamp
                 const query2: string = 'SELECT timestamp, balance FROM ' + address.coin.keyspace + '.address_balance WHERE address=? AND timestamp >= ? AND timestamp <= ?'
-                const args2: any[] = [address.address, start, end]
+                const args2: unknown[] = [address.address, start, end]
                 const resultSet2: types.ResultSet = await this.client.execute(
                     query2,
                     args2,
@@ -274,7 +274,7 @@ export class AddressResolver {
             res = []
         }
         if (limit + 1 > 0) {
-            let args: any[] = [address.address]
+            let args: unknown[] = [address.address]
             let query: string = 'SELECT timestamp, balance FROM ' + address.coin.keyspace + '.address_balance WHERE address=?'
             if (cursor) {
                 query += ' AND timestamp < ?'

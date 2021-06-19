@@ -35,7 +35,7 @@ export class BlockHashResolver {
                 coin: blockHash.coin
             }
         }
-        const args: any[] = [blockHash.hash]
+        const args: unknown[] = [blockHash.hash]
         const query: string = 'SELECT * FROM ' + blockHash.coin.keyspace + '.block WHERE hash=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,

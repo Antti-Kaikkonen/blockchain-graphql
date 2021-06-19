@@ -60,7 +60,7 @@ export class AddressClusterResolver {
     async transactions(@Root() cluster: AddressCluster,
         @Args() { limit, cursor }: ClusterTransactionsArgs
     ): Promise<PaginatedClusterTransactionResponse> {
-        let args: any[] = [cluster.clusterId]
+        let args: unknown[] = [cluster.clusterId]
         let query: string = 'SELECT timestamp, height, tx_n, balance_change FROM ' + cluster.coin.keyspace + '.cluster_transaction WHERE cluster_id=?'
         if (cursor) {
             query += ' AND (timestamp, height, tx_n) < (?, ?, ?)'
@@ -94,7 +94,7 @@ export class AddressClusterResolver {
     async addresses(@Root() cluster: AddressCluster,
         @Args() { limit, cursor }: ClusterAddressesArgs
     ): Promise<PaginatedAddressResponse> {
-        let args: any[] = [cluster.clusterId]
+        let args: unknown[] = [cluster.clusterId]
         let query: string = 'SELECT address FROM ' + cluster.coin.keyspace + '.cluster_address WHERE cluster_id=?'
         if (cursor) {
             query += ' AND address > ?'
@@ -121,7 +121,7 @@ export class AddressClusterResolver {
         @Args() { limit, cursor }: DailyBalanceChangeArgs
     ): Promise<PaginatedAddressClusterDailyBalanceChangeResponse> {
         const bin = Math.abs(hashCode(cluster.clusterId)) % AddressClusterResolver.CLUSTER_DAILY_BALANCES_BIN_COUNT
-        let args: any[] = [cluster.clusterId, bin]
+        let args: unknown[] = [cluster.clusterId, bin]
         let query: string = 'SELECT date, balance_change FROM ' + cluster.coin.keyspace + '.cluster_daily_balance_change WHERE cluster_id=? AND bin = ?'
         if (cursor) {
             query += ' AND date > ?'
@@ -152,7 +152,7 @@ export class AddressClusterResolver {
     async details(@Root() cluster: AddressCluster,
     ): Promise<AddressClusterDetails> {
         const bin = Math.abs(hashCode(cluster.clusterId)) % CoinResolver.CLUSTER_RICHLIST_BIN_COUNT
-        const args: any[] = [cluster.clusterId, bin]
+        const args: unknown[] = [cluster.clusterId, bin]
         const query: string = 'SELECT * FROM ' + cluster.coin.keyspace + '.cluster_details WHERE cluster_id=? AND bin = ?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,

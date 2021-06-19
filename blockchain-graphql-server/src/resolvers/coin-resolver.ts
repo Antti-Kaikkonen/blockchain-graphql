@@ -93,7 +93,7 @@ export class CoinResolver {
         if (mempoolTransaction !== undefined) {
             return mempoolTransaction.toGraphQL(coin)
         }
-        const args: any[] = [txid]
+        const args: unknown[] = [txid]
         const query: string = 'SELECT * FROM ' + coin.keyspace + '.transaction WHERE txid=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -140,7 +140,7 @@ export class CoinResolver {
             return vin
         }
 
-        const args: any[] = [spendingTxid, spendingIndex]
+        const args: unknown[] = [spendingTxid, spendingIndex]
         const query: string = 'SELECT * FROM ' + coin.keyspace + '.transaction_input WHERE spending_txid=? AND spending_index=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -195,7 +195,7 @@ export class CoinResolver {
             }
             return vout
         }
-        const args: any[] = [txid, n]
+        const args: unknown[] = [txid, n]
         const query: string = 'SELECT * FROM ' + coin.keyspace + '.transaction_output WHERE txid=? AND n=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -245,7 +245,7 @@ export class CoinResolver {
                 coin: coin
             }
         }
-        const args: any[] = [height, tx_n]
+        const args: unknown[] = [height, tx_n]
         const query: string = 'SELECT * FROM ' + coin.keyspace + '.confirmed_transaction WHERE height=? AND tx_n=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -302,7 +302,7 @@ export class CoinResolver {
                 coin: coin
             }
         }
-        const args: any[] = [height]
+        const args: unknown[] = [height]
         const query: string = 'SELECT * FROM ' + coin.keyspace + '.longest_chain WHERE height=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -344,7 +344,7 @@ export class CoinResolver {
                 coin: coin
             }
         }
-        const args: any[] = [hash]
+        const args: unknown[] = [hash]
         const query: string = 'SELECT * FROM ' + coin.keyspace + '.block WHERE hash=?'
         const resultSet: types.ResultSet = await this.client.execute(
             query,
@@ -377,7 +377,7 @@ export class CoinResolver {
     async clusterRichlist(@Root() coin: Coin,
         @Args() { limit, cursor }: ClusterRichlistArgs
     ): Promise<PaginatedAddressClusterRichlistResponse> {
-        let args: any[] = [CoinResolver.CLUSTER_RICHLIST_BINS]
+        let args: unknown[] = [CoinResolver.CLUSTER_RICHLIST_BINS]
         let query: string = 'SELECT balance, cluster_id FROM ' + coin.keyspace + '.cluster_richlist WHERE bin IN ?'
         if (cursor) {
             query += ' AND (balance, cluster_id) < (?, ?)'
