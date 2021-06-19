@@ -17,4 +17,20 @@ export class LimitedCapacityClient {
         })
         return p
     }
+
+    public async executeWithRetries(query: string, params?: ArrayOrObject, options?: QueryOptions): Promise<types.ResultSet> {
+        await this.sem.acquire()
+        let error
+        for (let i = 0; i < 3; i++) {
+            try {
+                const res = await this.client.execute(query, params, options)
+                this.sem.release()
+                return res
+            } catch (err) {
+                error = err
+            }
+        }
+        this.sem.release()
+        throw error
+    }
 }

@@ -144,13 +144,13 @@ export class BlockHandler extends Writable {
 
 
     private async getDbBlockTimestamp(height: number): Promise<number> {
-        const res = await this.client.execute('SELECT hash FROM ' + this.coin.keyspace + '.longest_chain WHERE height = ?;', [height], { prepare: true })
+        const res = await this.client.executeWithRetries('SELECT hash FROM ' + this.coin.keyspace + '.longest_chain WHERE height = ?;', [height], { prepare: true })
         let hash: string
         res.rows.forEach(row => {
             hash = row.get('hash')
         })
         if (hash === undefined) throw new Error('Failed to get block hash for height ' + height)
-        const res2 = await this.client.execute('SELECT time FROM ' + this.coin.keyspace + '.block WHERE hash = ?;', [hash], { prepare: true })
+        const res2 = await this.client.executeWithRetries('SELECT time FROM ' + this.coin.keyspace + '.block WHERE hash = ?;', [hash], { prepare: true })
         let time: number
         res2.rows.forEach(row => {
             time = row.get('time')
@@ -160,7 +160,7 @@ export class BlockHandler extends Writable {
     }
 
     private async getDbAddressBalance(address: string, beforeTimestamnp: number): Promise<number> {
-        const res = await this.client.execute('SELECT balance FROM ' + this.coin.keyspace + '.address_balance WHERE address = ? AND timestamp < ? LIMIT 1;', [address, beforeTimestamnp], { prepare: true })
+        const res = await this.client.executeWithRetries('SELECT balance FROM ' + this.coin.keyspace + '.address_balance WHERE address = ? AND timestamp < ? LIMIT 1;', [address, beforeTimestamnp], { prepare: true })
         let balance: number
         res.rows.forEach(row => {
             balance = row.get('balance')

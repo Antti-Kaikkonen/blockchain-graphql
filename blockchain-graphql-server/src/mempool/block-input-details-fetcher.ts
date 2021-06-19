@@ -8,7 +8,7 @@ import { RpcBlock, RpcClient, RpcTx, RpcVin } from '../rpc-client'
 import { Mempool } from './mempool'
 
 export interface AddEvent3 extends AddEvent2 {
-    inputDetails: Map<string, Promise<{ address: string, value: number }>>;
+    inputDetails: Map<string, Promise<{ address: string, value: number }>>
 }
 
 export class BlockInputDetailsFetcher extends Transform {
@@ -68,7 +68,7 @@ export class BlockInputDetailsFetcher extends Transform {
     }
 
     private async getInputDetailsFromDB(vin: RpcVin): Promise<{ address: string, value: number }> {
-        const res: types.ResultSet = await this.client.execute('SELECT value, scriptpubkey.addresses FROM ' + this.coin.keyspace + '.transaction_output WHERE txid = ? AND n=?;', [vin.txid, vin.vout], { prepare: true })
+        const res: types.ResultSet = await this.client.executeWithRetries('SELECT value, scriptpubkey.addresses FROM ' + this.coin.keyspace + '.transaction_output WHERE txid = ? AND n=?;', [vin.txid, vin.vout], { prepare: true })
         if (res.rows.length === 0) {
             throw new Error(this.coin.name + ' output ' + vin.txid + '-' + vin.vout + ' was not found in db. Make sure your db is synchronized with the blockchain.')
         } else {
