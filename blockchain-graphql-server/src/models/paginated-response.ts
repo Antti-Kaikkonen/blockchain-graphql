@@ -1,6 +1,6 @@
 import { ObjectType, ClassType, Field } from 'type-graphql'
 
-export function PaginatedResponse<TItem>(TItemClass: ClassType<TItem>) {
+export function PaginatedResponse<TItem>(TItemClass: ClassType<TItem>): abstract new () => { items: TItem[], hasMore: boolean } {
     // `isAbstract` decorator option is mandatory to prevent registering in schema
     @ObjectType({ isAbstract: true })
     abstract class PaginatedResponseClass {
