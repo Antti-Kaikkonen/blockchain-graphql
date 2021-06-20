@@ -1,6 +1,6 @@
 import { Resolver, FieldResolver, Root, Field, ArgsType, Args } from 'type-graphql'
 import { types } from 'cassandra-driver'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { Transaction } from '../models/transaction'
 import { TransactionInput, TransactionInputCursor, PaginatedTransactionInputResponse } from '../models/transaction-input'
 import { TransactionOutput, TransactionOutputCursor, PaginatedTransactionOutputResponse } from '../models/transaction-output'
@@ -28,6 +28,7 @@ class TransactionOutputArgs extends PaginationArgs {
 
 }
 
+@Service()
 @Resolver(of => Transaction)
 export class TransactionResolver {
 

@@ -1,10 +1,11 @@
 import { Resolver, FieldResolver, Root } from 'type-graphql'
 import { types } from 'cassandra-driver'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { ConfirmedTransaction } from '../models/confirmed-transaction'
 import { ClusterTransaction } from '../models/cluster-transaction'
 import { LimitedCapacityClient } from '../limited-capacity-client'
 
+@Service()
 @Resolver(of => ClusterTransaction)
 export class ClusterTransactionResolver {
 

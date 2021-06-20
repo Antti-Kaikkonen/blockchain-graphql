@@ -1,11 +1,12 @@
 import { Resolver, FieldResolver, Root } from 'type-graphql'
 import { types } from 'cassandra-driver'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { AddressTransaction } from '../models/address-transaction'
 import { ConfirmedTransaction } from '../models/confirmed-transaction'
 import { LimitedCapacityClient } from '../limited-capacity-client'
 import { MempoolBlock } from '../mempool/mempool'
 
+@Service()
 @Resolver(of => AddressTransaction)
 export class AddressTransactionsResolver {
 

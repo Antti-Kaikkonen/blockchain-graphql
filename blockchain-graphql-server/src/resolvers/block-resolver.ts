@@ -1,7 +1,7 @@
 import { Block } from '../models/block'
 import { Resolver, FieldResolver, Root, Field, ArgsType, Args } from 'type-graphql'
 import { types } from 'cassandra-driver'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { ConfirmedTransaction, ConfirmedTransactionCursor, PaginatedConfirmedTransactionResponse } from '../models/confirmed-transaction'
 import { PaginationArgs } from './pagination-args'
 import { MempoolBlock, MempoolTx } from '../mempool/mempool'
@@ -16,6 +16,7 @@ class ConfirmedTransactionArgs extends PaginationArgs {
 
 }
 
+@Service()
 @Resolver(of => Block)
 export class BlockResolver {
 

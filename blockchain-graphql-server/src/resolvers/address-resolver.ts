@@ -1,6 +1,6 @@
 import { Resolver, FieldResolver, Root, Field, Int, Args, ArgsType, Float } from 'type-graphql'
 import { types } from 'cassandra-driver'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { Address } from '../models/address'
 import { AddressTransaction, AddressTransactionCursor, PaginatedAddressTransactionResponse } from '../models/address-transaction'
 import { OHLCCursor, OHLC, PaginatedOHLCResponse } from '../models/ohlc'
@@ -46,7 +46,7 @@ class UnconfirmedTransactionsArgs extends PaginationArgs {
 }
 
 
-
+@Service()
 @Resolver(of => Address)
 export class AddressResolver {
 

@@ -1,12 +1,13 @@
 import { Resolver, FieldResolver, Root } from 'type-graphql'
 import { types } from 'cassandra-driver'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { ConfirmedTransaction } from '../models/confirmed-transaction'
 import { Transaction } from '../models/transaction'
 import { BlockHash } from '../models/block_hash'
 import { MempoolBlock, MempoolTx } from '../mempool/mempool'
 import { LimitedCapacityClient } from '../limited-capacity-client'
 
+@Service()
 @Resolver(of => ConfirmedTransaction)
 export class ConfirmedTransactionResolver {
 

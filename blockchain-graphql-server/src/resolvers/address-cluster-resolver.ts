@@ -1,6 +1,6 @@
 import { AddressCluster } from '../models/address-cluster'
 import { Resolver, FieldResolver, Root, InputType, Field, Args, ArgsType } from 'type-graphql'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { types } from 'cassandra-driver'
 import { PaginatedClusterTransactionResponse, ClusterTransactionCursor, ClusterTransaction } from '../models/cluster-transaction'
 import { PaginatedAddressResponse, Address } from '../models/address'
@@ -48,6 +48,7 @@ function hashCode(s) {
     return h
 }
 
+@Service()
 @Resolver(of => AddressCluster)
 export class AddressClusterResolver {
 

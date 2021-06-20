@@ -1,6 +1,6 @@
 import { Resolver, FieldResolver, Root } from 'type-graphql'
 import { types } from 'cassandra-driver'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { Transaction } from '../models/transaction'
 import { TransactionInput } from '../models/transaction-input'
 import { TransactionOutput } from '../models/transaction-output'
@@ -9,6 +9,7 @@ import { ScriptPubKey } from '../models/scriptpubkey'
 import { RpcVout } from '../rpc-client'
 import { LimitedCapacityClient } from '../limited-capacity-client'
 
+@Service()
 @Resolver(of => TransactionInput)
 export class TransactionInputResolver {
 

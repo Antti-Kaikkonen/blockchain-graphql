@@ -3,7 +3,7 @@ import { Date } from '../models/date'
 import { types } from 'cassandra-driver'
 import { RichListCursor, RichList, PaginatedRichlistResponse } from '../models/richlist'
 import { Address } from '../models/address'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { AddressBalanceChange, AddressBalanceChangeCursor, PaginatedAddressBalanceChangeResponse } from '../models/address-balance-change'
 import { PaginationArgs } from './pagination-args'
 import { LimitedCapacityClient } from '../limited-capacity-client'
@@ -34,6 +34,7 @@ class AddressClusterBalanceChangeArgs extends PaginationArgs {
 
 }
 
+@Service()
 @Resolver(of => Date)
 export class DateResolver {
 

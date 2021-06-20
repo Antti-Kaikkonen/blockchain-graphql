@@ -1,8 +1,9 @@
 import { Resolver } from 'type-graphql'
 import { RichList } from '../models/richlist'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { LimitedCapacityClient } from '../limited-capacity-client'
 
+@Service()
 @Resolver(of => RichList)
 export class RichlistResolver {
 

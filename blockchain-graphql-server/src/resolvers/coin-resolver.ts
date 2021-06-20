@@ -1,6 +1,6 @@
 import { types } from 'cassandra-driver'
 import { Arg, Args, ArgsType, Field, FieldResolver, Int, Mutation, Query, Resolver, Root } from 'type-graphql'
-import { Inject } from 'typedi'
+import { Inject, Service } from 'typedi'
 import { LimitedCapacityClient } from '../limited-capacity-client'
 import { MempoolBlock, MempoolTx } from '../mempool/mempool'
 import { Address } from '../models/address'
@@ -36,6 +36,7 @@ class BlockHashArgs extends PaginationArgs {
 
 }
 
+@Service()
 @Resolver(of => Coin)
 export class CoinResolver {
 

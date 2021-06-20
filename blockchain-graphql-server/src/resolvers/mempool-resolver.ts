@@ -1,4 +1,5 @@
 import { Args, ArgsType, Field, FieldResolver, Float, Int, Resolver, Root } from 'type-graphql'
+import { Service } from 'typedi'
 import { MempoolModel } from '../models/mempool-model'
 import { UnconfirmedTransaction, UnconfirmedTransactionCursor, PaginatedUnconfirmedTransactionResponse } from '../models/unconfirmedl-transaction'
 import { PaginationArgs } from './pagination-args'
@@ -11,6 +12,7 @@ class UnconfirmedTransactionsArgs extends PaginationArgs {
 
 }
 
+@Service()
 @Resolver(of => MempoolModel)
 export class MempoolResolver {
     @FieldResolver(returns => Float, { nullable: false, complexity: ({ childComplexity, args }) => 1 })
